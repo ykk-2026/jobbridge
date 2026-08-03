@@ -1,6 +1,146 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-</beans>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.ykk.jobbridge.mapper.ProfileMapper">
+
+    <!-- 프로필 등록 -->
+    <insert id="insertProfile"
+            parameterType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
+
+        INSERT INTO job_seeker_profile
+        (
+        member_id,
+        profile_image_url,
+        residence_region,
+        desired_job,
+        desired_region,
+        employment_type,
+        career_type,
+        career_years,
+        min_salary,
+        remote_preferred,
+        flexible_preferred,
+        hybrid_preferred,
+        onsite_preferred,
+        contact_time_start,
+        contact_time_end,
+        contact_method,
+        introduction,
+        profile_public
+        )
+
+        VALUES
+        (
+        #{memberId},
+        #{profileImageUrl},
+        #{residenceRegion},
+        #{desiredJob},
+        #{desiredRegion},
+        #{employmentType},
+        #{careerType},
+        #{careerYears},
+        #{minSalary},
+        #{remotePreferred},
+        #{flexiblePreferred},
+        #{hybridPreferred},
+        #{onsitePreferred},
+        #{contactTimeStart},
+        #{contactTimeEnd},
+        #{contactMethod},
+        #{introduction},
+        #{profilePublic}
+        )
+
+    </insert>
+
+    <!-- 회원번호로 프로필 조회 -->
+    <select id="findProfileByMemberId"
+            parameterType="Long"
+            resultType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
+
+        SELECT
+
+        m.id                 AS memberId,
+        m.name,
+        m.birth_date         AS birthDate,
+        m.gender,
+        m.email,
+        m.phone,
+
+        p.id                 AS profileId,
+        p.profile_image_url  AS profileImageUrl,
+        p.residence_region   AS residenceRegion,
+        p.desired_job        AS desiredJob,
+        p.desired_region     AS desiredRegion,
+        p.employment_type    AS employmentType,
+        p.career_type        AS careerType,
+        p.career_years       AS careerYears,
+        p.min_salary         AS minSalary,
+        p.remote_preferred   AS remotePreferred,
+        p.flexible_preferred AS flexiblePreferred,
+        p.hybrid_preferred   AS hybridPreferred,
+        p.onsite_preferred   AS onsitePreferred,
+        p.contact_time_start AS contactTimeStart,
+        p.contact_time_end   AS contactTimeEnd,
+        p.contact_method     AS contactMethod,
+        p.introduction,
+        p.profile_public     AS profilePublic,
+        p.created_at         AS createdAt,
+        p.updated_at         AS updatedAt
+
+        FROM member m
+
+        LEFT JOIN job_seeker_profile p
+        ON m.id = p.member_id
+
+        WHERE m.id = #{memberId}
+
+    </select>
+
+    <!-- 프로필 수정 -->
+    <update id="updateProfile"
+            parameterType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
+
+        UPDATE job_seeker_profile
+
+        SET
+
+        profile_image_url = #{profileImageUrl},
+        residence_region = #{residenceRegion},
+        desired_job = #{desiredJob},
+        desired_region = #{desiredRegion},
+        employment_type = #{employmentType},
+        career_type = #{careerType},
+        career_years = #{careerYears},
+        min_salary = #{minSalary},
+        remote_preferred = #{remotePreferred},
+        flexible_preferred = #{flexiblePreferred},
+        hybrid_preferred = #{hybridPreferred},
+        onsite_preferred = #{onsitePreferred},
+        contact_time_start = #{contactTimeStart},
+        contact_time_end = #{contactTimeEnd},
+        contact_method = #{contactMethod},
+        introduction = #{introduction},
+        profile_public = #{profilePublic}
+
+        WHERE member_id = #{memberId}
+
+    </update>
+
+    <!-- 프로필 존재 여부 -->
+    <select id="countProfileByMemberId"
+            parameterType="Long"
+            resultType="int">
+
+        SELECT COUNT(*)
+
+        FROM job_seeker_profile
+
+        WHERE member_id = #{memberId}
+
+    </select>
+
+</mapper>
