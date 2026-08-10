@@ -131,6 +131,20 @@
     </update>
 
     <!-- 프로필 존재 여부 -->
+    <!-- 프로필 화면에서 수정한 회원 기본 정보 저장 -->
+    <update id="updateMember"
+            parameterType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
+
+        UPDATE member
+        SET name = #{name},
+            birth_date = #{birthDate},
+            gender = #{gender},
+            email = #{email},
+            phone = #{phone}
+        WHERE id = #{memberId}
+
+    </update>
+
     <select id="countProfileByMemberId"
             parameterType="Long"
             resultType="int">

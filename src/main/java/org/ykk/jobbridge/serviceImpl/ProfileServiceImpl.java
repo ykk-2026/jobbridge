@@ -34,6 +34,8 @@ public class ProfileServiceImpl implements ProfileService {
 
         validateProfile(profileDTO);
 
+        profileMapper.updateMember(profileDTO);
+
         int profileCount =
                 profileMapper.countProfileByMemberId(
                         profileDTO.getMemberId()
