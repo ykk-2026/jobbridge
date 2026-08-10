@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.ykk.jobbridge.mapper.MemberMapper">
+
+    <!-- 로그인 아이디 중복 확인 -->
+    <select id="countByLoginId"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM member
+        WHERE login_id = #{loginId}
+    </select>
+
+    <!-- 이메일 중복 확인 -->
+    <select id="countByEmail"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM member
+        WHERE email = #{email}
+    </select>
+
+    <!-- 회원 저장 -->
+    <insert id="insertMember"
+            parameterType="org.ykk.jobbridge.dto.JoinRequest"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+
+        INSERT INTO member (
+        login_id,
+        password,
+        name,
+        birth_date,
+        gender,
+        email,
+        phone,
+        role
+        )
+        VALUES (
+        #{loginId},
+        #{password},
+        #{name},
+        #{birthDate},
+        #{gender},
+        #{email},
+        #{phone},
+        #{role}
+        )
+    </insert>
+
+    <!-- 구직자 프로필 저장 -->
+    <insert id="insertJobSeekerProfile"
+            parameterType="org.ykk.jobbridge.dto.JoinRequest">
+
+        INSERT INTO job_seeker_profile (
+        member_id,
+        desired_job
+        )
+        VALUES (
+        #{id},
+        #{desiredJob}
+        )
+    </insert>
+
+    <!-- 로그인 회원 조회 -->
+    <select id="findByLoginId"
+            resultType="org.ykk.jobbridge.dto.MemberLoginResult">
+
+        SELECT
+        id,
+        login_id AS loginId,
+        password,
+        name,
+        role,
+        status
+        FROM member
+        WHERE login_id = #{loginId}
+    </select>
+
+</mapper>
