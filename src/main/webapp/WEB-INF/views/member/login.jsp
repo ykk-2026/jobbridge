@@ -1,16 +1,44 @@
-<%--
-  Created by IntelliJ IDEA.
-  User: data8320-13
-  Date: 26. 7. 26.
-  Time: 오후 1:34
-  To change this template use File | Settings | File Templates.
---%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+
 <html>
 <head>
-    <title>Title</title>
+    <title>로그인</title>
 </head>
+
+
 <body>
+
+
+<h2>로그인</h2>
+
+
+<form action="/member/login" method="post">
+
+
+    아이디 :
+    <input type="text" name="loginId">
+
+    <br>
+
+
+    비밀번호 :
+    <input type="password" name="password">
+
+    <br>
+
+
+    <button type="submit">
+        로그인
+    </button>
+
+
+</form>
+
+
+<a href="/member/join">
+    회원가입
+</a>
+
 
 </body>
 </html>
