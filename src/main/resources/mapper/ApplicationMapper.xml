@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ykk.jobbridge.mapper.ApplicationMapper">
+
+    <select id="existsByJobIdAndEmail" resultType="int">
+        SELECT COUNT(*)
+        FROM applications
+        WHERE job_id = #{jobId}
+          AND email = #{email}
+    </select>
+
+    <insert id="insert"
+            parameterType="org.ykk.jobbridge.dto.ApplicationDTO"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO applications (
+            job_id,
+            applicant_name,
+            email,
+            phone,
+            cover_letter
+        ) VALUES (
+            #{jobId},
+            #{applicantName},
+            #{email},
+            #{phone},
+            #{coverLetter}
+        )
+    </insert>
+
+    <select id="findByJobId" parameterType="long" resultType="org.ykk.jobbridge.dto.ApplicationDTO">
+        SELECT
+            id,
+            job_id,
+            applicant_name,
+            email,
+            phone,
+            cover_letter,
+            created_at
+        FROM applications
+        WHERE job_id = #{jobId}
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+</mapper>
