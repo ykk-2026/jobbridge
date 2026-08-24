@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ykk.jobbridge.mapper.JobApplicationMapper">
+    <update id="ensureTable">
+        CREATE TABLE IF NOT EXISTS job_application (
+            id BIGINT NOT NULL AUTO_INCREMENT,
+            member_id BIGINT NOT NULL,
+            job_id VARCHAR(50) NOT NULL,
+            company_name VARCHAR(100) NOT NULL,
+            job_title VARCHAR(200) NOT NULL,
+            applicant_name VARCHAR(50) NOT NULL,
+            phone VARCHAR(20) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            employment_type VARCHAR(50) DEFAULT NULL,
+            status VARCHAR(30) NOT NULL DEFAULT 'APPLIED',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uk_job_application_member_job (member_id, job_id),
+            CONSTRAINT fk_job_application_member FOREIGN KEY (member_id)
+                REFERENCES member(id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+    </update>
+
+    <update id="ensureCompanyNameColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS company_name VARCHAR(100) DEFAULT NULL
+    </update>
+    <update id="ensureJobTitleColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS job_title VARCHAR(200) DEFAULT NULL
+    </update>
+    <update id="ensureApplicantNameColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS applicant_name VARCHAR(50) DEFAULT NULL
+    </update>
+    <update id="ensurePhoneColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT NULL
+    </update>
+    <update id="ensureEmailColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS email VARCHAR(100) DEFAULT NULL
+    </update>
+    <update id="ensureEmploymentTypeColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50) DEFAULT NULL
+    </update>
+    <update id="ensureStatusColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'APPLIED'
+    </update>
+    <update id="ensureCreatedAtColumn">
+        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    </update>
+
+    <select id="countByMemberAndJob" resultType="int">
+        SELECT COUNT(*) FROM job_application WHERE member_id = #{memberId} AND job_id = #{jobId}
+    </select>
+
+    <insert id="insert" parameterType="org.ykk.jobbridge.dto.JobApplicationDTO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job_application
+            (member_id, job_id, company_name, job_title, applicant_name, phone, email, employment_type, status)
+        VALUES
+            (#{memberId}, #{jobId}, #{companyName}, #{jobTitle}, #{applicantName}, #{phone}, #{email}, #{employmentType}, #{status})
+    </insert>
+
+    <select id="findAllByMemberId" resultType="org.ykk.jobbridge.dto.JobApplicationDTO">
+        SELECT id, member_id, job_id, company_name, job_title, applicant_name,
+               phone, email, employment_type, status, created_at, updated_at
+        FROM job_application
+        WHERE member_id = #{memberId}
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="countAll" resultType="long">SELECT COUNT(*) FROM job_application</select>
+</mapper>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.ykk.jobbridge.mapper.AdminMapper">
+
+    <select id="countMembers" resultType="long">
+        SELECT COUNT(*)
+        FROM member
+    </select>
+
+    <select id="countCompanies" resultType="long">
+        SELECT COUNT(*)
+        FROM member
+        WHERE role = 'COMPANY'
+    </select>
+
+    <select id="findMembers" resultType="org.ykk.jobbridge.dto.AdminMemberDTO">
+        SELECT id,
+               name,
+               email,
+               role,
+               status
+        FROM member
+        ORDER BY id DESC
+    </select>
+
+</mapper>
