@@ -4,6 +4,20 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.ykk.jobbridge.mapper.ApplicationMapper">
 
+    <resultMap id="applicationResultMap" type="org.ykk.jobbridge.dto.ApplicationDTO">
+        <id property="id" column="id"/>
+        <result property="jobId" column="job_id"/>
+        <result property="applicantName" column="applicant_name"/>
+        <result property="email" column="email"/>
+        <result property="phone" column="phone"/>
+        <result property="coverLetter" column="cover_letter"/>
+        <result property="status" column="status"/>
+        <result property="jobTitle" column="job_title"/>
+        <result property="companyName" column="company_name"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
     <select id="existsByJobIdAndEmail" resultType="int">
         SELECT COUNT(*)
         FROM applications
@@ -30,18 +44,66 @@
         )
     </insert>
 
-    <select id="findByJobId" parameterType="long" resultType="org.ykk.jobbridge.dto.ApplicationDTO">
+    <select id="findByJobId" parameterType="long" resultMap="applicationResultMap">
         SELECT
-            id,
-            job_id,
-            applicant_name,
-            email,
-            phone,
-            cover_letter,
-            created_at
-        FROM applications
-        WHERE job_id = #{jobId}
-        ORDER BY created_at DESC, id DESC
+            a.id,
+            a.job_id,
+            a.applicant_name,
+            a.email,
+            a.phone,
+            a.cover_letter,
+            a.status,
+            j.title AS job_title,
+            j.company_name,
+            a.created_at,
+            a.updated_at
+        FROM applications a
+        INNER JOIN jobs j ON j.id = a.job_id
+        WHERE a.job_id = #{jobId}
+        ORDER BY a.created_at DESC, a.id DESC
     </select>
+
+    <select id="findAll" resultMap="applicationResultMap">
+        SELECT
+            a.id,
+            a.job_id,
+            a.applicant_name,
+            a.email,
+            a.phone,
+            a.cover_letter,
+            a.status,
+            j.title AS job_title,
+            j.company_name,
+            a.created_at,
+            a.updated_at
+        FROM applications a
+        INNER JOIN jobs j ON j.id = a.job_id
+        ORDER BY a.created_at DESC, a.id DESC
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="applicationResultMap">
+        SELECT
+            a.id,
+            a.job_id,
+            a.applicant_name,
+            a.email,
+            a.phone,
+            a.cover_letter,
+            a.status,
+            j.title AS job_title,
+            j.company_name,
+            a.created_at,
+            a.updated_at
+        FROM applications a
+        INNER JOIN jobs j ON j.id = a.job_id
+        WHERE a.id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE applications
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
 
 </mapper>

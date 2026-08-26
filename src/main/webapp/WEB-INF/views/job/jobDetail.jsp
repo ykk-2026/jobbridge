@@ -17,9 +17,14 @@
             padding: 0 20px;
         }
 
-        .back {
-            display: inline-block;
+        .top-links {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
             margin-bottom: 18px;
+        }
+
+        .link {
             color: #2563eb;
             text-decoration: none;
         }
@@ -107,7 +112,10 @@
 </head>
 <body>
 <main class="wrap">
-    <a class="back" href="${pageContext.request.contextPath}/jobs">목록으로</a>
+    <div class="top-links">
+        <a class="link" href="${pageContext.request.contextPath}/jobs">목록으로</a>
+        <a class="link" href="${pageContext.request.contextPath}/applications">입사지원 관리</a>
+    </div>
 
     <section class="panel">
         <h1>${job.title}</h1>

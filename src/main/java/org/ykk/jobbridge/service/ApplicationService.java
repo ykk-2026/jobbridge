@@ -9,4 +9,10 @@ public interface ApplicationService {
     void apply(ApplicationDTO applicationDTO);
 
     List<ApplicationDTO> findByJobId(Long jobId);
+
+    List<ApplicationDTO> findAll();
+
+    ApplicationDTO findById(Long id);
+
+    void updateStatus(Long id, String status);
 }

@@ -14,4 +14,10 @@ public interface ApplicationMapper {
     int insert(ApplicationDTO applicationDTO);
 
     List<ApplicationDTO> findByJobId(Long jobId);
+
+    List<ApplicationDTO> findAll();
+
+    ApplicationDTO findById(Long id);
+
+    int updateStatus(@Param("id") Long id, @Param("status") String status);
 }

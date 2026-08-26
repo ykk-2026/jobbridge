@@ -12,6 +12,8 @@ import java.util.List;
 @Service
 public class ApplicationServiceImpl implements ApplicationService {
 
+    private static final List<String> ALLOWED_STATUSES = List.of("RECEIVED", "REVIEWING", "ACCEPTED", "REJECTED");
+
     private final ApplicationMapper applicationMapper;
 
     public ApplicationServiceImpl(ApplicationMapper applicationMapper) {
@@ -33,6 +35,30 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     public List<ApplicationDTO> findByJobId(Long jobId) {
         return applicationMapper.findByJobId(jobId);
+    }
+
+    @Override
+    public List<ApplicationDTO> findAll() {
+        return applicationMapper.findAll();
+    }
+
+    @Override
+    public ApplicationDTO findById(Long id) {
+        return applicationMapper.findById(id);
+    }
+
+    @Override
+    @Transactional
+    public void updateStatus(Long id, String status) {
+        if (id == null) {
+            throw new IllegalArgumentException("지원 정보가 없습니다.");
+        }
+        if (!ALLOWED_STATUSES.contains(status)) {
+            throw new IllegalArgumentException("변경할 수 없는 지원 상태입니다.");
+        }
+        if (applicationMapper.updateStatus(id, status) == 0) {
+            throw new IllegalArgumentException("존재하지 않는 지원서입니다.");
+        }
     }
 
     private void validate(ApplicationDTO applicationDTO) {

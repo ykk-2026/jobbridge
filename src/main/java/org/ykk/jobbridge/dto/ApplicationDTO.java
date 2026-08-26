@@ -10,7 +10,11 @@ public class ApplicationDTO {
     private String email;
     private String phone;
     private String coverLetter;
+    private String status;
+    private String jobTitle;
+    private String companyName;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public Long getId() {
         return id;
@@ -60,11 +64,43 @@ public class ApplicationDTO {
         this.coverLetter = coverLetter;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getJobTitle() {
+        return jobTitle;
+    }
+
+    public void setJobTitle(String jobTitle) {
+        this.jobTitle = jobTitle;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

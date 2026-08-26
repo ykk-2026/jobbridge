@@ -17,9 +17,23 @@
             padding: 0 20px;
         }
 
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
         h1 {
-            margin: 0 0 24px;
+            margin: 0;
             font-size: 28px;
+        }
+
+        .manage-link {
+            color: #2563eb;
+            font-weight: 700;
+            text-decoration: none;
         }
 
         .job-list {
@@ -67,7 +81,10 @@
 </head>
 <body>
 <main class="wrap">
-    <h1>채용공고</h1>
+    <div class="header">
+        <h1>채용공고</h1>
+        <a class="manage-link" href="${pageContext.request.contextPath}/applications">입사지원 관리</a>
+    </div>
 
     <c:choose>
         <c:when test="${empty jobs}">
