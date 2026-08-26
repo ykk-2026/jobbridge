@@ -1,6 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CurrentUser, Page, RegisterFormData, UserRole } from '@/app/types';
-import { mockAdminUser, mockCorporateUser, mockUser } from '@/app/data/mockData';
+import {
+  getCurrentMember,
+  loginMember,
+  logoutMember,
+  registerMember,
+  type LoginMember,
+} from '@/app/api/memberApi';
 import { Navbar } from '@/app/layout/Navbar';
 import { Footer } from '@/app/layout/Footer';
 import { MainPage } from '@/app/pages/home/MainPage';
@@ -11,28 +17,35 @@ import { ProfilePage } from '@/app/pages/profile/ProfilePage';
 
 // MARKER-MAKE-KIT-INVOKED
 const noNavPages: Page[] = ['login', 'register'];
-const registeredUserStorageKey = 'jobBridgeRegisteredUser';
 
-const loadRegisteredUser = (): RegisterFormData | null => {
-  if (typeof window === 'undefined') return null;
+const toCurrentUser = (member: LoginMember): CurrentUser => {
+  const role: UserRole = member.role === 'ADMIN'
+    ? 'admin'
+    : member.role === 'CORPORATE' || member.role === 'EMPLOYER'
+      ? 'corporate'
+      : 'personal';
 
-  const savedUser = localStorage.getItem(registeredUserStorageKey);
-  if (!savedUser) return null;
-
-  try {
-    return JSON.parse(savedUser) as RegisterFormData;
-  } catch {
-    localStorage.removeItem(registeredUserStorageKey);
-    return null;
-  }
+  return {
+    role,
+    name: member.name,
+    id: String(member.id),
+    avatar: member.name.slice(0, 1),
+    loginId: member.loginId,
+  };
 };
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('main');
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [registeredUser, setRegisteredUser] = useState<RegisterFormData | null>(() => loadRegisteredUser());
+  const [registeredUser, setRegisteredUser] = useState<RegisterFormData | null>(null);
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set(['1', '2']));
+
+  useEffect(() => {
+    getCurrentMember()
+      .then(member => setCurrentUser(member ? toCurrentUser(member) : null))
+      .catch(() => setCurrentUser(null));
+  }, []);
 
   const navigate = (page: Page) => {
     if (page !== currentPage) {
@@ -49,22 +62,9 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const createUserFromForm = (role: UserRole, formData: RegisterFormData): CurrentUser => ({
-    role,
-    name: formData.name.trim() || '구직자',
-    id: formData.loginId.trim() || 'new_user',
-    avatar: (formData.name.trim() || '회').slice(0, 1),
-    loginId: formData.loginId,
-    email: formData.email,
-    phone: formData.phone,
-    birthDate: formData.birthDate,
-    gender: formData.gender,
-    preferredRole: formData.preferredRole,
-  });
-
-  const handleRegister = (formData: RegisterFormData) => {
+  const handleRegister = async (formData: RegisterFormData, passwordConfirm: string) => {
+    await registerMember(formData, passwordConfirm);
     setRegisteredUser(formData);
-    localStorage.setItem(registeredUserStorageKey, JSON.stringify(formData));
   };
 
   const handleResetPassword = (newPassword: string) => {
@@ -72,31 +72,23 @@ export default function App() {
       if (!prev) return prev;
 
       const updatedUser = { ...prev, password: newPassword };
-      localStorage.setItem(registeredUserStorageKey, JSON.stringify(updatedUser));
       return updatedUser;
     });
   };
 
-  const handleLogin = (role: UserRole, formData?: RegisterFormData) => {
-    if (formData) {
-      setCurrentUser(createUserFromForm(role, formData));
-      return;
-    }
-
-    if (role === 'personal' && registeredUser) {
-      setCurrentUser(createUserFromForm(role, registeredUser));
-      return;
-    }
-
-    if (role === 'admin') setCurrentUser(mockAdminUser);
-    else if (role === 'corporate') setCurrentUser(mockCorporateUser);
-    else setCurrentUser(mockUser);
+  const handleLogin = async (loginId: string, password: string) => {
+    const member = await loginMember(loginId, password);
+    setCurrentUser(toCurrentUser(member));
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setPageHistory([]);
-    setCurrentPage('main');
+  const handleLogout = async () => {
+    try {
+      await logoutMember();
+    } finally {
+      setCurrentUser(null);
+      setPageHistory([]);
+      setCurrentPage('main');
+    }
   };
 
   const handleBookmark = (id: string) => {

@@ -7,10 +7,27 @@ import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.ProfileMapper;
 import org.ykk.jobbridge.service.ProfileService;
 
+import java.util.Locale;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProfileServiceImpl implements ProfileService {
+
+    private static final Map<String, String> GENDER_CODES = Map.of(
+            "남성", "MALE", "여성", "FEMALE", "기타", "OTHER"
+    );
+    private static final Map<String, String> EMPLOYMENT_TYPE_CODES = Map.of(
+            "정규직", "FULL_TIME", "아르바이트", "PART_TIME", "계약직", "CONTRACT",
+            "인턴", "INTERNSHIP", "프리랜서", "FREELANCER", "무관", "ANY"
+    );
+    private static final Map<String, String> CAREER_TYPE_CODES = Map.of(
+            "신입", "ENTRY", "경력", "EXPERIENCED", "무관", "ANY"
+    );
+    private static final Map<String, String> CONTACT_METHOD_CODES = Map.of(
+            "전화", "PHONE", "이메일", "EMAIL", "문자", "SMS", "카카오톡", "KAKAO"
+    );
 
     private final ProfileMapper profileMapper;
 
@@ -32,6 +49,7 @@ public class ProfileServiceImpl implements ProfileService {
             throw new IllegalArgumentException("회원 정보가 없습니다.");
         }
 
+        normalizeEnumValues(profileDTO);
         validateProfile(profileDTO);
 
         profileMapper.updateMember(profileDTO);
@@ -84,5 +102,21 @@ public class ProfileServiceImpl implements ProfileService {
                     "연락 가능 시작 시간은 종료 시간보다 빨라야 합니다."
             );
         }
+    }
+
+    private void normalizeEnumValues(JobSeekerProfileDTO profileDTO) {
+        profileDTO.setGender(toDatabaseCode(profileDTO.getGender(), GENDER_CODES));
+        profileDTO.setEmploymentType(toDatabaseCode(profileDTO.getEmploymentType(), EMPLOYMENT_TYPE_CODES));
+        profileDTO.setCareerType(toDatabaseCode(profileDTO.getCareerType(), CAREER_TYPE_CODES));
+        profileDTO.setContactMethod(toDatabaseCode(profileDTO.getContactMethod(), CONTACT_METHOD_CODES));
+    }
+
+    private String toDatabaseCode(String value, Map<String, String> labelCodes) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return labelCodes.getOrDefault(trimmed, trimmed.toUpperCase(Locale.ROOT));
     }
 }

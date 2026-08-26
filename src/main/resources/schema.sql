@@ -1,11 +1,22 @@
 CREATE TABLE IF NOT EXISTS member (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    login_id VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,
     birth_date DATE,
     gender VARCHAR(20),
     email VARCHAR(255),
-    phone VARCHAR(30)
+    phone VARCHAR(30),
+    role VARCHAR(30) NOT NULL DEFAULT 'JOB_SEEKER',
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'
 );
+
+-- Keep existing local H2 databases compatible with the current member model.
+ALTER TABLE member ADD COLUMN IF NOT EXISTS login_id VARCHAR(100);
+ALTER TABLE member ADD COLUMN IF NOT EXISTS password VARCHAR(255);
+ALTER TABLE member ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'JOB_SEEKER';
+ALTER TABLE member ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'ACTIVE';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_member_login_id ON member(login_id);
 
 CREATE TABLE IF NOT EXISTS job_seeker_profile (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

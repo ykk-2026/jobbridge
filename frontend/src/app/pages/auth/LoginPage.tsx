@@ -1,10 +1,10 @@
 import { ArrowLeft, Briefcase, ClipboardList, Eye, EyeOff, ShieldCheck, Target, X } from 'lucide-react';
 import { useState } from 'react';
-import type { Page, RegisterFormData, UserRole } from '@/app/types';
+import type { Page, RegisterFormData } from '@/app/types';
 
 interface LoginPageProps {
   navigate: (page: Page) => void;
-  onLogin: (role: UserRole, formData?: RegisterFormData) => void;
+  onLogin: (loginId: string, password: string) => Promise<void>;
   registeredUser: RegisterFormData | null;
   onBack: () => void;
   onResetPassword: (newPassword: string) => void;
@@ -66,27 +66,19 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
     else localStorage.removeItem('savedLoginId');
   };
 
-  const submitLogin = () => {
-    if (registeredUser) {
-      if (loginId.trim() !== registeredUser.loginId.trim() || password !== registeredUser.password) {
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.');
-        return;
-      }
+  const submitLogin = async () => {
+    if (!loginId.trim() || !password) {
+      setError('아이디와 비밀번호를 입력해 주세요.');
+      return;
+    }
 
-      saveRememberedId(registeredUser.loginId.trim());
-      onLogin('personal', registeredUser);
+    try {
+      await onLogin(loginId.trim(), password);
+      saveRememberedId(loginId.trim());
       navigate('user-dashboard');
-      return;
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : '로그인에 실패했습니다.');
     }
-
-    if (loginId.trim() !== 'demo' || password !== 'password') {
-      setError('데모 계정은 아이디 demo, 비밀번호 password로 로그인할 수 있습니다.');
-      return;
-    }
-
-    saveRememberedId('demo');
-    onLogin('personal');
-    navigate('user-dashboard');
   };
 
   const findLoginIdByInfo = () => {

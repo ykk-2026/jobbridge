@@ -11,6 +11,8 @@ import org.ykk.jobbridge.dto.SessionMember;
 import org.ykk.jobbridge.mapper.MemberMapper;
 import org.ykk.jobbridge.service.MemberService;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -24,7 +26,7 @@ public class MemberServiceImpl implements MemberService {
     public void join(JoinRequest request) {
         validateJoinRequest(request);
 
-        String loginId = request.getLoginId().trim();
+        String loginId = normalizeLoginId(request.getLoginId());
         String email = request.getEmail().trim();
 
         if (memberMapper.countByLoginId(loginId) > 0) {
@@ -50,7 +52,7 @@ public class MemberServiceImpl implements MemberService {
             throw new IllegalArgumentException("아이디와 비밀번호를 입력해 주세요.");
         }
 
-        MemberLoginResult member = memberMapper.findByLoginId(request.getLoginId().trim());
+        MemberLoginResult member = memberMapper.findByLoginId(normalizeLoginId(request.getLoginId()));
         if (member == null || !passwordEncoder.matches(request.getPassword(), member.getPassword())) {
             throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
@@ -63,7 +65,11 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public boolean isLoginIdAvailable(String loginId) {
-        return !isBlank(loginId) && memberMapper.countByLoginId(loginId.trim()) == 0;
+        return !isBlank(loginId) && memberMapper.countByLoginId(normalizeLoginId(loginId)) == 0;
+    }
+
+    private String normalizeLoginId(String loginId) {
+        return loginId.trim().toLowerCase(Locale.ROOT);
     }
 
     private void validateJoinRequest(JoinRequest request) {

@@ -1,10 +1,11 @@
 import { ArrowLeft, Briefcase, ClipboardList, Eye, EyeOff, ShieldCheck, Target } from 'lucide-react';
 import { useState } from 'react';
 import type { Page, RegisterFormData } from '@/app/types';
+import { checkLoginIdAvailability } from '@/app/api/memberApi';
 
 interface RegisterPageProps {
   navigate: (page: Page) => void;
-  onRegister: (formData: RegisterFormData) => void;
+  onRegister: (formData: RegisterFormData, passwordConfirm: string) => Promise<void>;
   onBack: () => void;
 }
 
@@ -19,7 +20,6 @@ const initialForm: RegisterFormData = {
   preferredRole: '',
 };
 
-const reservedIds = ['admin', 'demo', 'test', 'user', 'jobbridge', 'minjun_kim'];
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,20}$/;
 const phonePattern = /^010-\d{4}-\d{4}$/;
@@ -62,6 +62,7 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
   const [idCheckMessage, setIdCheckMessage] = useState('');
   const [idAvailable, setIdAvailable] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = (field: keyof RegisterFormData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -73,7 +74,7 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
     }
   };
 
-  const checkLoginId = () => {
+  const checkLoginId = async () => {
     const loginId = form.loginId.trim().toLowerCase();
 
     if (!loginId) {
@@ -88,15 +89,17 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
       return;
     }
 
-    if (reservedIds.includes(loginId)) {
+    try {
+      const result = await checkLoginIdAvailability(loginId);
+      setIdAvailable(result.available);
+      setIdCheckMessage(result.message);
+      if (result.available) {
+        setErrors(prev => ({ ...prev, loginId: '' }));
+      }
+    } catch (checkError) {
       setIdAvailable(false);
-      setIdCheckMessage('이미 사용 중인 아이디입니다.');
-      return;
+      setIdCheckMessage(checkError instanceof Error ? checkError.message : '중복확인에 실패했습니다.');
     }
-
-    setIdAvailable(true);
-    setIdCheckMessage('사용 가능한 아이디입니다.');
-    setErrors(prev => ({ ...prev, loginId: '' }));
   };
 
   const validateForm = () => {
@@ -119,19 +122,30 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
     return Object.keys(nextErrors).length === 0;
   };
 
-  const submitRegister = () => {
+  const submitRegister = async () => {
     if (!validateForm()) return;
 
-    onRegister({
-      ...form,
-      loginId: form.loginId.trim().toLowerCase(),
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone,
-      birthDate: form.birthDate.trim(),
-    });
-    window.alert('회원가입이 완료되었습니다. 로그인해 주세요.');
-    navigate('login');
+    setIsSubmitting(true);
+    setErrors(prev => ({ ...prev, submit: '' }));
+    try {
+      await onRegister({
+        ...form,
+        loginId: form.loginId.trim().toLowerCase(),
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone,
+        birthDate: form.birthDate.trim(),
+      }, passwordConfirm);
+      window.alert('회원가입이 완료되었습니다. 로그인해 주세요.');
+      navigate('login');
+    } catch (registerError) {
+      setErrors(prev => ({
+        ...prev,
+        submit: registerError instanceof Error ? registerError.message : '회원가입에 실패했습니다.',
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -345,8 +359,15 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
             </label>
           </div>
 
-          <button type="button" onClick={submitRegister} className="mt-6 w-full py-3.5 rounded-lg bg-primary text-white font-medium shadow-sm hover:bg-primary/90">
-            회원가입
+          {errors.submit && <p className="mt-5 text-sm text-red-500">{errors.submit}</p>}
+
+          <button
+            type="button"
+            onClick={submitRegister}
+            disabled={isSubmitting}
+            className="mt-6 w-full py-3.5 rounded-lg bg-primary text-white font-medium shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? '저장 중...' : '회원가입'}
           </button>
           <button type="button" onClick={() => navigate('login')} className="w-full mt-4 text-sm text-muted-foreground">
             이미 계정이 있으신가요? <span className="font-semibold text-primary">로그인</span>

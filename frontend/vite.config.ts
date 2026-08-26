@@ -32,12 +32,20 @@ export default defineConfig({
   },
 
   server: {
+    host: 'localhost',
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },
+  },
+
+  build: {
+    outDir: '../src/main/resources/static',
+    emptyOutDir: false,
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.

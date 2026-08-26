@@ -8,11 +8,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JoinRequest;
 import org.ykk.jobbridge.dto.InterestJobDTO;
 import org.ykk.jobbridge.dto.JobApplicationDTO;
+import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.AdminMapper;
 import org.ykk.jobbridge.mapper.InterestJobMapper;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
 import org.ykk.jobbridge.service.MemberService;
 import org.ykk.jobbridge.service.JobCatalogService;
+import org.ykk.jobbridge.service.ProfileService;
 
 import java.time.LocalDate;
 
@@ -37,6 +39,9 @@ class ApiDataIntegrationTests {
 
     @Autowired
     private JobApplicationMapper jobApplicationMapper;
+
+    @Autowired
+    private ProfileService profileService;
 
     @Test
     void adminOverviewSourcesCanReadMembersAndJobs() {
@@ -115,5 +120,23 @@ class ApiDataIntegrationTests {
         assertThat(application.getId()).isNotNull();
         assertThat(jobApplicationMapper.countByMemberAndJob(1L, "2")).isEqualTo(1);
         assertThat(jobApplicationMapper.findAllByMemberId(1L)).hasSize(1);
+    }
+
+    @Test
+    @Transactional
+    void koreanProfileLabelsAreConvertedToDatabaseEnumCodes() {
+        JobSeekerProfileDTO profile = profileService.getProfile(1L);
+        profile.setGender("남성");
+        profile.setEmploymentType("아르바이트");
+        profile.setCareerType("경력");
+        profile.setContactMethod("이메일");
+
+        assertThat(profileService.saveProfile(profile)).isEqualTo(1);
+
+        JobSeekerProfileDTO saved = profileService.getProfile(1L);
+        assertThat(saved.getGender()).isEqualTo("MALE");
+        assertThat(saved.getEmploymentType()).isEqualTo("PART_TIME");
+        assertThat(saved.getCareerType()).isEqualTo("EXPERIENCED");
+        assertThat(saved.getContactMethod()).isEqualTo("EMAIL");
     }
 }

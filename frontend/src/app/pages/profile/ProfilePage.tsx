@@ -36,6 +36,55 @@ const menuItems = [
 const workTypeOptions = ['재택근무', '유연근무', '하이브리드 근무', '출퇴근 근무'];
 const maxIntroLength = 500;
 
+const genderToCode: Record<string, string> = {
+  남성: 'MALE',
+  여성: 'FEMALE',
+  기타: 'OTHER',
+};
+const genderToLabel: Record<string, string> = {
+  MALE: '남성',
+  FEMALE: '여성',
+  OTHER: '기타',
+};
+const employmentTypeToCode: Record<string, string> = {
+  정규직: 'FULL_TIME',
+  아르바이트: 'PART_TIME',
+  계약직: 'CONTRACT',
+  인턴: 'INTERNSHIP',
+  프리랜서: 'FREELANCER',
+  무관: 'ANY',
+};
+const employmentTypeToLabel: Record<string, string> = {
+  FULL_TIME: '정규직',
+  PART_TIME: '아르바이트',
+  CONTRACT: '계약직',
+  INTERNSHIP: '인턴',
+  FREELANCER: '프리랜서',
+  ANY: '무관',
+};
+const careerTypeToCode: Record<string, string> = {
+  신입: 'ENTRY',
+  경력: 'EXPERIENCED',
+  무관: 'ANY',
+};
+const careerTypeToLabel: Record<string, string> = {
+  ENTRY: '신입',
+  EXPERIENCED: '경력',
+  ANY: '무관',
+};
+const contactMethodToCode: Record<string, string> = {
+  전화: 'PHONE',
+  이메일: 'EMAIL',
+  문자: 'SMS',
+  카카오톡: 'KAKAO',
+};
+const contactMethodToLabel: Record<string, string> = {
+  PHONE: '전화',
+  EMAIL: '이메일',
+  SMS: '문자',
+  KAKAO: '카카오톡',
+};
+
 const resumeItems = [
   { title: '기본 이력서', updatedAt: '2026-08-01', status: '대표 이력서', completeness: '92%' },
   { title: '사무보조 지원용 이력서', updatedAt: '2026-07-22', status: '임시 저장', completeness: '76%' },
@@ -60,6 +109,7 @@ const aiResultItems = [
 ];
 
 export function ProfilePage({ currentUser }: ProfilePageProps) {
+  const memberId = Number(currentUser?.id) || demoMemberId;
   const initialName = currentUser?.name || '김민준';
   const initialEmail = currentUser?.email || 'minjun.kim@example.com';
   const initialBirthDate = currentUser?.birthDate || '1998-05-23';
@@ -118,7 +168,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
   useEffect(() => {
     let active = true;
 
-    getProfile(demoMemberId)
+    getProfile(memberId)
       .then(profile => {
         if (!active) return;
 
@@ -133,19 +183,19 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
           ...previous,
           name: profile.name || previous.name,
           birthDate: profile.birthDate || previous.birthDate,
-          gender: profile.gender || previous.gender,
+          gender: genderToLabel[profile.gender || ''] || profile.gender || previous.gender,
           email: profile.email || previous.email,
           phone: profile.phone || previous.phone,
           currentRegion: profile.residenceRegion || previous.currentRegion,
           preferredRole: profile.desiredJob || previous.preferredRole,
           preferredRegion: profile.desiredRegion || previous.preferredRegion,
-          employmentType: profile.employmentType || previous.employmentType,
-          careerType: profile.careerType || previous.careerType,
+          employmentType: employmentTypeToLabel[profile.employmentType || ''] || profile.employmentType || previous.employmentType,
+          careerType: careerTypeToLabel[profile.careerType || ''] || profile.careerType || previous.careerType,
           careerYears: profile.careerYears?.toString() || previous.careerYears,
           salary: profile.minSalary?.toLocaleString('ko-KR') || previous.salary,
           contactStart: profile.contactTimeStart?.slice(0, 5) || previous.contactStart,
           contactEnd: profile.contactTimeEnd?.slice(0, 5) || previous.contactEnd,
-          contactMethod: profile.contactMethod || previous.contactMethod,
+          contactMethod: contactMethodToLabel[profile.contactMethod || ''] || profile.contactMethod || previous.contactMethod,
           introduction: profile.introduction || previous.introduction,
           openStatus: profile.profilePublic ? '공개' : '비공개',
           workTypes,
@@ -161,7 +211,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [memberId]);
 
   const updateForm = (field: keyof typeof profileForm, value: string | string[]) => {
     setProfileForm(prev => ({ ...prev, [field]: value }));
@@ -178,18 +228,18 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
     setSavedMessage('프로필을 저장하고 있습니다...');
 
     try {
-      await saveProfile(demoMemberId, {
+      await saveProfile(memberId, {
         name: profileForm.name,
         birthDate: profileForm.birthDate || null,
-        gender: profileForm.gender,
+        gender: genderToCode[profileForm.gender] || profileForm.gender,
         email: profileForm.email,
         phone: profileForm.phone,
         profileImageUrl: null,
         residenceRegion: profileForm.currentRegion,
         desiredJob: profileForm.preferredRole,
         desiredRegion: profileForm.preferredRegion,
-        employmentType: profileForm.employmentType,
-        careerType: profileForm.careerType,
+        employmentType: employmentTypeToCode[profileForm.employmentType] || profileForm.employmentType,
+        careerType: careerTypeToCode[profileForm.careerType] || profileForm.careerType,
         careerYears: Number.parseInt(profileForm.careerYears, 10) || 0,
         minSalary: Number.parseInt(profileForm.salary.replace(/[^0-9]/g, ''), 10) || 0,
         remotePreferred: profileForm.workTypes.includes('재택근무'),
@@ -198,7 +248,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
         onsitePreferred: profileForm.workTypes.includes('출퇴근 근무'),
         contactTimeStart: profileForm.contactStart || null,
         contactTimeEnd: profileForm.contactEnd || null,
-        contactMethod: profileForm.contactMethod,
+        contactMethod: contactMethodToCode[profileForm.contactMethod] || profileForm.contactMethod,
         introduction: profileForm.introduction,
         profilePublic: profileForm.openStatus === '공개',
       });

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.ykk.jobbridge.dto.JoinRequest;
 import org.ykk.jobbridge.dto.LoginRequest;
@@ -25,28 +26,6 @@ public class MemberController {
             MemberService memberService
     ) {
         this.memberService = memberService;
-    }
-
-    /**
-     * 메인 화면
-     */
-    @GetMapping("/")
-    public String home(
-            HttpSession session,
-            Model model
-    ) {
-
-        SessionMember loginMember =
-                (SessionMember) session.getAttribute(
-                        LOGIN_MEMBER
-                );
-
-        model.addAttribute(
-                "loginMember",
-                loginMember
-        );
-
-        return "home";
     }
 
     /**
@@ -220,5 +199,71 @@ public class MemberController {
         );
 
         return response;
+    }
+
+    @PostMapping("/api/members")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> joinApi(
+            @RequestBody JoinRequest request
+    ) {
+        try {
+            memberService.join(request);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("memberId", request.getId());
+            response.put("loginId", request.getLoginId());
+            response.put("name", request.getName());
+            response.put("message", "회원가입이 완료되었습니다.");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/api/members/login")
+    @ResponseBody
+    public ResponseEntity<?> loginApi(
+            @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        try {
+            SessionMember loginMember = memberService.login(request);
+            HttpSession oldSession = httpRequest.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
+
+            HttpSession newSession = httpRequest.getSession(true);
+            newSession.setAttribute(LOGIN_MEMBER, loginMember);
+            return ResponseEntity.ok(loginMember);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/api/members/me")
+    @ResponseBody
+    public ResponseEntity<SessionMember> currentMember(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        SessionMember loginMember = (SessionMember) session.getAttribute(LOGIN_MEMBER);
+        return loginMember == null
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(loginMember);
+    }
+
+    @PostMapping("/api/members/logout")
+    @ResponseBody
+    public ResponseEntity<Void> logoutApi(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        return ResponseEntity.noContent().build();
     }
 }
