@@ -1,10 +1,12 @@
-import { ArrowLeft, Briefcase, ClipboardList, Eye, EyeOff, ShieldCheck, Target, X } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Eye, EyeOff, ShieldCheck, Target, X } from 'lucide-react';
 import { useState } from 'react';
+import { BrandLogo } from '@/app/components/BrandLogo';
 import type { Page, RegisterFormData } from '@/app/types';
 
 interface LoginPageProps {
   navigate: (page: Page) => void;
   onLogin: (loginId: string, password: string) => Promise<void>;
+  onLoginSuccess?: () => void;
   registeredUser: RegisterFormData | null;
   onBack: () => void;
   onResetPassword: (newPassword: string) => void;
@@ -23,12 +25,11 @@ const formatPhoneNumber = (value: string) => {
 
 const isPhoneLike = (value: string) => /^\d|^-?\d/.test(value.replace(/\s/g, ''));
 
-export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPassword }: LoginPageProps) {
-  const savedLoginId = typeof window !== 'undefined' ? localStorage.getItem('savedLoginId') : null;
+export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, onBack, onResetPassword }: LoginPageProps) {
   const [showPw, setShowPw] = useState(false);
-  const [loginId, setLoginId] = useState(savedLoginId || '');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberId, setRememberId] = useState(Boolean(savedLoginId));
+  const [autoLogin, setAutoLogin] = useState(false);
   const [error, setError] = useState('');
   const [findMode, setFindMode] = useState<FindMode>(null);
   const [findName, setFindName] = useState('');
@@ -38,6 +39,16 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const finishLogin = () => {
+    if (onLoginSuccess) {
+      onLoginSuccess();
+      return;
+    }
+
+    navigate('main');
+  };
 
   const closeFindModal = () => {
     setFindMode(null);
@@ -61,23 +72,23 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
     setNewPasswordConfirm('');
   };
 
-  const saveRememberedId = (id: string) => {
-    if (rememberId) localStorage.setItem('savedLoginId', id);
-    else localStorage.removeItem('savedLoginId');
-  };
-
   const submitLogin = async () => {
     if (!loginId.trim() || !password) {
       setError('아이디와 비밀번호를 입력해 주세요.');
       return;
     }
 
+    setIsLoggingIn(true);
+    setError('');
     try {
-      await onLogin(loginId.trim(), password);
-      saveRememberedId(loginId.trim());
-      navigate('user-dashboard');
+      await onLogin(loginId, password);
+      if (autoLogin) localStorage.setItem('savedLoginId', loginId.trim());
+      else localStorage.removeItem('savedLoginId');
+      finishLogin();
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : '로그인에 실패했습니다.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -148,15 +159,22 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
     setTimeout(closeFindModal, 700);
   };
 
+  const submitFindModal = () => {
+    if (findMode === 'id') {
+      findLoginIdByInfo();
+      return;
+    }
+
+    if (isPasswordVerified) submitNewPassword();
+    else findPasswordByInfo();
+  };
+
   return (
     <div className="min-h-screen bg-[#F3F7FF] flex items-stretch justify-center">
       <aside className="hidden lg:flex w-[360px] bg-gradient-to-b from-white to-[#EAF4FF] px-8 py-10 flex-col justify-between border-r border-[#DCEAF3]">
         <div>
           <button type="button" onClick={() => navigate('main')} className="flex items-center gap-2 font-bold text-foreground mb-12">
-            <span className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center">
-              <Briefcase size={18} />
-            </span>
-            JobBridgeAI
+            <BrandLogo compact />
           </button>
 
           <h1 className="text-3xl font-bold leading-tight text-foreground">
@@ -205,10 +223,7 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
           </button>
 
           <button type="button" onClick={() => navigate('main')} className="lg:hidden flex items-center gap-2 font-bold text-foreground mb-8">
-            <span className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center">
-              <Briefcase size={18} />
-            </span>
-            JobBridgeAI
+            <BrandLogo compact />
           </button>
 
           <div className="mb-8">
@@ -221,12 +236,6 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
             <div className="mt-4 h-px bg-border" />
           </div>
 
-          {registeredUser && (
-            <div className="mb-5 rounded-lg bg-[#F0FBF8] px-4 py-3 text-sm text-[#176B87]">
-              회원가입이 완료되었습니다. 가입한 아이디로 로그인해 주세요.
-            </div>
-          )}
-
           <div className="space-y-4">
             <label className="block">
               <span className="block text-sm font-medium mb-2">아이디</span>
@@ -235,6 +244,9 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
                 onChange={event => {
                   setLoginId(event.target.value);
                   setError('');
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') submitLogin();
                 }}
                 className="w-full px-3 py-3 rounded-lg border border-border"
                 placeholder="아이디를 입력해 주세요"
@@ -249,6 +261,9 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
                   onChange={event => {
                     setPassword(event.target.value);
                     setError('');
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') submitLogin();
                   }}
                   type={showPw ? 'text' : 'password'}
                   className="w-full px-3 py-3 pr-10 rounded-lg border border-border"
@@ -272,13 +287,10 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
             <label className="flex items-center gap-2 text-muted-foreground cursor-pointer">
               <input
                 type="checkbox"
-                checked={rememberId}
-                onChange={event => {
-                  setRememberId(event.target.checked);
-                  if (!event.target.checked) localStorage.removeItem('savedLoginId');
-                }}
+                checked={autoLogin}
+                onChange={event => setAutoLogin(event.target.checked)}
               />
-              아이디 저장
+              자동 로그인
             </label>
             <div className="flex items-center gap-2 text-muted-foreground">
               <button type="button" className="hover:text-foreground" onClick={() => openFindModal('id')}>
@@ -291,8 +303,8 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
             </div>
           </div>
 
-          <button type="button" onClick={submitLogin} className="mt-6 w-full py-3.5 rounded-lg bg-primary text-white font-medium shadow-sm hover:bg-primary/90">
-            로그인
+          <button type="button" onClick={submitLogin} disabled={isLoggingIn} className="mt-6 w-full py-3.5 rounded-lg bg-primary text-white font-medium shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+            {isLoggingIn ? '로그인 중...' : '로그인'}
           </button>
           <button type="button" onClick={() => navigate('register')} className="w-full mt-4 text-sm text-muted-foreground">
             아직 계정이 없으신가요? <span className="font-semibold text-primary">회원가입</span>
@@ -319,12 +331,28 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
               {findMode === 'id' ? (
                 <label className="block">
                   <span className="block text-sm font-medium mb-2">이름</span>
-                  <input value={findName} onChange={event => setFindName(event.target.value)} className="w-full px-3 py-3 rounded-lg border border-border" placeholder="이름을 입력해 주세요" />
+                  <input
+                    value={findName}
+                    onChange={event => setFindName(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') submitFindModal();
+                    }}
+                    className="w-full px-3 py-3 rounded-lg border border-border"
+                    placeholder="이름을 입력해 주세요"
+                  />
                 </label>
               ) : (
                 <label className="block">
                   <span className="block text-sm font-medium mb-2">아이디</span>
-                  <input value={findLoginId} onChange={event => setFindLoginId(event.target.value)} className="w-full px-3 py-3 rounded-lg border border-border" placeholder="아이디를 입력해 주세요" />
+                  <input
+                    value={findLoginId}
+                    onChange={event => setFindLoginId(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') submitFindModal();
+                    }}
+                    className="w-full px-3 py-3 rounded-lg border border-border"
+                    placeholder="아이디를 입력해 주세요"
+                  />
                 </label>
               )}
 
@@ -335,6 +363,9 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
                   onChange={event => {
                     const value = event.target.value;
                     setFindContact(findMode === 'id' && isPhoneLike(value) ? formatPhoneNumber(value) : value);
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') submitFindModal();
                   }}
                   className="w-full px-3 py-3 rounded-lg border border-border"
                   placeholder={findMode === 'id' ? '예: name@example.com 또는 010-1234-5678' : '예: name@example.com'}
@@ -356,6 +387,9 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
                     type="password"
                     value={newPassword}
                     onChange={event => setNewPassword(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') submitFindModal();
+                    }}
                     className="w-full px-3 py-3 rounded-lg border border-border"
                     placeholder="영문, 숫자, 특수문자 포함 8~20자"
                   />
@@ -366,6 +400,9 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
                     type="password"
                     value={newPasswordConfirm}
                     onChange={event => setNewPasswordConfirm(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') submitFindModal();
+                    }}
                     className="w-full px-3 py-3 rounded-lg border border-border"
                     placeholder="새 비밀번호를 다시 입력해 주세요"
                   />
@@ -376,7 +413,7 @@ export function LoginPage({ navigate, onLogin, registeredUser, onBack, onResetPa
             <button
               type="button"
               className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90"
-              onClick={findMode === 'id' ? findLoginIdByInfo : isPasswordVerified ? submitNewPassword : findPasswordByInfo}
+              onClick={submitFindModal}
             >
               {findMode === 'password' && isPasswordVerified ? '새 비밀번호 저장' : '확인'}
             </button>

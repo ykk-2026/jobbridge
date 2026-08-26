@@ -21,8 +21,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { mockJobs } from '@/app/data/mockData';
-import type { CurrentUser, Page } from '@/app/types';
-import type { JobApplicationForm } from '@/app/api/jobApplicationApi';
+import type { ApplicationFormData, CurrentUser, Page } from '@/app/types';
 
 interface JobDetailPageProps {
   jobId: string | null;
@@ -31,7 +30,7 @@ interface JobDetailPageProps {
   bookmarked: boolean;
   applied: boolean;
   onBookmark: (id: string) => void;
-  onApply: (id: string, form: JobApplicationForm) => Promise<void>;
+  onApply: (id: string, formData: ApplicationFormData) => Promise<void>;
   onRequireLoginForApply: (id: string) => void;
 }
 
@@ -157,18 +156,22 @@ export function JobDetailPage({
       return;
     }
 
+    const now = new Date().toISOString();
     try {
       await onApply(job.id, {
-        applicantName: applicationForm.name.trim(),
+        name: applicationForm.name.trim(),
         phone: phoneParts.join('-'),
         email: applicationForm.email.trim(),
         employmentType: applicationForm.employmentType,
+        privacyAgreed: applicationForm.privacyAgreed,
+        submittedAt: now,
+        updatedAt: now,
       });
       setSubmittedApplied(true);
       setIsApplyOpen(false);
-      window.alert('지원서가 제출되었습니다.');
+      window.alert('지원서가 MariaDB에 제출되었습니다.');
     } catch (error) {
-      setApplyError(error instanceof Error ? error.message : '지원서 저장에 실패했습니다.');
+      setApplyError(error instanceof Error ? error.message : '지원서 제출에 실패했습니다.');
     }
   };
 

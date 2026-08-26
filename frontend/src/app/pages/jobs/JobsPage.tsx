@@ -10,13 +10,17 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Star,
+  Target,
+  WalletCards,
+  X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Page } from '@/app/types';
 
 interface JobsPageProps {
-  mode?: 'all' | 'saved';
+  mode?: 'all' | 'saved' | 'recommended';
   navigate: (page: Page, jobId?: string) => void;
   bookmarks: Set<string>;
   onBookmark: (id: string) => void;
@@ -274,7 +278,7 @@ const allJobs = [...jobs, ...partTimeJobs];
 const regions = ['전체', '서울', '경기', '인천', '부산', '대구', '전국'];
 const companies = ['전체', ...Array.from(new Set(allJobs.map(job => job.company)))];
 const quickFilters = [
-  { label: '알바 공고', query: '알바', icon: Star },
+  { label: '알바 공고', query: '알바', icon: BriefcaseBusiness },
   { label: '재택근무', query: '재택근무', icon: BriefcaseBusiness },
   { label: '하이브리드', query: '하이브리드', icon: BriefcaseBusiness },
   { label: '유연근무', query: '유연근무', icon: BriefcaseBusiness },
@@ -283,18 +287,31 @@ const quickFilters = [
   { label: '화상 면접', query: '화상 면접', icon: Search },
 ];
 
+const getDeadlineDays = (deadline: string) => Number(deadline.replace('D-', ''));
+
 export function JobsPage({ mode = 'all', navigate, bookmarks, onBookmark, initialQuery = '' }: JobsPageProps) {
   const [query, setQuery] = useState(initialQuery);
   const [selectedRegion, setSelectedRegion] = useState('전체');
   const [selectedCompany, setSelectedCompany] = useState('전체');
   const [companyPanelOpen, setCompanyPanelOpen] = useState(false);
+  const [urgentOnly, setUrgentOnly] = useState(false);
+  const [recommendedOnly, setRecommendedOnly] = useState(false);
   const [sort, setSort] = useState<'latest' | 'deadline'>('latest');
   const submitSearch = () => {
     setCompanyPanelOpen(false);
   };
 
   useEffect(() => {
+    if (initialQuery === 'D-3') {
+      setQuery('');
+      setUrgentOnly(true);
+      setSort('deadline');
+      setCompanyPanelOpen(false);
+      return;
+    }
+
     setQuery(initialQuery);
+    setUrgentOnly(false);
     setCompanyPanelOpen(false);
   }, [initialQuery]);
 
@@ -304,8 +321,11 @@ export function JobsPage({ mode = 'all', navigate, bookmarks, onBookmark, initia
     return allJobs
       .filter(job => {
         if (mode === 'saved' && !bookmarks.has(job.id)) return false;
+        if (mode === 'recommended' && job.score < 90) return false;
         if (selectedRegion !== '전체' && selectedRegion !== '전국' && job.region !== selectedRegion) return false;
         if (selectedCompany !== '전체' && job.company !== selectedCompany) return false;
+        if (urgentOnly && getDeadlineDays(job.deadline) > 7) return false;
+        if (recommendedOnly && job.score < 90) return false;
         if (!normalizedQuery) return true;
 
         const target = [job.title, job.company, job.location, job.workType, job.salary, job.deadline, ...job.tags, ...job.accessibility].join(' ').toLowerCase();
@@ -315,47 +335,109 @@ export function JobsPage({ mode = 'all', navigate, bookmarks, onBookmark, initia
         if (sort === 'latest') return Number(b.id.replace('job-', '')) - Number(a.id.replace('job-', ''));
         return Number(a.deadline.replace('D-', '')) - Number(b.deadline.replace('D-', ''));
       });
-  }, [bookmarks, mode, query, selectedCompany, selectedRegion, sort]);
+  }, [bookmarks, mode, query, selectedCompany, selectedRegion, sort, urgentOnly, recommendedOnly]);
 
   const resetFilters = () => {
     setQuery('');
     setSelectedRegion('전체');
     setSelectedCompany('전체');
+    setUrgentOnly(false);
+    setRecommendedOnly(false);
     setSort('latest');
   };
 
-  const title = mode === 'saved' ? '관심공고' : '채용정보';
+  const title = mode === 'saved' ? '관심공고' : mode === 'recommended' ? 'AI 추천 일자리' : '채용정보';
+  const hasActiveFilters = Boolean(query.trim()) || selectedRegion !== '전체' || selectedCompany !== '전체' || urgentOnly || recommendedOnly || sort !== 'latest';
+  const recommendedJobs = useMemo(() => [...allJobs].sort((a, b) => b.score - a.score).slice(0, 4), []);
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] text-[#111827]">
       <main className="mx-auto max-w-[1256px] px-5 py-5 sm:px-8">
-        <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <span className="rounded-full bg-[#E4EFFF] px-4 py-1.5 text-xs font-bold text-[#0D6BEA]">장애친화 채용</span>
-              <h1 className="mt-3 text-3xl font-extrabold text-black">{title}</h1>
-              <p className="mt-2 text-sm font-semibold text-[#7A8495]">지역, 기업, 직무, 접근성 조건을 선택해서 공고를 찾아보세요.</p>
-            </div>
+        <section className="overflow-hidden rounded-xl border border-[#DDE3EA] bg-white shadow-sm">
+          <div className="bg-[#EEF5FF] px-5 py-6 sm:px-7">
+            <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-center">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-extrabold text-[#0D6BEA] shadow-sm">
+                  <Sparkles size={14} />
+                  장애친화 채용
+                </span>
+                <h1 className="mt-3 text-3xl font-extrabold leading-tight text-black">{title}</h1>
+                <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#596273]">
+                  지역, 기업, 직무, 접근성 조건을 조합해서 바로 지원할 공고를 찾아보세요.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecommendedOnly(prev => !prev);
+                      setSort('latest');
+                    }}
+                    aria-pressed={recommendedOnly}
+                    className={`inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-extrabold ${
+                      recommendedOnly ? 'bg-[#0D6BEA] text-white' : 'bg-white text-[#0D6BEA] shadow-sm hover:bg-[#F8FAFC]'
+                    }`}
+                  >
+                    <Target size={17} />
+                    AI 추천만 보기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUrgentOnly(prev => !prev);
+                      setSort('deadline');
+                    }}
+                    aria-pressed={urgentOnly}
+                    className={`inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-extrabold ${
+                      urgentOnly ? 'bg-[#D92D20] text-white' : 'bg-white text-[#D92D20] shadow-sm hover:bg-[#F8FAFC]'
+                    }`}
+                  >
+                    <Clock3 size={17} />
+                    마감 임박
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCompanyPanelOpen(prev => !prev)}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-extrabold text-[#344054] shadow-sm hover:bg-[#F8FAFC]"
+                  >
+                    기업 선택 <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#D7DDE5] bg-white px-4 text-sm font-bold text-[#344054] hover:bg-[#F8FAFC]"
-              >
-                전체 보기
-              </button>
-              <button
-                type="button"
-                onClick={() => setCompanyPanelOpen(prev => !prev)}
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0D6BEA] px-4 text-sm font-bold text-white hover:bg-[#0959C7]"
-              >
-                기업 더 보기 <ArrowRight size={16} />
-              </button>
+              <div className="rounded-xl border border-[#D7E6FF] bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-extrabold text-black">오늘의 추천 요약</p>
+                  <span className="rounded-full bg-[#E7F8EF] px-2.5 py-1 text-xs font-extrabold text-[#14843C]">LIVE</span>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {[
+                    ['추천', `${allJobs.filter(job => job.score >= 90).length}건`],
+                    ['마감임박', `${allJobs.filter(job => getDeadlineDays(job.deadline) <= 7).length}건`],
+                    ['알바', `${partTimeJobs.length}건`],
+                  ].map(([label, value]) => (
+                    <button
+                      type="button"
+                      key={label}
+                      onClick={() => {
+                        if (label === '추천') setRecommendedOnly(true);
+                        if (label === '마감임박') {
+                          setUrgentOnly(true);
+                          setSort('deadline');
+                        }
+                        if (label === '알바') setQuery('알바');
+                      }}
+                      className="rounded-lg bg-[#F8FAFC] px-3 py-3 text-left hover:bg-[#EEF5FF]"
+                    >
+                      <span className="block text-xs font-bold text-[#7A8495]">{label}</span>
+                      <span className="mt-1 block text-lg font-black text-[#0D6BEA]">{value}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_180px]">
+          <div className="grid gap-3 px-5 pb-5 pt-5 lg:grid-cols-[1fr_180px]">
             <div className="relative">
               <Search size={19} className="absolute left-4 top-1/2 -translate-y-1/2 text-black" />
               <input
@@ -377,7 +459,103 @@ export function JobsPage({ mode = 'all', navigate, bookmarks, onBookmark, initia
               {sort === 'latest' ? '등록순' : '마감순'}
             </button>
           </div>
+
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-[#E7ECF2] px-5 pb-5 pt-4">
+              <span className="text-xs font-extrabold text-[#7A8495]">적용 조건</span>
+              {query.trim() && (
+                <button type="button" onClick={() => setQuery('')} className="inline-flex items-center gap-1 rounded-full bg-[#EEF5FF] px-3 py-1 text-xs font-extrabold text-[#0D6BEA]">
+                  검색: {query.trim()} <X size={13} />
+                </button>
+              )}
+              {selectedRegion !== '전체' && (
+                <button type="button" onClick={() => setSelectedRegion('전체')} className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F6] px-3 py-1 text-xs font-extrabold text-[#344054]">
+                  지역: {selectedRegion} <X size={13} />
+                </button>
+              )}
+              {selectedCompany !== '전체' && (
+                <button type="button" onClick={() => setSelectedCompany('전체')} className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F6] px-3 py-1 text-xs font-extrabold text-[#344054]">
+                  기업: {selectedCompany} <X size={13} />
+                </button>
+              )}
+              {urgentOnly && (
+                <button type="button" onClick={() => setUrgentOnly(false)} className="inline-flex items-center gap-1 rounded-full bg-[#FFF1F1] px-3 py-1 text-xs font-extrabold text-[#D92D20]">
+                  마감 7일 이내 <X size={13} />
+                </button>
+              )}
+              {recommendedOnly && (
+                <button type="button" onClick={() => setRecommendedOnly(false)} className="inline-flex items-center gap-1 rounded-full bg-[#EEF5FF] px-3 py-1 text-xs font-extrabold text-[#0D6BEA]">
+                  AI 추천 90% 이상 <X size={13} />
+                </button>
+              )}
+              {sort !== 'latest' && (
+                <button type="button" onClick={() => setSort('latest')} className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F6] px-3 py-1 text-xs font-extrabold text-[#344054]">
+                  마감순 <X size={13} />
+                </button>
+              )}
+              <button type="button" onClick={resetFilters} className="ml-auto text-xs font-extrabold text-[#596273] hover:text-[#0D6BEA]">
+                조건 초기화
+              </button>
+            </div>
+          )}
         </section>
+
+        {mode === 'all' && (
+          <section className="mt-5 rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-extrabold text-black">AI가 추천하는 일자리</h2>
+                <p className="mt-1 text-xs font-bold text-[#7A8495]">매칭 점수가 높은 공고를 먼저 모았습니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecommendedOnly(true);
+                  setSort('latest');
+                }}
+                className="inline-flex items-center gap-1 text-sm font-extrabold text-[#0D6BEA]"
+              >
+                추천만 보기 <ArrowRight size={15} />
+              </button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {recommendedJobs.map(job => (
+                <article key={job.id} className="rounded-lg border border-[#E1E6EE] bg-white p-4 transition hover:border-[#B9D6FF] hover:shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <button type="button" onClick={() => navigate('job-detail', job.id)} className="flex min-w-0 gap-3 text-left">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-black text-white" style={{ backgroundColor: job.color }}>
+                        {job.initial}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-extrabold text-[#596273]">{job.company}</span>
+                        <span className="mt-1 block truncate text-sm font-extrabold text-black">{job.title}</span>
+                        <span className="mt-2 inline-flex rounded-full bg-[#E7F8EF] px-2.5 py-1 text-xs font-extrabold text-[#14843C]">
+                          매칭 {job.score}%
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={bookmarks.has(job.id) ? '관심 공고 해제' : '관심 공고 저장'}
+                      onClick={() => onBookmark(job.id)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D7DDE5] text-[#596273] hover:bg-[#F8FAFC]"
+                    >
+                      {bookmarks.has(job.id) ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {[job.location, job.workType].map(item => (
+                      <span key={item} className="rounded-full bg-[#F1F3F6] px-2.5 py-1 text-[11px] font-bold text-[#596273]">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]">
           <section className="space-y-4">
@@ -390,58 +568,67 @@ export function JobsPage({ mode = 'all', navigate, bookmarks, onBookmark, initia
 
             {filteredJobs.length > 0 ? (
               filteredJobs.map(job => (
-                <article key={job.id} className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm transition hover:border-[#0D6BEA]">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <button type="button" onClick={() => navigate('job-detail', job.id)} className="flex min-w-0 items-start gap-4 text-left">
+                <article key={job.id} className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm transition hover:border-[#B9D6FF] hover:shadow-md">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <button type="button" onClick={() => navigate('job-detail', job.id)} className="flex min-w-0 flex-1 gap-4 text-left">
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-lg font-extrabold text-white" style={{ backgroundColor: job.color }}>
                         {job.initial}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-bold text-[#7A8495]">{job.company}</span>
-                        <span className="mt-1 block text-xl font-extrabold text-black">{job.title}</span>
-                        <span className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[#596273]">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F6] px-3 py-1">
-                            <MapPin size={13} /> {job.location}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-extrabold text-[#596273]">{job.company}</span>
+                        <span className="mt-1 block text-xl font-extrabold leading-7 text-black">{job.title}</span>
+
+                        <span className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#596273]">
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin size={15} className="text-[#7A8495]" />
+                            {job.location}
                           </span>
-                          <span className="rounded-full bg-[#F1F3F6] px-3 py-1">{job.workType}</span>
-                          <span className="rounded-full bg-[#F1F3F6] px-3 py-1">{job.salary}</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <BriefcaseBusiness size={15} className="text-[#7A8495]" />
+                            {job.workType}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <WalletCards size={15} className="text-[#7A8495]" />
+                            {job.salary}
+                          </span>
+                          <span className={`font-extrabold ${getDeadlineDays(job.deadline) <= 3 ? 'text-[#D92D20]' : 'text-[#0D6BEA]'}`}>
+                            {job.deadline}
+                          </span>
                         </span>
                       </span>
                     </button>
 
-                    <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                      <span className="rounded-full bg-[#E7F8EF] px-3 py-1 text-sm font-extrabold text-[#14843C]">OPEN</span>
+                    <div className="flex shrink-0 gap-2 lg:justify-end">
                       <button
                         type="button"
+                        aria-label={bookmarks.has(job.id) ? '관심 공고 해제' : '관심 공고 저장'}
                         onClick={() => onBookmark(job.id)}
-                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D7DDE5] px-3 text-sm font-bold hover:bg-[#F8FAFC]"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#D7DDE5] bg-white text-[#344054] hover:bg-[#F8FAFC]"
                       >
-                        {bookmarks.has(job.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-                        저장
+                        {bookmarks.has(job.id) ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate('job-detail', job.id)}
+                        className="inline-flex h-10 items-center justify-center gap-1 rounded-lg bg-[#0D6BEA] px-4 text-sm font-extrabold text-white hover:bg-[#0959C7]"
+                      >
+                        상세 보기 <ArrowRight size={15} />
                       </button>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {job.tags.map(tag => (
-                      <span key={tag} className="rounded-full bg-[#E4EFFF] px-3 py-1 text-xs font-bold text-[#0D6BEA]">
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-[#E7ECF2] pt-4">
+                    {job.tags.slice(0, 3).map(tag => (
+                      <span key={tag} className="rounded-full bg-[#EEF5FF] px-3 py-1 text-xs font-extrabold text-[#0D6BEA]">
                         {tag}
                       </span>
                     ))}
-                    {job.accessibility.map(item => (
-                      <span key={item} className="rounded-full bg-[#EAF8F8] px-3 py-1 text-xs font-bold text-[#3A8F98]">
+                    {job.accessibility.slice(0, 3).map(item => (
+                      <span key={item} className="inline-flex items-center gap-1 rounded-full bg-[#EAF8F8] px-3 py-1 text-xs font-extrabold text-[#217A83]">
+                        <Accessibility size={13} />
                         {item}
                       </span>
                     ))}
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between border-t border-[#E7ECF2] pt-4">
-                    <span className="inline-flex items-center gap-1 text-sm font-bold text-[#596273]">
-                      <Clock3 size={15} /> {job.deadline}
-                    </span>
-                    <button type="button" onClick={() => navigate('job-detail', job.id)} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#0D6BEA]">
-                      상세 보기 <ArrowRight size={15} />
-                    </button>
                   </div>
                 </article>
               ))
@@ -449,7 +636,7 @@ export function JobsPage({ mode = 'all', navigate, bookmarks, onBookmark, initia
               <div className="rounded-xl border border-[#DDE3EA] bg-white p-10 text-center shadow-sm">
                 <p className="text-lg font-extrabold text-black">조건에 맞는 공고가 없습니다.</p>
                 <button type="button" onClick={resetFilters} className="mt-4 rounded-lg bg-[#0D6BEA] px-5 py-2.5 text-sm font-bold text-white">
-                  전체 보기
+                  조건 초기화
                 </button>
               </div>
             )}

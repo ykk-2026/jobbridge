@@ -3,13 +3,13 @@ export type Page =
   | 'login'
   | 'register'
   | 'user-dashboard'
-  | 'ai-recommend'
   | 'jobs'
   | 'job-detail'
   | 'saved'
   | 'applications'
-  | 'corporate'
-  | 'admin';
+  | 'ai-recommend'
+  | 'support'
+  | 'corporate';
 
 export type UserRole = 'personal' | 'corporate' | 'admin';
 
@@ -22,6 +22,7 @@ export interface CurrentUser {
   loginId?: string;
   email?: string;
   phone?: string;
+  currentRegion?: string;
   birthDate?: string;
   gender?: string;
   preferredRole?: string;
@@ -34,6 +35,7 @@ export interface RegisterFormData {
   name: string;
   email: string;
   phone: string;
+  currentRegion?: string;
   gender: string;
   preferredRole: string;
 }
@@ -86,6 +88,16 @@ export interface ApplicationTimelineStep {
   step: string;
   date: string;
   done: boolean;
+}
+
+export interface ApplicationFormData {
+  name: string;
+  phone: string;
+  email: string;
+  employmentType: string;
+  privacyAgreed: boolean;
+  submittedAt: string;
+  updatedAt: string;
 }
 
 export interface Application {

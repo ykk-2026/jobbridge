@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { AlertCircle, BarChart3, Briefcase, Building2, Check, ChevronDown, Search, TrendingUp, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BarChart3, Briefcase, Building2, Check, ChevronDown, Search, TrendingUp, Users, X } from 'lucide-react';
 import {
   Area,
   AreaChart,
@@ -16,8 +16,10 @@ import {
   YAxis,
 } from 'recharts';
 import { adminStats } from '@/app/data/mockData';
+import { BrandLogo } from '@/app/components/BrandLogo';
+import { getAdminOverview, type AdminOverview } from '@/app/api/adminApi';
 
-const mockMembers = [
+const fallbackMembers = [
   { id: '1', name: '김민준', email: 'minjun@example.com', joined: '2026-07-01', status: '활성', role: '구직자' },
   { id: '2', name: '이지은', email: 'jieun@example.com', joined: '2026-07-05', status: '활성', role: '구직자' },
   { id: '3', name: '박성민', email: 'sungmin@example.com', joined: '2026-07-10', status: '활성', role: '구직자' },
@@ -26,7 +28,7 @@ const mockMembers = [
   { id: '6', name: '최수진', email: 'sujin@example.com', joined: '2026-07-20', status: '활성', role: '구직자' },
 ];
 
-const mockJobs = [
+const fallbackJobs = [
   { id: '1', company: 'Samsung SDS', title: 'Java 백엔드 개발자', applicants: 128, status: '진행중', posted: '2026-07-15' },
   { id: '2', company: 'Kakao', title: '프론트엔드 개발자', applicants: 93, status: '진행중', posted: '2026-07-18' },
   { id: '3', company: 'LG CNS', title: '데이터 분석가', applicants: 64, status: '진행중', posted: '2026-07-20' },
@@ -36,6 +38,24 @@ const mockJobs = [
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'members' | 'companies' | 'jobs'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    getAdminOverview()
+      .then(setOverview)
+      .catch(error => setLoadError(error instanceof Error ? error.message : '관리자 데이터를 불러오지 못했습니다.'));
+  }, []);
+
+  const members = overview?.members.map(member => ({
+    id: String(member.id),
+    name: member.name,
+    email: member.email || '',
+    joined: '-',
+    status: member.status,
+    role: member.role,
+  })) || fallbackMembers;
+  const jobs = overview?.jobs || fallbackJobs;
 
   const tabs = [
     { id: 'dashboard', label: '대시보드', icon: BarChart3 },
@@ -45,10 +65,10 @@ export function AdminPage() {
   ] as const;
 
   const topStats = [
-    { label: '전체 회원', value: adminStats.totalUsers.toLocaleString(), sub: `이번 달 +${adminStats.newUsersThisMonth}`, icon: Users, color: '#1B6EF3' },
-    { label: '등록 기업', value: adminStats.totalCompanies.toLocaleString(), sub: '1,021개 인증 완료', icon: Building2, color: '#10B981' },
-    { label: '채용공고', value: adminStats.totalJobs.toLocaleString(), sub: `이번 달 +${adminStats.newJobsThisMonth}`, icon: Briefcase, color: '#8B5CF6' },
-    { label: '지원 건수', value: adminStats.totalApplications.toLocaleString(), sub: '월평균 5,499건', icon: TrendingUp, color: '#F59E0B' },
+    { label: '전체 회원', value: (overview?.totalUsers ?? adminStats.totalUsers).toLocaleString(), sub: `이번 달 +${overview?.newUsersThisMonth ?? adminStats.newUsersThisMonth}`, icon: Users, color: '#1B6EF3' },
+    { label: '등록 기업', value: (overview?.totalCompanies ?? adminStats.totalCompanies).toLocaleString(), sub: 'MariaDB 집계', icon: Building2, color: '#10B981' },
+    { label: '채용공고', value: (overview?.totalJobs ?? adminStats.totalJobs).toLocaleString(), sub: `이번 달 +${overview?.newJobsThisMonth ?? adminStats.newJobsThisMonth}`, icon: Briefcase, color: '#8B5CF6' },
+    { label: '지원 건수', value: (overview?.totalApplications ?? adminStats.totalApplications).toLocaleString(), sub: 'MariaDB 집계', icon: TrendingUp, color: '#F59E0B' },
   ];
 
   const statusBadge = (status: string) => {
@@ -67,7 +87,7 @@ export function AdminPage() {
     );
   };
 
-  const filteredMembers = mockMembers.filter(member =>
+  const filteredMembers = members.filter(member =>
     [member.name, member.email, member.role, member.status].some(value =>
       value.toLowerCase().includes(searchQuery.toLowerCase()),
     ),
@@ -80,15 +100,14 @@ export function AdminPage() {
   return (
     <div className="min-h-screen py-8" style={{ backgroundColor: '#F5F8FF' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {loadError && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{loadError}</p>}
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: '#8B5CF6' }}>
-                <AlertCircle size={14} />
-              </div>
+              <BrandLogo compact />
               <span className="text-sm text-muted-foreground">관리자 콘솔</span>
             </div>
-            <h1 className="font-bold text-foreground" style={{ fontSize: '1.5rem' }}>JobBridgeAI 관리자</h1>
+            <h1 className="font-bold text-foreground" style={{ fontSize: '1.5rem' }}>일이음 관리자</h1>
           </div>
           <div className="text-xs text-muted-foreground">마지막 업데이트: 2026-07-31 09:00</div>
         </div>
@@ -203,6 +222,9 @@ export function AdminPage() {
                 <input
                   value={searchQuery}
                   onChange={event => setSearchQuery(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
+                  }}
                   placeholder="회원 검색"
                   className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
@@ -264,7 +286,7 @@ export function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockJobs.map(job => (
+                  {jobs.map(job => (
                     <tr key={job.id} className="border-t border-border">
                       <td className="px-5 py-4 font-medium text-foreground">{job.company}</td>
                       <td className="px-5 py-4 text-muted-foreground">{job.title}</td>

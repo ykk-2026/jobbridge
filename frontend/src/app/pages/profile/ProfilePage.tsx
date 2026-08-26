@@ -1,211 +1,265 @@
-import { useEffect, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import {
-  Bell,
+  ArrowRight,
   Bookmark,
+  BookmarkCheck,
   Briefcase,
-  Calendar,
-  ChevronDown,
-  Clock,
-  FileText,
+  Camera,
+  Clock3,
+  Eye,
+  EyeOff,
   Lock,
   Mail,
+  MapPin,
+  Pencil,
   Phone,
-  Plus,
-  ShieldCheck,
-  X,
+  Save,
+  Trash2,
   UserRound,
 } from 'lucide-react';
-import type { CurrentUser } from '@/app/types';
-import { demoMemberId, getProfile, saveProfile } from '@/app/api/profileApi';
+import { mockJobs } from '@/app/data/mockData';
+import type { ApplicationFormData, CurrentUser, Job, Page } from '@/app/types';
+import { getProfile, saveProfile } from '@/app/api/profileApi';
 
 interface ProfilePageProps {
   currentUser: CurrentUser | null;
+  navigate: (page: Page, jobId?: string) => void;
+  bookmarks: Set<string>;
+  appliedJobIds?: Set<string>;
+  applicationForms?: Record<string, ApplicationFormData>;
+  onBookmark: (id: string) => void;
+  onUpdateApplication?: (id: string, formData: ApplicationFormData) => void;
+  onDeleteApplication?: (id: string) => void;
 }
+
+type ProfileAvatar = {
+  type: 'initial' | 'preset' | 'upload';
+  value: string;
+};
+
+const regionOptions = [
+  '서울특별시 송파구',
+  '서울특별시 강남구',
+  '서울특별시 강서구',
+  '서울특별시 마포구',
+  '경기도 성남시',
+  '경기도 수원시',
+  '경기도 고양시',
+  '인천광역시',
+  '부산광역시',
+  '대구광역시',
+  '대전광역시',
+  '광주광역시',
+  '울산광역시',
+  '세종특별자치시',
+  '강원특별자치도',
+  '충청북도',
+  '충청남도',
+  '전북특별자치도',
+  '전라남도',
+  '경상북도',
+  '경상남도',
+  '제주특별자치도',
+];
 
 const menuItems = [
   { label: '내 프로필', icon: UserRound },
-  { label: '이력서 관리', icon: FileText },
   { label: '지원 현황', icon: Briefcase },
   { label: '관심 공고', icon: Bookmark },
-  { label: 'AI 추천 결과', icon: Bell },
-  { label: '알림 설정', icon: Bell },
   { label: '계정 설정', icon: Lock },
 ];
 
-const workTypeOptions = ['재택근무', '유연근무', '하이브리드 근무', '출퇴근 근무'];
-const maxIntroLength = 500;
+const workTypes = [
+  { label: '재택근무', field: 'remotePreferred' as const },
+  { label: '유연근무', field: 'flexiblePreferred' as const },
+  { label: '하이브리드', field: 'hybridPreferred' as const },
+  { label: '출퇴근 근무', field: 'onsitePreferred' as const },
+];
 
-const genderToCode: Record<string, string> = {
-  남성: 'MALE',
-  여성: 'FEMALE',
-  기타: 'OTHER',
-};
-const genderToLabel: Record<string, string> = {
+const salaryPresets = ['3000', '4000', '5000', '6000', '10000'];
+const maxIntroLength = 500;
+const profilePhotoStoragePrefix = 'jobBridgeProfilePhoto';
+const maxProfilePhotoSize = 3 * 1024 * 1024;
+
+const defaultProfileOptions = [
+  { id: 'blue', label: '블루', backgroundColor: '#E4EFFF', color: '#0D6BEA' },
+  { id: 'green', label: '그린', backgroundColor: '#E8F7EF', color: '#14843C' },
+  { id: 'yellow', label: '옐로', backgroundColor: '#FFF5D6', color: '#B7791F' },
+  { id: 'gray', label: '그레이', backgroundColor: '#EEF2F6', color: '#475467' },
+];
+
+const genderLabels: Record<string, string> = {
   MALE: '남성',
   FEMALE: '여성',
-  OTHER: '기타',
-};
-const employmentTypeToCode: Record<string, string> = {
-  정규직: 'FULL_TIME',
-  아르바이트: 'PART_TIME',
-  계약직: 'CONTRACT',
-  인턴: 'INTERNSHIP',
-  프리랜서: 'FREELANCER',
-  무관: 'ANY',
-};
-const employmentTypeToLabel: Record<string, string> = {
-  FULL_TIME: '정규직',
-  PART_TIME: '아르바이트',
-  CONTRACT: '계약직',
-  INTERNSHIP: '인턴',
-  FREELANCER: '프리랜서',
-  ANY: '무관',
-};
-const careerTypeToCode: Record<string, string> = {
-  신입: 'ENTRY',
-  경력: 'EXPERIENCED',
-  무관: 'ANY',
-};
-const careerTypeToLabel: Record<string, string> = {
-  ENTRY: '신입',
-  EXPERIENCED: '경력',
-  ANY: '무관',
-};
-const contactMethodToCode: Record<string, string> = {
-  전화: 'PHONE',
-  이메일: 'EMAIL',
-  문자: 'SMS',
-  카카오톡: 'KAKAO',
-};
-const contactMethodToLabel: Record<string, string> = {
-  PHONE: '전화',
-  EMAIL: '이메일',
-  SMS: '문자',
-  KAKAO: '카카오톡',
+  OTHER: '기타/선택 안함',
+  남성: '남성',
+  여성: '여성',
+  '선택 안함': '기타/선택 안함',
 };
 
-const resumeItems = [
-  { title: '기본 이력서', updatedAt: '2026-08-01', status: '대표 이력서', completeness: '92%' },
-  { title: '사무보조 지원용 이력서', updatedAt: '2026-07-22', status: '임시 저장', completeness: '76%' },
+const employmentTypeOptions = [
+  { value: 'ANY', label: '무관' },
+  { value: 'FULL_TIME', label: '정규직' },
+  { value: 'PART_TIME', label: '파트타임' },
+  { value: 'CONTRACT', label: '계약직' },
+  { value: 'INTERNSHIP', label: '인턴' },
+  { value: 'FREELANCER', label: '프리랜서' },
 ];
 
-const applicationItems = [
-  { company: '네오서비스', title: '고객지원 사무보조', status: '서류 검토중', date: '2026-08-02' },
-  { company: '그린테크', title: '웹 운영 보조', status: '면접 제안', date: '2026-07-29' },
-  { company: '서울케어', title: '데이터 입력 담당', status: '지원 완료', date: '2026-07-25' },
+const careerTypeOptions = [
+  { value: 'ANY', label: '무관' },
+  { value: 'ENTRY', label: '신입' },
+  { value: 'EXPERIENCED', label: '경력' },
 ];
 
-const savedJobItems = [
-  { company: '브릿지랩', title: 'React 프론트엔드 보조', deadline: 'D-5', match: '96%' },
-  { company: '위드워크', title: '장애인 채용 사무직', deadline: 'D-8', match: '93%' },
-  { company: '케어링크', title: '고객 상담 매니저', deadline: 'D-12', match: '90%' },
+const contactMethodOptions = [
+  { value: 'PHONE', label: '전화' },
+  { value: 'EMAIL', label: '이메일' },
+  { value: 'SMS', label: '문자' },
+  { value: 'KAKAO', label: '카카오톡' },
 ];
 
-const aiResultItems = [
-  { title: '웹 서비스 운영 보조', reason: 'React 경험과 재택근무 조건이 잘 맞습니다.', score: '98%' },
-  { title: '데이터 입력 담당', reason: '꼼꼼한 문서 처리와 접근성 조건이 적합합니다.', score: '94%' },
-  { title: '고객지원 사무직', reason: '연락 가능 시간과 희망 지역이 일치합니다.', score: '91%' },
-];
+const getProfilePhotoStorageKey = (userId: string) => `${profilePhotoStoragePrefix}:${userId}`;
 
-export function ProfilePage({ currentUser }: ProfilePageProps) {
-  const memberId = Number(currentUser?.id) || demoMemberId;
+const formatSalaryInput = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 6);
+  if (!digits) return '';
+  return Number(digits).toLocaleString('ko-KR');
+};
+
+const formatCareerYears = (value: string) => value.replace(/\D/g, '').slice(0, 2);
+
+const loadProfilePhoto = (userId: string) => {
+  if (typeof window === 'undefined') return { type: 'initial', value: '' } satisfies ProfileAvatar;
+
+  const savedAvatar = localStorage.getItem(getProfilePhotoStorageKey(userId));
+  if (!savedAvatar) return { type: 'initial', value: '' } satisfies ProfileAvatar;
+
+  if (savedAvatar.startsWith('data:image/')) {
+    return { type: 'upload', value: savedAvatar } satisfies ProfileAvatar;
+  }
+
+  try {
+    const parsedAvatar = JSON.parse(savedAvatar) as ProfileAvatar;
+    if (parsedAvatar.type === 'initial' || parsedAvatar.type === 'preset' || parsedAvatar.type === 'upload') {
+      return parsedAvatar;
+    }
+  } catch {
+    localStorage.removeItem(getProfilePhotoStorageKey(userId));
+  }
+
+  return { type: 'initial', value: '' } satisfies ProfileAvatar;
+};
+
+export function ProfilePage({
+  currentUser,
+  navigate,
+  bookmarks,
+  appliedJobIds = new Set(),
+  applicationForms = {},
+  onBookmark,
+  onUpdateApplication,
+  onDeleteApplication,
+}: ProfilePageProps) {
+  const memberId = Number(currentUser?.id);
   const initialName = currentUser?.name || '김민준';
-  const initialEmail = currentUser?.email || 'minjun.kim@example.com';
-  const initialBirthDate = currentUser?.birthDate || '1998-05-23';
-  const initialGender = currentUser?.gender || '남성';
-  const initialPreferredRole = currentUser?.preferredRole || '백엔드 개발자';
   const initialAvatar = currentUser?.avatar || initialName.slice(0, 1);
-
+  const userId = currentUser?.loginId || currentUser?.id || 'guest';
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [activeMenu, setActiveMenu] = useState('내 프로필');
   const [savedMessage, setSavedMessage] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState('');
-  const [resumeStatus, setResumeStatus] = useState('대표 이력서가 설정되어 있습니다.');
-  const [notificationSettings, setNotificationSettings] = useState({
-    deadline: true,
-    recommendation: true,
-    application: true,
+  const [isResidenceRegionOpen, setIsResidenceRegionOpen] = useState(false);
+  const [isDesiredRegionOpen, setIsDesiredRegionOpen] = useState(false);
+  const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
+  const [editingApplicationJobId, setEditingApplicationJobId] = useState<string | null>(null);
+  const [applicationEditError, setApplicationEditError] = useState('');
+  const [applicationEditForm, setApplicationEditForm] = useState({
+    name: '',
+    phone1: '010',
+    phone2: '',
+    phone3: '',
+    email: '',
+    employmentType: '정규/계약직',
+    privacyAgreed: true,
   });
+  const [profileAvatar, setProfileAvatar] = useState<ProfileAvatar>(() => loadProfilePhoto(userId));
   const [accountForm, setAccountForm] = useState({
     loginId: currentUser?.loginId || currentUser?.id || 'minjun_kim',
-    password: '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '010-1234-5678',
+    currentPassword: '',
     newPassword: '',
+    status: 'ACTIVE',
   });
   const [profileForm, setProfileForm] = useState({
     name: initialName,
-    birthDate: initialBirthDate,
-    gender: initialGender,
-    email: initialEmail,
-    phone: '010-1234-5678',
-    currentRegion: '서울특별시 송파구',
-    preferredRole: initialPreferredRole,
-    preferredRegion: '서울 전체',
-    employmentType: '정규직',
-    careerType: '경력',
-    careerYears: '3',
-    salary: '4,000',
-    contactStart: '09:00',
-    contactEnd: '18:00',
-    contactMethod: '이메일',
-    introduction:
-      '새로운 기술을 배우는 것을 좋아하고,\n문제를 해결하며 성장하는 개발자가 되고 싶습니다.\n함께 성장할 수 있는 일을 찾고 있습니다.',
-    openStatus: '공개',
-    workTypes: ['재택근무', '유연근무', '하이브리드 근무'],
-    jobSummary: 'Spring Boot와 React 기반 웹 서비스 개발 경험 3년',
-    skills: ['JavaScript', 'React', 'Spring Boot', 'MySQL'],
-    skillInput: '',
-    certifications: '정보처리기사, SQLD',
-    availableDate: '2026-08-12',
-    finalEducation: '대학교 졸업',
-    disabilitySupport: '휠체어 접근 가능한 사무공간, 높낮이 조절 책상 필요',
+    birthDate: currentUser?.birthDate || '1998-05-23',
+    gender: currentUser?.gender || 'MALE',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '010-1234-5678',
+    residenceRegion: currentUser?.currentRegion || '서울특별시 송파구',
+    desiredJob: currentUser?.preferredRole || '',
+    desiredRegion: '서울특별시 송파구',
+    employmentType: 'ANY',
+    careerType: 'ANY',
+    careerYears: '0',
+    minSalary: '',
+    remotePreferred: false,
+    flexiblePreferred: false,
+    hybridPreferred: false,
+    onsitePreferred: false,
+    contactTimeStart: '09:00',
+    contactTimeEnd: '18:00',
+    contactMethod: 'PHONE',
+    introduction: '',
+    profilePublic: true,
   });
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const avatar = photoPreview || initialAvatar;
 
   useEffect(() => {
-    let active = true;
+    setProfileAvatar(loadProfilePhoto(userId));
+  }, [userId]);
 
+  useEffect(() => {
+    if (!Number.isFinite(memberId) || memberId <= 0) return;
+
+    let active = true;
     getProfile(memberId)
       .then(profile => {
         if (!active) return;
-
-        const workTypes = [
-          profile.remotePreferred && '재택근무',
-          profile.flexiblePreferred && '유연근무',
-          profile.hybridPreferred && '하이브리드 근무',
-          profile.onsitePreferred && '출퇴근 근무',
-        ].filter((item): item is string => Boolean(item));
-
         setProfileForm(previous => ({
           ...previous,
           name: profile.name || previous.name,
           birthDate: profile.birthDate || previous.birthDate,
-          gender: genderToLabel[profile.gender || ''] || profile.gender || previous.gender,
+          gender: profile.gender || previous.gender,
           email: profile.email || previous.email,
           phone: profile.phone || previous.phone,
-          currentRegion: profile.residenceRegion || previous.currentRegion,
-          preferredRole: profile.desiredJob || previous.preferredRole,
-          preferredRegion: profile.desiredRegion || previous.preferredRegion,
-          employmentType: employmentTypeToLabel[profile.employmentType || ''] || profile.employmentType || previous.employmentType,
-          careerType: careerTypeToLabel[profile.careerType || ''] || profile.careerType || previous.careerType,
-          careerYears: profile.careerYears?.toString() || previous.careerYears,
-          salary: profile.minSalary?.toLocaleString('ko-KR') || previous.salary,
-          contactStart: profile.contactTimeStart?.slice(0, 5) || previous.contactStart,
-          contactEnd: profile.contactTimeEnd?.slice(0, 5) || previous.contactEnd,
-          contactMethod: contactMethodToLabel[profile.contactMethod || ''] || profile.contactMethod || previous.contactMethod,
-          introduction: profile.introduction || previous.introduction,
-          openStatus: profile.profilePublic ? '공개' : '비공개',
-          workTypes,
+          residenceRegion: profile.residenceRegion || previous.residenceRegion,
+          desiredJob: profile.desiredJob || previous.desiredJob,
+          desiredRegion: profile.desiredRegion || previous.desiredRegion,
+          employmentType: profile.employmentType || previous.employmentType,
+          careerType: profile.careerType || previous.careerType,
+          careerYears: String(profile.careerYears ?? 0),
+          minSalary: profile.minSalary ? profile.minSalary.toLocaleString('ko-KR') : '',
+          remotePreferred: Boolean(profile.remotePreferred),
+          flexiblePreferred: Boolean(profile.flexiblePreferred),
+          hybridPreferred: Boolean(profile.hybridPreferred),
+          onsitePreferred: Boolean(profile.onsitePreferred),
+          contactTimeStart: profile.contactTimeStart?.slice(0, 5) || previous.contactTimeStart,
+          contactTimeEnd: profile.contactTimeEnd?.slice(0, 5) || previous.contactTimeEnd,
+          contactMethod: profile.contactMethod || previous.contactMethod,
+          introduction: profile.introduction || '',
+          profilePublic: Boolean(profile.profilePublic),
         }));
-        setSavedMessage('Spring Boot에서 프로필을 불러왔습니다.');
+        setAccountForm(previous => ({
+          ...previous,
+          email: profile.email || previous.email,
+          phone: profile.phone || previous.phone,
+        }));
+        setSavedMessage('MariaDB에서 프로필을 불러왔습니다.');
       })
       .catch(error => {
-        if (active) {
-          setSavedMessage(`백엔드 연결 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-        }
+        if (active) setSavedMessage(`프로필 불러오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
       });
 
     return () => {
@@ -213,124 +267,17 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
     };
   }, [memberId]);
 
-  const updateForm = (field: keyof typeof profileForm, value: string | string[]) => {
+  const avatarInitial = (profileForm.name.trim() || initialName).slice(0, 1);
+  const selectedDefaultProfile = defaultProfileOptions.find(option => option.id === profileAvatar.value) || defaultProfileOptions[0];
+  const savedJobs = mockJobs
+    .map(job => ({ ...job, savedKey: bookmarks.has(`job-${job.id}`) ? `job-${job.id}` : '' }))
+    .filter(job => job.savedKey);
+  const appliedJobs = mockJobs.filter(job => appliedJobIds.has(job.id));
+  const editingApplicationJob = editingApplicationJobId ? mockJobs.find(job => job.id === editingApplicationJobId) : null;
+
+  const updateForm = (field: keyof typeof profileForm, value: string | boolean) => {
     setProfileForm(prev => ({ ...prev, [field]: value }));
     setSavedMessage('');
-  };
-
-  const handleMenuClick = (label: string) => {
-    setActiveMenu(label);
-    setSavedMessage(`${label} 메뉴를 선택했습니다.`);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSavedMessage('프로필을 저장하고 있습니다...');
-
-    try {
-      await saveProfile(memberId, {
-        name: profileForm.name,
-        birthDate: profileForm.birthDate || null,
-        gender: genderToCode[profileForm.gender] || profileForm.gender,
-        email: profileForm.email,
-        phone: profileForm.phone,
-        profileImageUrl: null,
-        residenceRegion: profileForm.currentRegion,
-        desiredJob: profileForm.preferredRole,
-        desiredRegion: profileForm.preferredRegion,
-        employmentType: employmentTypeToCode[profileForm.employmentType] || profileForm.employmentType,
-        careerType: careerTypeToCode[profileForm.careerType] || profileForm.careerType,
-        careerYears: Number.parseInt(profileForm.careerYears, 10) || 0,
-        minSalary: Number.parseInt(profileForm.salary.replace(/[^0-9]/g, ''), 10) || 0,
-        remotePreferred: profileForm.workTypes.includes('재택근무'),
-        flexiblePreferred: profileForm.workTypes.includes('유연근무'),
-        hybridPreferred: profileForm.workTypes.includes('하이브리드 근무'),
-        onsitePreferred: profileForm.workTypes.includes('출퇴근 근무'),
-        contactTimeStart: profileForm.contactStart || null,
-        contactTimeEnd: profileForm.contactEnd || null,
-        contactMethod: contactMethodToCode[profileForm.contactMethod] || profileForm.contactMethod,
-        introduction: profileForm.introduction,
-        profilePublic: profileForm.openStatus === '공개',
-      });
-      setSavedMessage('Spring Boot와 MariaDB에 프로필을 저장했습니다.');
-      window.alert('프로필 정보가 저장되었습니다.');
-    } catch (error) {
-      setSavedMessage(`저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleConsult = () => {
-    window.alert('상담 신청이 접수되었습니다. 담당자가 확인 후 연락드립니다.');
-  };
-
-  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      window.alert('2MB 이하의 이미지만 등록할 수 있습니다.');
-      event.target.value = '';
-      return;
-    }
-
-    setPhotoPreview(URL.createObjectURL(file));
-    setSavedMessage('프로필 사진이 변경되었습니다. 저장하기를 눌러 반영해 주세요.');
-  };
-
-  const handleWorkTypeToggle = (workType: string) => {
-    setProfileForm(prev => {
-      const checked = prev.workTypes.includes(workType);
-      return {
-        ...prev,
-        workTypes: checked ? prev.workTypes.filter(item => item !== workType) : [...prev.workTypes, workType],
-      };
-    });
-    setSavedMessage('');
-  };
-
-  const handleIntroChange = (value: string) => {
-    updateForm('introduction', value.slice(0, maxIntroLength));
-  };
-
-  const handleAddSkill = () => {
-    const nextSkill = profileForm.skillInput.trim();
-    if (!nextSkill) return;
-    if (profileForm.skills.includes(nextSkill)) {
-      window.alert('이미 등록된 기술입니다.');
-      return;
-    }
-
-    setProfileForm(prev => ({
-      ...prev,
-      skills: [...prev.skills, nextSkill],
-      skillInput: '',
-    }));
-    setSavedMessage('');
-  };
-
-  const handleRemoveSkill = (skill: string) => {
-    setProfileForm(prev => ({
-      ...prev,
-      skills: prev.skills.filter(item => item !== skill),
-    }));
-    setSavedMessage('');
-  };
-
-  const handleResumeAction = (message: string) => {
-    setResumeStatus(message);
-    setSavedMessage(message);
-  };
-
-  const handleApplyAction = (message: string) => {
-    window.alert(message);
-    setSavedMessage(message);
-  };
-
-  const updateNotification = (field: keyof typeof notificationSettings) => {
-    setNotificationSettings(prev => ({ ...prev, [field]: !prev[field] }));
-    setSavedMessage('알림 설정이 변경되었습니다.');
   };
 
   const updateAccountForm = (field: keyof typeof accountForm, value: string) => {
@@ -338,675 +285,843 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
     setSavedMessage('');
   };
 
-  const handleAccountSave = () => {
-    setSavedMessage('계정 설정이 저장되었습니다.');
-    window.alert('계정 설정이 저장되었습니다.');
+  const updateApplicationEditForm = (field: keyof typeof applicationEditForm, value: string | boolean) => {
+    setApplicationEditForm(prev => ({ ...prev, [field]: value }));
+    setApplicationEditError('');
   };
 
-  const renderMenuPanel = () => {
-    switch (activeMenu) {
-      case '이력서 관리':
-        return (
-          <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-              <div>
-                <h2 className="font-bold text-foreground">이력서 관리</h2>
-                <p className="text-sm text-muted-foreground mt-1">{resumeStatus}</p>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                onClick={() => handleResumeAction('새 이력서 작성 화면을 열었습니다.')}
-              >
-                새 이력서 작성
-              </button>
-            </div>
-            <div className="space-y-3">
-              {resumeItems.map(item => (
-                <div key={item.title} className="rounded-lg border border-[#E2E8F0] p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-foreground">{item.title}</p>
-                      <p className="text-sm text-muted-foreground mt-1">완성도 {item.completeness} · 최근 수정 {item.updatedAt}</p>
-                      <span className="mt-2 inline-block rounded-full bg-[#EAF4FF] px-3 py-1 text-xs font-semibold text-primary">{item.status}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button type="button" className="rounded-lg border border-[#DCEAF3] px-3 py-2 text-sm font-semibold text-primary" onClick={() => handleResumeAction(`${item.title}을 수정합니다.`)}>수정</button>
-                      <button type="button" className="rounded-lg border border-[#DCEAF3] px-3 py-2 text-sm font-semibold text-muted-foreground" onClick={() => handleResumeAction(`${item.title} 미리보기를 열었습니다.`)}>미리보기</button>
-                      <button type="button" className="rounded-lg border border-[#DCEAF3] px-3 py-2 text-sm font-semibold text-muted-foreground" onClick={() => handleResumeAction(`${item.title}을 PDF로 저장했습니다.`)}>PDF</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
+  const toggleWorkType = (field: (typeof workTypes)[number]['field']) => {
+    setProfileForm(prev => ({ ...prev, [field]: !prev[field] }));
+    setSavedMessage('');
+  };
 
-      case '지원 현황':
-        return (
-          <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-            <h2 className="font-bold text-foreground mb-5">지원 현황</h2>
-            <div className="grid sm:grid-cols-3 gap-3 mb-5">
-              {['전체 3건', '면접 제안 1건', '서류 검토중 1건'].map(item => (
-                <div key={item} className="rounded-lg bg-[#F7FAFC] p-4 text-sm font-semibold text-foreground">{item}</div>
-              ))}
-            </div>
-            <div className="space-y-3">
-              {applicationItems.map(item => (
-                <div key={`${item.company}-${item.title}`} className="rounded-lg border border-[#E2E8F0] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-foreground">{item.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.company} · 지원일 {item.date}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-[#EAF4FF] px-3 py-1 text-xs font-semibold text-primary">{item.status}</span>
-                    <button type="button" className="rounded-lg border border-[#DCEAF3] px-3 py-2 text-sm font-semibold text-primary" onClick={() => handleApplyAction(`${item.company} 지원 상세를 확인합니다.`)}>상세보기</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-
-      case '관심 공고':
-        return (
-          <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-            <h2 className="font-bold text-foreground mb-5">관심 공고</h2>
-            <div className="grid md:grid-cols-3 gap-3">
-              {savedJobItems.map(item => (
-                <div key={`${item.company}-${item.title}`} className="rounded-lg border border-[#E2E8F0] p-4">
-                  <p className="text-sm text-muted-foreground">{item.company}</p>
-                  <p className="font-semibold text-foreground mt-1">{item.title}</p>
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <span className="font-semibold text-primary">AI {item.match}</span>
-                    <span className="text-muted-foreground">{item.deadline}</span>
-                  </div>
-                  <button type="button" className="mt-4 w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white" onClick={() => handleApplyAction(`${item.title} 공고를 확인합니다.`)}>공고 보기</button>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-
-      case 'AI 추천 결과':
-        return (
-          <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-              <div>
-                <h2 className="font-bold text-foreground">AI 추천 결과</h2>
-                <p className="text-sm text-muted-foreground mt-1">현재 프로필 기준 추천 만족도 98%</p>
-              </div>
-              <button type="button" className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary" onClick={() => handleApplyAction('AI 추천 결과를 새로 계산했습니다.')}>다시 추천받기</button>
-            </div>
-            <div className="space-y-3">
-              {aiResultItems.map(item => (
-                <div key={item.title} className="rounded-lg border border-[#E2E8F0] p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-foreground">{item.title}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
-                    </div>
-                    <span className="rounded-full bg-[#EAF4FF] px-3 py-1 text-sm font-bold text-primary">{item.score}</span>
-                  </div>
-                  <button type="button" className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white" onClick={() => handleApplyAction(`${item.title} 추천 공고로 이동합니다.`)}>추천 공고 보기</button>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-
-      case '알림 설정':
-        return (
-          <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-            <h2 className="font-bold text-foreground mb-5">알림 설정</h2>
-            <div className="space-y-3">
-              {[
-                { key: 'deadline' as const, title: '마감 임박 공고 알림', desc: '관심 공고의 마감일이 가까워지면 알려드립니다.' },
-                { key: 'recommendation' as const, title: 'AI 추천 공고 알림', desc: '프로필에 맞는 새 공고가 올라오면 알려드립니다.' },
-                { key: 'application' as const, title: '지원 상태 변경 알림', desc: '서류 검토, 면접 제안 등 지원 상태 변경을 알려드립니다.' },
-              ].map(item => (
-                <div key={item.key} className="rounded-lg border border-[#E2E8F0] p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-semibold text-foreground">{item.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.desc}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className={`w-14 rounded-full px-1 py-1 text-xs font-bold ${notificationSettings[item.key] ? 'bg-primary text-white' : 'bg-[#E2E8F0] text-muted-foreground'}`}
-                    onClick={() => updateNotification(item.key)}
-                  >
-                    {notificationSettings[item.key] ? 'ON' : 'OFF'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-
-      case '계정 설정':
-        return (
-          <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-            <h2 className="font-bold text-foreground mb-5">계정 설정</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="block text-sm font-medium mb-2">로그인 아이디</span>
-                <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.loginId} onChange={event => updateAccountForm('loginId', event.target.value)} />
-              </label>
-              <label className="block">
-                <span className="block text-sm font-medium mb-2">현재 비밀번호</span>
-                <input type="password" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.password} onChange={event => updateAccountForm('password', event.target.value)} />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className="block text-sm font-medium mb-2">새 비밀번호</span>
-                <input type="password" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.newPassword} onChange={event => updateAccountForm('newPassword', event.target.value)} />
-              </label>
-            </div>
-            <button type="button" className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white" onClick={handleAccountSave}>계정 정보 저장</button>
-          </section>
-        );
-
-      default:
-        return null;
+  const saveProfileAvatar = (nextAvatar: ProfileAvatar, message: string) => {
+    setProfileAvatar(nextAvatar);
+    try {
+      localStorage.setItem(getProfilePhotoStorageKey(userId), JSON.stringify(nextAvatar));
+      setSavedMessage(message);
+    } catch {
+      window.alert('프로필 사진 저장 공간이 부족합니다. 더 작은 이미지를 선택해 주세요.');
     }
   };
 
+  const renderProfileAvatar = (className: string) => {
+    if (profileAvatar.type === 'upload' && profileAvatar.value) {
+      return (
+        <div className={`${className} overflow-hidden rounded-full bg-[#E4EFFF]`}>
+          <img src={profileAvatar.value} alt={`${profileForm.name} 프로필 사진`} className="h-full w-full object-cover" />
+        </div>
+      );
+    }
+
+    const avatarStyle = profileAvatar.type === 'preset'
+      ? { backgroundColor: selectedDefaultProfile.backgroundColor, color: selectedDefaultProfile.color }
+      : { backgroundColor: '#E4EFFF', color: '#0D6BEA' };
+
+    return (
+      <div className={`${className} rounded-full font-extrabold`} style={avatarStyle}>
+        {avatarInitial || initialAvatar}
+      </div>
+    );
+  };
+
+  const handleSave = async () => {
+    if (profileForm.contactTimeStart && profileForm.contactTimeEnd && profileForm.contactTimeStart >= profileForm.contactTimeEnd) {
+      window.alert('연락 가능 시작시간은 종료시간보다 빨라야 합니다.');
+      return;
+    }
+
+    if (!Number.isFinite(memberId) || memberId <= 0) {
+      setSavedMessage('로그인 후 프로필을 저장할 수 있습니다.');
+      navigate('login');
+      return;
+    }
+
+    setSavedMessage('프로필을 저장하고 있습니다...');
+    try {
+      await saveProfile(memberId, {
+        name: profileForm.name,
+        birthDate: profileForm.birthDate || null,
+        gender: profileForm.gender,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        profileImageUrl: null,
+        residenceRegion: profileForm.residenceRegion,
+        desiredJob: profileForm.desiredJob,
+        desiredRegion: profileForm.desiredRegion,
+        employmentType: profileForm.employmentType,
+        careerType: profileForm.careerType,
+        careerYears: Number.parseInt(profileForm.careerYears, 10) || 0,
+        minSalary: Number.parseInt(profileForm.minSalary.replace(/\D/g, ''), 10) || 0,
+        remotePreferred: profileForm.remotePreferred,
+        flexiblePreferred: profileForm.flexiblePreferred,
+        hybridPreferred: profileForm.hybridPreferred,
+        onsitePreferred: profileForm.onsitePreferred,
+        contactTimeStart: profileForm.contactTimeStart || null,
+        contactTimeEnd: profileForm.contactTimeEnd || null,
+        contactMethod: profileForm.contactMethod,
+        introduction: profileForm.introduction,
+        profilePublic: profileForm.profilePublic,
+      });
+      setSavedMessage('MariaDB에 프로필 정보가 저장되었습니다.');
+      window.alert('프로필 정보가 저장되었습니다.');
+    } catch (error) {
+      setSavedMessage(`프로필 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+    }
+  };
+
+  const saveAccountSettings = () => {
+    setSavedMessage('회원 계정 정보가 저장되었습니다.');
+    setAccountForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
+  };
+
+  const handleProfilePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      window.alert('이미지 파일만 선택할 수 있습니다.');
+      return;
+    }
+
+    if (file.size > maxProfilePhotoSize) {
+      window.alert('프로필 사진은 3MB 이하 이미지만 등록할 수 있습니다.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const nextPhotoUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!nextPhotoUrl) return;
+
+      saveProfileAvatar({ type: 'upload', value: nextPhotoUrl }, '프로필 사진이 변경되었습니다.');
+      setIsPhotoPickerOpen(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const openApplicationEdit = (job: Job) => {
+    const savedApplication = applicationForms[job.id];
+    const phoneParts = (savedApplication?.phone || profileForm.phone || '010--').split('-');
+
+    setApplicationEditForm({
+      name: savedApplication?.name || profileForm.name,
+      phone1: phoneParts[0] || '010',
+      phone2: phoneParts[1] || '',
+      phone3: phoneParts[2] || '',
+      email: savedApplication?.email || profileForm.email,
+      employmentType: savedApplication?.employmentType || (job.category === 'PartTime' ? '아르바이트' : '정규/계약직'),
+      privacyAgreed: savedApplication?.privacyAgreed ?? true,
+    });
+    setApplicationEditError('');
+    setEditingApplicationJobId(job.id);
+  };
+
+  const closeApplicationEdit = () => {
+    setEditingApplicationJobId(null);
+    setApplicationEditError('');
+  };
+
+  const saveApplicationEdit = () => {
+    if (!editingApplicationJob || !onUpdateApplication) return;
+
+    const phoneParts = [applicationEditForm.phone1, applicationEditForm.phone2, applicationEditForm.phone3].map(value => String(value).trim());
+
+    if (!applicationEditForm.privacyAgreed) {
+      setApplicationEditError('개인정보 전달 동의가 필요합니다.');
+      return;
+    }
+
+    if (!applicationEditForm.name.trim() || /\s/.test(applicationEditForm.name)) {
+      setApplicationEditError('성명은 공백 없이 입력해 주세요.');
+      return;
+    }
+
+    if (phoneParts.some(part => !/^\d+$/.test(part)) || phoneParts[1].length < 3 || phoneParts[2].length < 4) {
+      setApplicationEditError('연락 가능한 휴대전화 번호를 정확히 입력해 주세요.');
+      return;
+    }
+
+    if (!applicationEditForm.email.trim() || !applicationEditForm.email.includes('@')) {
+      setApplicationEditError('지원 결과를 받을 이메일을 입력해 주세요.');
+      return;
+    }
+
+    const previousApplication = applicationForms[editingApplicationJob.id];
+    const now = new Date().toISOString();
+    onUpdateApplication(editingApplicationJob.id, {
+      name: applicationEditForm.name.trim(),
+      phone: phoneParts.join('-'),
+      email: applicationEditForm.email.trim(),
+      employmentType: applicationEditForm.employmentType,
+      privacyAgreed: applicationEditForm.privacyAgreed,
+      submittedAt: previousApplication?.submittedAt || now,
+      updatedAt: now,
+    });
+    setSavedMessage('지원서가 수정되었습니다.');
+    closeApplicationEdit();
+  };
+
+  const deleteApplication = () => {
+    if (!editingApplicationJob || !onDeleteApplication) return;
+
+    const confirmed = window.confirm(`${editingApplicationJob.company} ${editingApplicationJob.title} 지원서를 삭제하시겠습니까?`);
+    if (!confirmed) return;
+
+    onDeleteApplication(editingApplicationJob.id);
+    setSavedMessage('지원서가 삭제되었습니다.');
+    closeApplicationEdit();
+  };
+
+  const selectedWorkTypes = workTypes.filter(item => profileForm[item.field]).map(item => item.label);
+
   return (
-    <div className="min-h-screen bg-[#F5F7FB]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid lg:grid-cols-[220px_1fr] gap-6">
-          <aside className="hidden lg:flex flex-col gap-5">
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
-              <h2 className="text-sm font-bold text-foreground mb-3">마이페이지</h2>
-              <nav className="space-y-1">
-                {menuItems.map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      type="button"
-                      key={item.label}
-                      className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
-                        activeMenu === item.label ? 'bg-[#EAF4FF] text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'
-                      }`}
-                      onClick={() => handleMenuClick(item.label)}
-                    >
-                      <Icon size={15} />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </nav>
+    <div className="min-h-screen bg-[#F3F7FF] text-[#111827]">
+      <main className="mx-auto grid max-w-[1256px] gap-5 px-5 py-5 sm:px-8 lg:grid-cols-[260px_1fr]">
+        <aside className="rounded-xl border border-[#DDE3EA] bg-white p-4 shadow-sm">
+          <div className="mb-4 rounded-xl bg-[#F4F8FC] px-4 py-4">
+            <div className="flex items-center gap-3">
+              {renderProfileAvatar('flex h-11 w-11 shrink-0 items-center justify-center text-lg')}
+              <div className="min-w-0">
+                <p className="truncate text-base font-extrabold text-black">{profileForm.name}</p>
+                <p className="mt-1 truncate text-xs font-bold text-[#7A8495]">{profileForm.desiredJob || '개인회원'}</p>
+              </div>
             </div>
+          </div>
 
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
-              <p className="text-sm font-semibold text-foreground">도움이 필요하신가요?</p>
-              <p className="text-xs text-muted-foreground mt-2 leading-5">프로필 작성과 접근성 조건 설정을 도와드립니다.</p>
-              <button
-                type="button"
-                className="mt-4 w-full rounded-lg border border-[#CFE3F3] py-2 text-sm font-semibold text-primary hover:bg-[#F7FAFC]"
-                onClick={handleConsult}
-              >
-                상담 신청하기
-              </button>
-            </div>
-          </aside>
+          <nav className="space-y-1">
+            {menuItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <button
+                  type="button"
+                  key={item.label}
+                  aria-pressed={activeMenu === item.label}
+                  onClick={() => {
+                    setActiveMenu(item.label);
+                    setSavedMessage('');
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-bold transition ${
+                    activeMenu === item.label ? 'bg-[#E4EFFF] text-[#0D6BEA]' : 'bg-transparent text-[#344054] hover:text-[#0D6BEA]'
+                  }`}
+                >
+                  <Icon size={17} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-          <main>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+        <section className="space-y-5">
+          <div className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">입력한 정보를 바탕으로 맞춤 채용을 추천합니다.</p>
-                <h1 className="text-2xl font-bold text-foreground mt-1">{activeMenu}</h1>
+                <p className="text-sm font-bold text-[#0D6BEA]">{activeMenu}</p>
+                <h1 className="mt-1 text-2xl font-extrabold text-black">프로필 관리</h1>
+                <p className="mt-2 text-sm font-semibold text-[#7A8495]">제공된 MariaDB 스키마 기준으로 저장 가능한 정보만 관리합니다.</p>
               </div>
               {activeMenu === '내 프로필' && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"
-                  onClick={() => setIsPreviewOpen(true)}
-                >
-                  미리보기
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? '저장 중...' : '저장하기'}
-                </button>
-              </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setIsPreviewOpen(true)} className="rounded-lg border border-[#D7DDE5] px-4 py-2 text-sm font-bold hover:bg-[#F8FAFC]">
+                    미리보기
+                  </button>
+                  <button type="button" onClick={handleSave} className="inline-flex items-center gap-2 rounded-lg bg-[#0D6BEA] px-4 py-2 text-sm font-bold text-white hover:bg-[#0959C7]">
+                    <Save size={16} />
+                    저장
+                  </button>
+                </div>
               )}
             </div>
+            {savedMessage && <p className="mt-4 rounded-lg bg-[#E7F8EF] px-4 py-3 text-sm font-bold text-[#14843C]">{savedMessage}</p>}
+          </div>
 
-            {savedMessage && (
-              <div className="mb-5 rounded-lg border border-[#CFE3F3] bg-[#F7FAFC] px-4 py-3 text-sm font-semibold text-primary">
-                {savedMessage}
+          {activeMenu === '지원 현황' ? (
+            <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-extrabold text-black">지원 현황</h2>
+                  <p className="mt-1 text-sm font-semibold text-[#7A8495]">job_application 테이블의 지원 상태에 해당하는 화면입니다.</p>
+                </div>
+                <button type="button" onClick={() => navigate('jobs')} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#0D6BEA]">
+                  공고 더 보기 <ArrowRight size={15} />
+                </button>
               </div>
-            )}
 
-            {activeMenu === '내 프로필' ? (
-              <>
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
-              <h2 className="font-bold text-foreground mb-5">기본 정보</h2>
-              <div className="grid md:grid-cols-[150px_1fr] gap-6">
-                <div className="flex flex-col items-center">
-                  <div className="w-24 h-24 rounded-full bg-[#E5EAF0] text-primary flex items-center justify-center text-3xl font-bold overflow-hidden">
-                    {photoPreview ? (
-                      <img src={photoPreview} alt="프로필 사진 미리보기" className="h-full w-full object-cover" />
-                    ) : (
-                      avatar
-                    )}
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    className="hidden"
-                    onChange={handlePhotoChange}
-                  />
-                  <button
-                    type="button"
-                    className="mt-3 rounded-lg border border-[#DCEAF3] px-4 py-2 text-sm font-semibold text-primary hover:bg-[#F7FAFC]"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    사진 변경
+              {appliedJobs.length > 0 ? (
+                <div className="grid gap-3">
+                  {appliedJobs.map(job => {
+                    const savedApplication = applicationForms[job.id];
+                    return (
+                      <article key={job.id} className="rounded-lg border border-[#E1E6EE] bg-white p-4">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <button type="button" onClick={() => navigate('job-detail', `job-${job.id}`)} className="flex min-w-0 items-start gap-3 text-left">
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-lg font-extrabold text-white" style={{ backgroundColor: job.companyColor }}>
+                              {job.companyInitials}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block text-sm font-bold text-[#7A8495]">{job.company}</span>
+                              <span className="mt-1 block text-lg font-extrabold text-black">{job.title}</span>
+                              <span className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[#596273]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F6] px-3 py-1">
+                                  <MapPin size={13} /> {job.location}
+                                </span>
+                                <span className="rounded-full bg-[#E7F8EF] px-3 py-1 text-[#14843C]">APPLIED</span>
+                                {savedApplication?.employmentType && (
+                                  <span className="rounded-full bg-[#EEF5FF] px-3 py-1 text-[#0D6BEA]">{savedApplication.employmentType}</span>
+                                )}
+                              </span>
+                              {savedApplication && (
+                                <span className="mt-3 block text-xs font-bold leading-5 text-[#7A8495]">
+                                  {savedApplication.name} · {savedApplication.phone} · {savedApplication.email}
+                                </span>
+                              )}
+                            </span>
+                          </button>
+
+                          <div className="flex flex-wrap gap-2 lg:justify-end">
+                            <button
+                              type="button"
+                              onClick={() => openApplicationEdit(job)}
+                              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D7DDE5] px-3 text-sm font-bold text-[#344054] hover:bg-[#F8FAFC]"
+                            >
+                              <Pencil size={15} />
+                              지원 수정
+                            </button>
+                            <button type="button" onClick={() => navigate('job-detail', `job-${job.id}`)} className="inline-flex h-9 items-center gap-1 px-1 text-sm font-extrabold text-[#0D6BEA]">
+                              상세 보기 <ArrowRight size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-[#D7DDE5] bg-[#F8FAFC] p-8 text-center">
+                  <Briefcase size={32} className="mx-auto text-[#7A8495]" />
+                  <p className="mt-3 text-base font-extrabold text-black">지원한 공고가 없습니다.</p>
+                  <button type="button" onClick={() => navigate('jobs')} className="mt-4 rounded-lg bg-[#0D6BEA] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#0959C7]">
+                    공고 보러가기
                   </button>
-                  <p className="text-xs text-muted-foreground mt-2">JPG, PNG 2MB 이하</p>
                 </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <label className="block">
-                    <span className="block text-sm font-medium mb-2">이름</span>
-                    <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.name} onChange={event => updateForm('name', event.target.value)} />
-                  </label>
-
-                  <label className="block">
-                    <span className="block text-sm font-medium mb-2">생년월일</span>
-                    <div className="relative">
-                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.birthDate} onChange={event => updateForm('birthDate', event.target.value)} />
-                      <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                  </label>
-
-                  <label className="block">
-                    <span className="block text-sm font-medium mb-2">성별</span>
-                    <div className="relative">
-                      <select className="w-full appearance-none rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 pr-10 text-sm" value={profileForm.gender} onChange={event => updateForm('gender', event.target.value)}>
-                        <option>남성</option>
-                        <option>여성</option>
-                        <option>선택 안 함</option>
-                      </select>
-                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                  </label>
-
-                  <label className="block">
-                    <span className="block text-sm font-medium mb-2">이메일</span>
-                    <div className="relative">
-                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.email} onChange={event => updateForm('email', event.target.value)} />
-                      <Mail size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                  </label>
-
-                  <label className="block">
-                    <span className="block text-sm font-medium mb-2">전화번호</span>
-                    <div className="relative">
-                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.phone} onChange={event => updateForm('phone', event.target.value)} />
-                      <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                  </label>
-
-                  <label className="block">
-                    <span className="block text-sm font-medium mb-2">현재 거주지역</span>
-                    <div className="relative">
-                      <select className="w-full appearance-none rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 pr-10 text-sm" value={profileForm.currentRegion} onChange={event => updateForm('currentRegion', event.target.value)}>
-                        <option>서울특별시 송파구</option>
-                        <option>서울특별시 강남구</option>
-                        <option>경기도 성남시</option>
-                        <option>인천광역시</option>
-                      </select>
-                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                  </label>
-                </div>
-              </div>
+              )}
             </section>
-
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
-              <h2 className="font-bold text-foreground mb-5">희망 근무 조건</h2>
-              <div className="grid sm:grid-cols-3 gap-4">
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">희망 직무</span>
-                  <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.preferredRole} onChange={event => updateForm('preferredRole', event.target.value)}>
-                    <option>백엔드 개발자</option>
-                    <option>프론트엔드 개발자</option>
-                    <option>데이터 분석가</option>
-                    <option>서비스 기획자</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">희망 근무지역</span>
-                  <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.preferredRegion} onChange={event => updateForm('preferredRegion', event.target.value)}>
-                    <option>서울 전체</option>
-                    <option>경기 전체</option>
-                    <option>인천 전체</option>
-                    <option>전국</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">희망 고용 형태</span>
-                  <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.employmentType} onChange={event => updateForm('employmentType', event.target.value)}>
-                    <option>정규직</option>
-                    <option>계약직</option>
-                    <option>인턴</option>
-                    <option>아르바이트</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">경력 구분</span>
-                  <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.careerType} onChange={event => updateForm('careerType', event.target.value)}>
-                    <option>신입</option>
-                    <option>경력</option>
-                    <option>무관</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">경력 연수</span>
-                  <div className="flex items-center gap-2">
-                    <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.careerYears} onChange={event => updateForm('careerYears', event.target.value)} />
-                    <span className="text-sm text-muted-foreground">년</span>
-                  </div>
-                </label>
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">희망 연봉</span>
-                  <div className="flex items-center gap-2">
-                    <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.salary} onChange={event => updateForm('salary', event.target.value)} />
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">만원 이상</span>
-                  </div>
-                </label>
+          ) : activeMenu === '관심 공고' ? (
+            <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-extrabold text-black">관심 공고</h2>
+                  <p className="mt-1 text-sm font-semibold text-[#7A8495]">interest_job 테이블에 저장될 공고 목록입니다.</p>
+                </div>
+                <button type="button" onClick={() => navigate('jobs')} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#0D6BEA]">
+                  공고 더 보기 <ArrowRight size={15} />
+                </button>
               </div>
 
-              <div className="mt-5">
-                <p className="text-sm font-medium mb-3">근무 형태</p>
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {workTypeOptions.map(item => (
-                    <label key={item} className="inline-flex items-center gap-2 text-muted-foreground">
-                      <input type="checkbox" checked={profileForm.workTypes.includes(item)} onChange={() => handleWorkTypeToggle(item)} />
-                      {item}
-                    </label>
+              {savedJobs.length > 0 ? (
+                <div className="grid gap-3">
+                  {savedJobs.map(job => (
+                    <article key={job.id} className="rounded-lg border border-[#E1E6EE] bg-white p-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <button type="button" onClick={() => navigate('job-detail', `job-${job.id}`)} className="flex min-w-0 items-start gap-3 text-left">
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-lg font-extrabold text-white" style={{ backgroundColor: job.companyColor }}>
+                            {job.companyInitials}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-bold text-[#7A8495]">{job.company}</span>
+                            <span className="mt-1 block text-lg font-extrabold text-black">{job.title}</span>
+                            <span className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[#596273]">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F6] px-3 py-1">
+                                <MapPin size={13} /> {job.location}
+                              </span>
+                              <span className="rounded-full bg-[#F1F3F6] px-3 py-1">{job.workType}</span>
+                            </span>
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onBookmark(job.savedKey)}
+                          className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D7DDE5] px-3 text-sm font-bold hover:bg-[#F8FAFC]"
+                        >
+                          <BookmarkCheck size={16} />
+                          저장 해제
+                        </button>
+                      </div>
+                    </article>
                   ))}
                 </div>
-              </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-[#D7DDE5] bg-[#F8FAFC] p-8 text-center">
+                  <Bookmark size={32} className="mx-auto text-[#7A8495]" />
+                  <p className="mt-3 text-base font-extrabold text-black">저장한 공고가 없습니다.</p>
+                  <button type="button" onClick={() => navigate('jobs')} className="mt-4 rounded-lg bg-[#0D6BEA] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#0959C7]">
+                    공고 보러가기
+                  </button>
+                </div>
+              )}
             </section>
-
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
+          ) : activeMenu === '계정 설정' ? (
+            <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
               <div className="mb-5">
-                <h2 className="font-bold text-foreground">기업 확인 정보</h2>
-                <p className="text-sm text-muted-foreground mt-1">기업이 서류 검토 전에 꼭 확인하는 핵심 정보를 정리해 주세요.</p>
+                <h2 className="text-lg font-extrabold text-black">계정 설정</h2>
+                <p className="mt-1 text-sm font-semibold text-[#7A8495]">member 테이블의 기본 회원 정보입니다.</p>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <label className="block sm:col-span-2">
-                  <span className="block text-sm font-medium mb-2">핵심 경력 요약</span>
-                  <input
-                    className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm"
-                    value={profileForm.jobSummary}
-                    onChange={event => updateForm('jobSummary', event.target.value)}
-                  />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">로그인 아이디</span>
+                  <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.loginId} onChange={event => updateAccountForm('loginId', event.target.value)} />
                 </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">회원 상태</span>
+                  <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={accountForm.status} onChange={event => updateAccountForm('status', event.target.value)}>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="SUSPENDED">SUSPENDED</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">이메일</span>
+                  <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.email} onChange={event => updateAccountForm('email', event.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">전화번호</span>
+                  <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.phone} onChange={event => updateAccountForm('phone', event.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">현재 비밀번호</span>
+                  <input type="password" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.currentPassword} onChange={event => updateAccountForm('currentPassword', event.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">새 비밀번호</span>
+                  <input type="password" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={accountForm.newPassword} onChange={event => updateAccountForm('newPassword', event.target.value)} placeholder="변경할 때만 입력하세요" />
+                </label>
+              </div>
 
-                <div className="block sm:col-span-2">
-                  <span className="block text-sm font-medium mb-2">보유 기술</span>
-                  <div className="flex gap-2">
-                    <input
-                      className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm"
-                      placeholder="예: Java, React, 포토샵, 고객 응대"
-                      value={profileForm.skillInput}
-                      onChange={event => updateForm('skillInput', event.target.value)}
-                      onKeyDown={event => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          handleAddSkill();
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90"
-                      onClick={handleAddSkill}
-                    >
-                      <Plus size={16} />
-                      추가
-                    </button>
+              <button type="button" onClick={saveAccountSettings} className="mt-6 rounded-lg bg-[#0D6BEA] px-5 py-3 text-sm font-extrabold text-white hover:bg-[#0959C7]">
+                계정 설정 저장
+              </button>
+            </section>
+          ) : (
+            <>
+              <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-extrabold">회원 기본 정보</h2>
+                    <p className="mt-1 text-sm font-semibold text-[#7A8495]">member 테이블에 저장되는 필수 정보입니다.</p>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {profileForm.skills.map(skill => (
+                  <button type="button" onClick={() => setIsPhotoPickerOpen(prev => !prev)} className="inline-flex items-center gap-2 rounded-lg border border-[#D7DDE5] px-3 py-2 text-sm font-bold hover:bg-[#F8FAFC]">
+                    <Camera size={16} />
+                    사진 변경
+                  </button>
+                  <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleProfilePhotoChange} />
+                </div>
+
+                {isPhotoPickerOpen && (
+                  <div className="mb-5 rounded-lg border border-[#DDE3EA] bg-[#F8FAFC] p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        {renderProfileAvatar('flex h-16 w-16 shrink-0 items-center justify-center text-2xl')}
+                        <div>
+                          <p className="text-sm font-extrabold text-black">프로필 사진 선택</p>
+                          <p className="mt-1 text-xs font-semibold text-[#7A8495]">job_seeker_profile.profile_image_url에 대응되는 정보입니다.</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => photoInputRef.current?.click()} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0D6BEA] px-4 py-2 text-sm font-bold text-white hover:bg-[#0959C7]">
+                        <Camera size={16} />
+                        사진 업로드
+                      </button>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="mb-2 text-sm font-bold text-[#344054]">기본 프로필</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => saveProfileAvatar({ type: 'initial', value: '' }, '기본 이니셜 프로필이 선택되었습니다.')}
+                          aria-pressed={profileAvatar.type === 'initial'}
+                          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 bg-[#E4EFFF] text-base font-extrabold text-[#0D6BEA] ${
+                            profileAvatar.type === 'initial' ? 'border-[#0D6BEA]' : 'border-transparent hover:border-[#B9D6FF]'
+                          }`}
+                        >
+                          {avatarInitial || initialAvatar}
+                        </button>
+                        {defaultProfileOptions.map(option => (
+                          <button
+                            type="button"
+                            key={option.id}
+                            onClick={() => saveProfileAvatar({ type: 'preset', value: option.id }, '기본 프로필이 선택되었습니다.')}
+                            aria-pressed={profileAvatar.type === 'preset' && profileAvatar.value === option.id}
+                            className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-extrabold ${
+                              profileAvatar.type === 'preset' && profileAvatar.value === option.id ? 'border-[#0D6BEA]' : 'border-transparent hover:border-[#B9D6FF]'
+                            }`}
+                            style={{ backgroundColor: option.backgroundColor, color: option.color }}
+                            title={`${option.label} 기본 프로필`}
+                          >
+                            {avatarInitial || initialAvatar}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">이름</span>
+                    <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.name} onChange={event => updateForm('name', event.target.value)} />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">생년월일</span>
+                    <input type="date" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.birthDate} onChange={event => updateForm('birthDate', event.target.value)} />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">성별</span>
+                    <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.gender} onChange={event => updateForm('gender', event.target.value)}>
+                      <option value="MALE">남성</option>
+                      <option value="FEMALE">여성</option>
+                      <option value="OTHER">기타/선택 안함</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">이메일</span>
+                    <div className="relative">
+                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.email} onChange={event => updateForm('email', event.target.value)} />
+                      <Mail size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A8495]" />
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">전화번호</span>
+                    <div className="relative">
+                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.phone} onChange={event => updateForm('phone', event.target.value)} />
+                      <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A8495]" />
+                    </div>
+                  </label>
+                  <label className="relative block">
+                    <span className="mb-2 block text-sm font-bold">현재 거주지역</span>
+                    <button type="button" onClick={() => setIsResidenceRegionOpen(prev => !prev)} className="flex w-full items-center justify-between rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-left text-sm">
+                      {profileForm.residenceRegion}
+                      <span className="text-[#7A8495]">⌄</span>
+                    </button>
+                    {isResidenceRegionOpen && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#DCEAF3] bg-white shadow-lg">
+                        {regionOptions.map(region => (
+                          <button
+                            type="button"
+                            key={region}
+                            onClick={() => {
+                              updateForm('residenceRegion', region);
+                              setIsResidenceRegionOpen(false);
+                            }}
+                            className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-[#F4F8FC] ${
+                              profileForm.residenceRegion === region ? 'bg-[#E4EFFF] font-bold text-[#0D6BEA]' : 'text-[#111827]'
+                            }`}
+                          >
+                            {region}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+                <h2 className="mb-5 text-lg font-extrabold">구직 조건</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">희망 직무</span>
+                    <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.desiredJob} onChange={event => updateForm('desiredJob', event.target.value)} placeholder="예: 백엔드 개발자" />
+                  </label>
+                  <label className="relative block">
+                    <span className="mb-2 block text-sm font-bold">희망 근무지역</span>
+                    <button type="button" onClick={() => setIsDesiredRegionOpen(prev => !prev)} className="flex w-full items-center justify-between rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-left text-sm">
+                      {profileForm.desiredRegion}
+                      <span className="text-[#7A8495]">⌄</span>
+                    </button>
+                    {isDesiredRegionOpen && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#DCEAF3] bg-white shadow-lg">
+                        {regionOptions.map(region => (
+                          <button
+                            type="button"
+                            key={region}
+                            onClick={() => {
+                              updateForm('desiredRegion', region);
+                              setIsDesiredRegionOpen(false);
+                            }}
+                            className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-[#F4F8FC] ${
+                              profileForm.desiredRegion === region ? 'bg-[#E4EFFF] font-bold text-[#0D6BEA]' : 'text-[#111827]'
+                            }`}
+                          >
+                            {region}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">희망 고용형태</span>
+                    <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.employmentType} onChange={event => updateForm('employmentType', event.target.value)}>
+                      {employmentTypeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">경력 구분</span>
+                    <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.careerType} onChange={event => updateForm('careerType', event.target.value)}>
+                      {careerTypeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">경력 연수</span>
+                    <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm" value={profileForm.careerYears} onChange={event => updateForm('careerYears', formatCareerYears(event.target.value))} inputMode="numeric" placeholder="예: 3" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">희망 최소 연봉 <span className="text-[#7A8495]">(만원)</span></span>
+                    <div className="relative">
+                      <input
+                        className="w-full rounded-lg border border-[#DCEAF3] py-3 pl-3 pr-24 text-sm font-bold outline-none focus:ring-4 focus:ring-[#0D6BEA]/15"
+                        value={profileForm.minSalary}
+                        onChange={event => updateForm('minSalary', formatSalaryInput(event.target.value))}
+                        inputMode="numeric"
+                        placeholder="예: 4,000"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 inline-flex min-w-[70px] -translate-y-1/2 justify-end whitespace-nowrap text-sm font-extrabold text-[#596273]">
+                        만원 이상
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-[#7A8495]">DB의 min_salary는 만원 단위입니다. 예: 4,000만원 이상, 10,000만원 이상</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {salaryPresets.map(salary => (
+                        <button
+                          type="button"
+                          key={salary}
+                          onClick={() => updateForm('minSalary', Number(salary).toLocaleString('ko-KR'))}
+                          className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${
+                            profileForm.minSalary === Number(salary).toLocaleString('ko-KR') ? 'bg-[#0D6BEA] text-white' : 'bg-[#F1F3F6] text-[#344054] hover:bg-[#E4EFFF]'
+                          }`}
+                        >
+                          {Number(salary).toLocaleString('ko-KR')}만원
+                        </button>
+                      ))}
+                    </div>
+                  </label>
+                </div>
+
+                <div className="mt-5">
+                  <p className="mb-2 text-sm font-bold">선호 근무 방식</p>
+                  <div className="flex flex-wrap gap-2">
+                    {workTypes.map(workType => (
                       <button
                         type="button"
-                        key={skill}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#BFD8EA] bg-[#F5FAFF] px-3 py-2 text-sm font-semibold text-[#22618C]"
-                        onClick={() => handleRemoveSkill(skill)}
+                        key={workType.field}
+                        onClick={() => toggleWorkType(workType.field)}
+                        className={`rounded-full px-4 py-2 text-sm font-bold ${
+                          profileForm[workType.field] ? 'bg-[#0D6BEA] text-white' : 'bg-[#F1F3F6] text-black'
+                        }`}
                       >
-                        {skill}
-                        <X size={14} />
+                        {workType.label}
                       </button>
                     ))}
                   </div>
                 </div>
+              </section>
 
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">자격증</span>
-                  <input
-                    className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm"
-                    value={profileForm.certifications}
-                    onChange={event => updateForm('certifications', event.target.value)}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">출근 가능일</span>
-                  <input
-                    className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm"
-                    value={profileForm.availableDate}
-                    onChange={event => updateForm('availableDate', event.target.value)}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">최종 학력</span>
-                  <select
-                    className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm"
-                    value={profileForm.finalEducation}
-                    onChange={event => updateForm('finalEducation', event.target.value)}
-                  >
-                    <option>고등학교 졸업</option>
-                    <option>전문대 졸업</option>
-                    <option>대학교 졸업</option>
-                    <option>대학원 졸업</option>
-                    <option>학력 무관</option>
-                  </select>
-                </label>
-
-                <label className="block sm:col-span-2">
-                  <span className="block text-sm font-medium mb-2">업무 환경 지원 필요사항</span>
-                  <textarea
-                    className="min-h-24 w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm"
-                    value={profileForm.disabilitySupport}
-                    onChange={event => updateForm('disabilitySupport', event.target.value)}
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
-              <h2 className="font-bold text-foreground mb-5">연락 가능 설정</h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">연락 가능 시간대</span>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.contactStart} onChange={event => updateForm('contactStart', event.target.value)} />
-                      <Clock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+                <h2 className="mb-5 text-lg font-extrabold">연락 및 공개 설정</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">연락 가능 시작시간</span>
+                    <div className="relative">
+                      <input type="time" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.contactTimeStart} onChange={event => updateForm('contactTimeStart', event.target.value)} />
+                      <Clock3 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A8495]" />
                     </div>
-                    <div className="relative flex-1">
-                      <input className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.contactEnd} onChange={event => updateForm('contactEnd', event.target.value)} />
-                      <Clock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">연락 가능 종료시간</span>
+                    <div className="relative">
+                      <input type="time" className="w-full rounded-lg border border-[#DCEAF3] px-3 py-3 pr-10 text-sm" value={profileForm.contactTimeEnd} onChange={event => updateForm('contactTimeEnd', event.target.value)} />
+                      <Clock3 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A8495]" />
                     </div>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">선호 연락 방식</span>
+                    <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.contactMethod} onChange={event => updateForm('contactMethod', event.target.value)}>
+                      {contactMethodOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <div className="block">
+                    <span className="mb-2 block text-sm font-bold">프로필 공개 여부</span>
+                    <button
+                      type="button"
+                      onClick={() => updateForm('profilePublic', !profileForm.profilePublic)}
+                      className={`flex h-12 w-full items-center justify-between rounded-lg border px-4 text-sm font-extrabold ${
+                        profileForm.profilePublic ? 'border-[#0D6BEA] bg-[#EEF5FF] text-[#0D6BEA]' : 'border-[#DCEAF3] bg-white text-[#596273]'
+                      }`}
+                    >
+                      <span>{profileForm.profilePublic ? '공개' : '비공개'}</span>
+                      {profileForm.profilePublic ? <Eye size={18} /> : <EyeOff size={18} />}
+                    </button>
                   </div>
-                </label>
-                <label className="block">
-                  <span className="block text-sm font-medium mb-2">선호 연락 방식</span>
-                  <select className="w-full rounded-lg border border-[#DCEAF3] bg-white px-3 py-3 text-sm" value={profileForm.contactMethod} onChange={event => updateForm('contactMethod', event.target.value)}>
-                    <option>이메일</option>
-                    <option>문자</option>
-                    <option>전화</option>
-                  </select>
-                </label>
-              </div>
-            </section>
+                </div>
+              </section>
 
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
-              <h2 className="font-bold text-foreground mb-4">자기소개</h2>
-              <textarea
-                className="min-h-32 w-full rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm"
-                value={profileForm.introduction}
-                maxLength={maxIntroLength}
-                onChange={event => handleIntroChange(event.target.value)}
-              />
-              <p className="mt-2 text-right text-xs text-muted-foreground">
-                {profileForm.introduction.length} / {maxIntroLength}자
-              </p>
-            </section>
+              <section className="rounded-xl border border-[#DDE3EA] bg-white p-5 shadow-sm">
+                <h2 className="mb-5 text-lg font-extrabold">자기소개</h2>
+                <textarea
+                  value={profileForm.introduction}
+                  onChange={event => updateForm('introduction', event.target.value.slice(0, maxIntroLength))}
+                  rows={6}
+                  placeholder="지원 시 참고할 자기소개를 입력하세요."
+                  className="w-full resize-none rounded-lg border border-[#DCEAF3] px-3 py-3 text-sm outline-none focus:ring-4 focus:ring-[#0D6BEA]/15"
+                />
+                <p className="mt-2 text-right text-sm font-bold text-[#7A8495]">{profileForm.introduction.length} / {maxIntroLength}자</p>
+              </section>
+            </>
+          )}
+        </section>
+      </main>
 
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
-              <h2 className="font-bold text-foreground mb-4">공개 설정</h2>
-              <div className="grid md:grid-cols-[1fr_1fr] gap-4 items-center">
-                <div className="space-y-2 text-sm">
-                  {['공개', '비공개'].map(status => (
-                    <label key={status} className={`flex items-center gap-2 ${status === '비공개' ? 'text-muted-foreground' : ''}`}>
-                      <input
-                        name="openStatus"
-                        type="radio"
-                        checked={profileForm.openStatus === status}
-                        onChange={() => updateForm('openStatus', status)}
-                      />
-                      {status}
-                    </label>
-                  ))}
-                </div>
-                <div className="rounded-lg bg-[#F7FAFC] px-4 py-3 text-sm text-muted-foreground flex items-start gap-3">
-                  <ShieldCheck size={18} className="text-primary mt-0.5" />
-                  <p>공개 설정 시 기업이 프로필을 확인하고 면접 제안을 보낼 수 있습니다.</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-              <h2 className="font-bold text-foreground mb-4">계정 정보</h2>
-              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                <div className="rounded-lg bg-[#F7FAFC] p-4">
-                  <p className="text-muted-foreground">계정 상태</p>
-                  <p className="font-semibold text-[#14A38B] mt-1">활성</p>
-                </div>
-                <div className="rounded-lg bg-[#F7FAFC] p-4">
-                  <p className="text-muted-foreground">가입일</p>
-                  <p className="font-semibold text-foreground mt-1">2024-05-10</p>
-                </div>
-                <div className="rounded-lg bg-[#F7FAFC] p-4">
-                  <p className="text-muted-foreground">마지막 로그인</p>
-                  <p className="font-semibold text-foreground mt-1">2026-08-01 14:30</p>
-                </div>
-              </div>
-            </section>
-              </>
-            ) : (
-              renderMenuPanel()
-            )}
-          </main>
-        </div>
-      </div>
-
-      {isPreviewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
+      {editingApplicationJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden bg-black/45 px-4 py-6">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[#E7ECF2] px-6 py-5">
               <div>
-                <p className="text-sm text-muted-foreground">기업에게 보이는 프로필</p>
-                <h2 className="text-xl font-bold text-foreground mt-1">{profileForm.name}</h2>
+                <p className="text-sm font-bold text-[#0D6BEA]">{editingApplicationJob.company}</p>
+                <h2 className="mt-1 text-xl font-extrabold text-black">지원서 수정</h2>
+                <p className="mt-1 text-sm font-semibold text-[#7A8495]">{editingApplicationJob.title}</p>
               </div>
               <button
                 type="button"
-                className="rounded-lg border border-[#DCEAF3] px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-[#F7FAFC]"
-                onClick={() => setIsPreviewOpen(false)}
+                onClick={closeApplicationEdit}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F1F3F6] text-lg font-bold text-[#596273] hover:bg-[#E1E6EE]"
+                aria-label="지원서 수정 창 닫기"
               >
-                닫기
+                x
               </button>
             </div>
 
-            <div className="mt-5 flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-[#E5EAF0] text-primary flex items-center justify-center text-2xl font-bold overflow-hidden">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="프로필 사진" className="h-full w-full object-cover" />
-                ) : (
-                  initialAvatar
-                )}
+            <div className="px-6 py-6">
+              <div className="rounded-lg bg-[#F8FAFC] px-4 py-3 text-sm font-bold text-[#344054]">
+                공고명: <span className="text-black">{editingApplicationJob.title}</span>
               </div>
-              <div>
-                <p className="font-semibold text-foreground">{profileForm.preferredRole}</p>
-                <p className="text-sm text-muted-foreground">{profileForm.email}</p>
-              </div>
-            </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg bg-[#F7FAFC] p-3">
-                <p className="text-muted-foreground">생년월일</p>
-                <p className="font-semibold text-foreground mt-1">{profileForm.birthDate}</p>
-              </div>
-              <div className="rounded-lg bg-[#F7FAFC] p-3">
-                <p className="text-muted-foreground">성별</p>
-                <p className="font-semibold text-foreground mt-1">{profileForm.gender}</p>
-              </div>
-              <div className="rounded-lg bg-[#F7FAFC] p-3">
-                <p className="text-muted-foreground">희망 지역</p>
-                <p className="font-semibold text-foreground mt-1">{profileForm.preferredRegion}</p>
-              </div>
-              <div className="rounded-lg bg-[#F7FAFC] p-3">
-                <p className="text-muted-foreground">공개 상태</p>
-                <p className="font-semibold text-[#14A38B] mt-1">{profileForm.openStatus}</p>
-              </div>
-            </div>
+              <div className="mt-5 divide-y divide-[#E7ECF2] border-t border-[#D7DDE5]">
+                <label className="grid gap-3 py-5 sm:grid-cols-[140px_minmax(0,1fr)]">
+                  <span className="text-sm font-bold text-[#596273]">성명</span>
+                  <input
+                    value={applicationEditForm.name}
+                    onChange={event => updateApplicationEditForm('name', event.target.value)}
+                    className="h-11 w-full rounded border border-[#D7DDE5] px-3 text-sm outline-none focus:border-[#0D6BEA]"
+                  />
+                </label>
 
-            <div className="mt-5 rounded-lg bg-[#F7FAFC] p-4 text-sm">
-              <p className="font-semibold text-foreground">{profileForm.jobSummary}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {profileForm.skills.map(skill => (
-                  <span key={skill} className="rounded-full bg-white border border-[#DCEAF3] px-3 py-1 text-xs font-semibold text-primary">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-muted-foreground">출근 가능일</p>
-                  <p className="font-semibold text-foreground mt-1">{profileForm.availableDate}</p>
+                <div className="grid gap-3 py-5 sm:grid-cols-[140px_minmax(0,1fr)]">
+                  <p className="text-sm font-bold text-[#596273]">휴대전화</p>
+                  <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                    {(['phone1', 'phone2', 'phone3'] as const).map((field, index) => (
+                      <input
+                        key={field}
+                        value={applicationEditForm[field]}
+                        onChange={event => updateApplicationEditForm(field, event.target.value.replace(/\D/g, '').slice(0, index === 0 ? 3 : 4))}
+                        className="h-11 min-w-0 rounded border border-[#D7DDE5] px-3 text-sm outline-none focus:border-[#0D6BEA]"
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">최종 학력</p>
-                  <p className="font-semibold text-foreground mt-1">{profileForm.finalEducation}</p>
+
+                <label className="grid gap-3 py-5 sm:grid-cols-[140px_minmax(0,1fr)]">
+                  <span className="text-sm font-bold text-[#596273]">이메일</span>
+                  <input
+                    value={applicationEditForm.email}
+                    onChange={event => updateApplicationEditForm('email', event.target.value)}
+                    placeholder="email@example.com"
+                    className="h-11 rounded border border-[#D7DDE5] px-3 text-sm outline-none focus:border-[#0D6BEA]"
+                  />
+                </label>
+
+                <label className="grid gap-3 py-5 sm:grid-cols-[140px_minmax(0,1fr)]">
+                  <span className="text-sm font-bold text-[#596273]">고용형태</span>
+                  <select
+                    value={applicationEditForm.employmentType}
+                    onChange={event => updateApplicationEditForm('employmentType', event.target.value)}
+                    className="h-11 rounded border border-[#D7DDE5] bg-white px-3 text-sm font-bold text-[#344054] outline-none focus:border-[#0D6BEA]"
+                  >
+                    <option value="아르바이트">아르바이트</option>
+                    <option value="정규/계약직">정규/계약직</option>
+                    <option value="인턴">인턴</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="mt-5 flex items-start gap-2 rounded-lg bg-[#F8FAFC] px-4 py-3 text-sm font-bold text-[#344054]">
+                <input
+                  type="checkbox"
+                  checked={applicationEditForm.privacyAgreed}
+                  onChange={event => updateApplicationEditForm('privacyAgreed', event.target.checked)}
+                  className="mt-1"
+                />
+                수정된 이름, 연락처, 이메일을 채용 담당자에게 전달하는 데 동의합니다.
+              </label>
+
+              {applicationEditError && <p className="mt-4 rounded-lg bg-[#FFF5F5] px-4 py-3 text-sm font-bold text-[#D92D20]">{applicationEditError}</p>}
+
+              <div className="mt-6 flex flex-col gap-3 border-t border-[#E7ECF2] pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="button"
+                  onClick={deleteApplication}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#F2B8B5] px-5 py-3 text-sm font-extrabold text-[#D92D20] hover:bg-[#FFF5F5]"
+                >
+                  <Trash2 size={17} />
+                  지원서 삭제
+                </button>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={closeApplicationEdit} className="rounded-lg border border-[#D7DDE5] px-5 py-3 text-sm font-extrabold text-[#344054] hover:bg-[#F8FAFC]">
+                    취소
+                  </button>
+                  <button type="button" onClick={saveApplicationEdit} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0D6BEA] px-6 py-3 text-sm font-extrabold text-white hover:bg-[#0959C7]">
+                    <Save size={17} />
+                    수정 저장
+                  </button>
                 </div>
               </div>
-              <p className="mt-3 text-muted-foreground">지원 필요사항</p>
-              <p className="mt-1 text-foreground">{profileForm.disabilitySupport}</p>
-              <p className="mt-3 text-muted-foreground">자기소개</p>
-              <p className="mt-1 text-foreground whitespace-pre-line">{profileForm.introduction}</p>
             </div>
+          </div>
+        </div>
+      )}
 
-            <button
-              type="button"
-              className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90"
-              onClick={() => setIsPreviewOpen(false)}
-            >
-              확인
-            </button>
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                {renderProfileAvatar('flex h-14 w-14 shrink-0 items-center justify-center text-xl')}
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-[#0D6BEA]">프로필 미리보기</p>
+                  <h2 className="mt-1 truncate text-2xl font-extrabold">{profileForm.name}</h2>
+                  <p className="mt-1 truncate text-sm font-semibold text-[#7A8495]">{profileForm.desiredJob || '희망 직무 미입력'}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setIsPreviewOpen(false)} className="rounded-lg border border-[#D7DDE5] px-3 py-2 text-sm font-bold">
+                닫기
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3 text-sm">
+              <p><b>성별</b> {genderLabels[profileForm.gender] || profileForm.gender}</p>
+              <p><b>전화번호</b> {profileForm.phone}</p>
+              <p><b>이메일</b> {profileForm.email || '미입력'}</p>
+              <p><b>현재 거주지역</b> {profileForm.residenceRegion}</p>
+              <p><b>희망 근무지역</b> {profileForm.desiredRegion}</p>
+              <p><b>경력</b> {careerTypeOptions.find(option => option.value === profileForm.careerType)?.label} / {profileForm.careerYears || 0}년</p>
+              <p><b>희망 최소 연봉</b> {profileForm.minSalary ? `${profileForm.minSalary}만원 이상` : '미입력'}</p>
+              <p><b>근무 방식</b> {selectedWorkTypes.length > 0 ? selectedWorkTypes.join(', ') : '미선택'}</p>
+              <p><b>연락 가능 시간</b> {profileForm.contactTimeStart} ~ {profileForm.contactTimeEnd}</p>
+              <p><b>선호 연락 방식</b> {contactMethodOptions.find(option => option.value === profileForm.contactMethod)?.label}</p>
+              <p><b>공개 여부</b> {profileForm.profilePublic ? '공개' : '비공개'}</p>
+              <p className="whitespace-pre-line"><b>자기소개</b><br />{profileForm.introduction || '미입력'}</p>
+            </div>
           </div>
         </div>
       )}
