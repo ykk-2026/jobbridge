@@ -39,7 +39,7 @@ export async function saveInterestJob(job: Job) {
       companyName: job.company,
       title: job.title,
       jobCategory: job.category,
-      employmentType: 'FULL_TIME',
+      employmentType: job.category === 'PartTime' ? 'PART_TIME' : 'FULL_TIME',
       location: job.location,
       ...salaryRange(job.salary),
       experienceLevel: null,

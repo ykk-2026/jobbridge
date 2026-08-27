@@ -22,6 +22,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.List;
 
 @RestController
@@ -64,6 +65,8 @@ public class JobApplicationApiController {
         if (schemaReady) return;
 
         mapper.ensureTable();
+        removeLegacyJobForeignKey();
+        normalizeLegacyJobIdColumn();
         mapper.ensureCompanyNameColumn();
         mapper.ensureJobTitleColumn();
         mapper.ensureApplicantNameColumn();
@@ -72,7 +75,6 @@ public class JobApplicationApiController {
         mapper.ensureEmploymentTypeColumn();
         mapper.ensureStatusColumn();
         mapper.ensureCreatedAtColumn();
-        removeLegacyJobForeignKey();
         schemaReady = true;
     }
 
@@ -82,7 +84,7 @@ public class JobApplicationApiController {
             DatabaseMetaData metadata = connection.getMetaData();
             try (ResultSet foreignKeys = metadata.getImportedKeys(connection.getCatalog(), null, "job_application")) {
                 while (foreignKeys.next()) {
-                    if (!"fk_job_application_job".equalsIgnoreCase(foreignKeys.getString("FK_NAME"))
+                    if (!"job_id".equalsIgnoreCase(foreignKeys.getString("FKCOLUMN_NAME"))
                             || !"interest_job".equalsIgnoreCase(foreignKeys.getString("PKTABLE_NAME"))) {
                         continue;
                     }
@@ -93,13 +95,37 @@ public class JobApplicationApiController {
                             : "DROP CONSTRAINT";
                     try (Statement statement = connection.createStatement()) {
                         statement.executeUpdate("ALTER TABLE job_application " + dropClause
-                                + " fk_job_application_job");
+                                + " " + foreignKeys.getString("FK_NAME"));
                     }
                     return;
                 }
             }
         } catch (SQLException exception) {
             throw new IllegalStateException("지원서 테이블의 이전 외래키를 정리하지 못했습니다.", exception);
+        } finally {
+            DataSourceUtils.releaseConnection(connection, dataSource);
+        }
+    }
+
+    private void normalizeLegacyJobIdColumn() {
+        Connection connection = DataSourceUtils.getConnection(dataSource);
+        try {
+            DatabaseMetaData metadata = connection.getMetaData();
+            try (ResultSet columns = metadata.getColumns(connection.getCatalog(), null, "job_application", "job_id")) {
+                if (!columns.next()) return;
+                int type = columns.getInt("DATA_TYPE");
+                if (type == Types.CHAR || type == Types.VARCHAR || type == Types.LONGVARCHAR) return;
+            }
+
+            String product = metadata.getDatabaseProductName().toLowerCase();
+            String alterSql = product.contains("mariadb") || product.contains("mysql")
+                    ? "ALTER TABLE job_application MODIFY COLUMN job_id VARCHAR(50) NOT NULL"
+                    : "ALTER TABLE job_application ALTER COLUMN job_id VARCHAR(50) NOT NULL";
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate(alterSql);
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("지원서 테이블의 공고 ID 형식을 정리하지 못했습니다.", exception);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }

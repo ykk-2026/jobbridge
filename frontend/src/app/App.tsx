@@ -19,6 +19,7 @@ import {
   type LoginMember,
 } from '@/app/api/memberApi';
 import { saveJobApplication } from '@/app/api/jobApplicationApi';
+import { deleteInterestJob, getInterestJobs, saveInterestJob } from '@/app/api/interestJobApi';
 
 // MARKER-MAKE-KIT-INVOKED
 const noNavPages: Page[] = ['login', 'register'];
@@ -243,6 +244,35 @@ export default function App() {
       .catch(() => setCurrentUser(null));
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setBookmarks(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    getInterestJobs()
+      .then(savedJobs => {
+        if (cancelled) return;
+
+        const savedBookmarkIds = savedJobs.reduce<Set<string>>((ids, savedJob) => {
+          const matchedJob = mockJobs.find(job => (
+            job.company === savedJob.companyName && job.title === savedJob.title
+          ));
+          if (matchedJob) ids.add(`job-${matchedJob.id}`);
+          return ids;
+        }, new Set());
+        setBookmarks(savedBookmarkIds);
+      })
+      .catch(() => {
+        if (!cancelled) setBookmarks(new Set());
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
+
   const navigate = (page: Page, jobId?: string) => {
     if (page !== currentPage) {
       setPageHistory(prev => [...prev, currentPage]);
@@ -291,19 +321,44 @@ export default function App() {
     } finally {
       clearAutoLoginSession();
       setCurrentUser(null);
+      setBookmarks(new Set());
       setPageHistory([]);
       saveCurrentPage('main');
       setCurrentPage('main');
     }
   };
 
-  const handleBookmark = (id: string) => {
-    setBookmarks(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleBookmark = async (id: string) => {
+    if (!currentUser) {
+      alert('관심 공고를 저장하려면 로그인해 주세요.');
+      navigate('login');
+      return;
+    }
+
+    const normalizedJobId = normalizeJobId(id);
+    const bookmarkId = `job-${normalizedJobId}`;
+    const job = mockJobs.find(item => item.id === normalizedJobId);
+    if (!job) {
+      alert('저장할 공고를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      if (bookmarks.has(bookmarkId)) {
+        await deleteInterestJob(job.company, job.title);
+      } else {
+        await saveInterestJob(job);
+      }
+
+      setBookmarks(prev => {
+        const next = new Set(prev);
+        if (next.has(bookmarkId)) next.delete(bookmarkId);
+        else next.add(bookmarkId);
+        return next;
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '관심 공고 저장 중 오류가 발생했습니다.');
+    }
   };
 
   const handleApplyJob = async (id: string, formData: ApplicationFormData) => {

@@ -1,4 +1,4 @@
-package org.ykk.jobbridge.ServiceImpl;
+package org.ykk.jobbridge.serviceImpl;
 
 import org.springframework.stereotype.Service;
 import org.ykk.jobbridge.dto.JobDTO;
