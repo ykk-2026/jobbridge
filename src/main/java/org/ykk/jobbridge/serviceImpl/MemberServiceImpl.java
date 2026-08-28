@@ -1,4 +1,4 @@
-package org.ykk.jobbridge.ServiceImpl;
+package org.ykk.jobbridge.serviceImpl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;

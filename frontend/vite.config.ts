@@ -45,7 +45,7 @@ export default defineConfig({
 
   build: {
     outDir: '../src/main/resources/static',
-    emptyOutDir: false,
+    emptyOutDir: true,
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.

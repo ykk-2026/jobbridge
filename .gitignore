@@ -20,6 +20,11 @@ target/
 *.iml
 *.ipr
 
+### Local diagnostics and temporary tools ###
+/*.log
+/.chrome-*/
+/.tools/
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
