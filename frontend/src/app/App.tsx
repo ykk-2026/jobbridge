@@ -11,6 +11,7 @@ import { JobDetailPage } from '@/app/pages/jobs/JobDetailPage';
 import { JobsPage } from '@/app/pages/jobs/JobsPage';
 import { SupportPage } from '@/app/pages/support/SupportPage';
 import { AdminPage } from '@/app/pages/admin/AdminPage';
+import { CommunityPage } from '@/app/pages/community/CommunityPage';
 import {
   getCurrentMember,
   loginMember,
@@ -41,6 +42,7 @@ const pageValues: Page[] = [
   'applications',
   'ai-recommend',
   'support',
+  'community',
   'corporate',
   'admin',
 ];
@@ -502,6 +504,9 @@ export default function App() {
 
       case 'support':
         return <SupportPage />;
+
+      case 'community':
+        return <CommunityPage currentUser={currentUser} navigate={navigate} />;
 
       case 'admin':
         return currentUser?.role === 'admin' ? <AdminPage /> : <LoginPage navigate={navigate} onLogin={handleLogin} onLoginSuccess={handleLoginSuccess} registeredUser={registeredUser} onBack={handleBack} onResetPassword={handleResetPassword} />;

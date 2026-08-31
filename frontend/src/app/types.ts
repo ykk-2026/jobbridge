@@ -9,6 +9,8 @@ export type Page =
   | 'applications'
   | 'ai-recommend'
   | 'support'
+  | 'community'
+  | 'admin'
   | 'corporate';
 
 export type UserRole = 'personal' | 'corporate' | 'admin';

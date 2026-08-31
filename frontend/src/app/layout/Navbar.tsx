@@ -21,7 +21,7 @@ const navItems: NavItem[] = [
   { label: '채용정보', page: 'jobs' },
   { label: 'AI 추천일자리', page: 'ai-recommend', badge: 'NEW' },
   { label: '기업 정보', page: 'jobs' },
-  { label: '커뮤니티', page: 'support' },
+  { label: '커뮤니티', page: 'community' },
   { label: '이용안내', page: 'support' },
 ];
 
