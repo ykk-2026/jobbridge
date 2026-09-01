@@ -11,6 +11,7 @@ import { JobDetailPage } from '@/app/pages/jobs/JobDetailPage';
 import { JobsPage } from '@/app/pages/jobs/JobsPage';
 import { SupportPage } from '@/app/pages/support/SupportPage';
 import { AdminPage } from '@/app/pages/admin/AdminPage';
+import { CommunityPage, CompanyInfoPage, GuidePage } from '@/app/pages/info/InfoPages';
 import {
   getCurrentMember,
   loginMember,
@@ -40,6 +41,9 @@ const pageValues: Page[] = [
   'saved',
   'applications',
   'ai-recommend',
+  'company-info',
+  'community',
+  'guide',
   'support',
   'corporate',
   'admin',
@@ -478,6 +482,7 @@ export default function App() {
 
       case 'user-dashboard':
       case 'corporate':
+      case 'applications':
         return (
           <ProfilePage
             currentUser={currentUser}
@@ -485,6 +490,7 @@ export default function App() {
             bookmarks={bookmarks}
             appliedJobIds={appliedJobIds}
             applicationForms={applicationForms}
+            initialMenu={currentPage === 'applications' ? '지원 현황' : '내 프로필'}
             onBookmark={handleBookmark}
             onUpdateApplication={handleUpdateApplication}
             onDeleteApplication={handleDeleteApplication}
@@ -499,6 +505,15 @@ export default function App() {
 
       case 'saved':
         return <JobsPage mode="saved" navigate={navigate} bookmarks={bookmarks} onBookmark={handleBookmark} initialQuery={headerSearchQuery} />;
+
+      case 'company-info':
+        return <CompanyInfoPage navigate={navigate} />;
+
+      case 'community':
+        return <CommunityPage />;
+
+      case 'guide':
+        return <GuidePage navigate={navigate} />;
 
       case 'support':
         return <SupportPage />;
@@ -527,7 +542,7 @@ export default function App() {
         {renderPage()}
       </main>
 
-      {showNavFooter && currentPage !== 'user-dashboard' && currentPage !== 'corporate' && currentPage !== 'admin' && (
+      {showNavFooter && currentPage !== 'user-dashboard' && currentPage !== 'corporate' && currentPage !== 'applications' && currentPage !== 'admin' && (
         <Footer navigate={navigate} />
       )}
     </div>

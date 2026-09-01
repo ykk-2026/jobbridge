@@ -20,9 +20,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: '채용정보', page: 'jobs' },
   { label: 'AI 추천일자리', page: 'ai-recommend', badge: 'NEW' },
-  { label: '기업 정보', page: 'jobs' },
-  { label: '커뮤니티', page: 'support' },
-  { label: '이용안내', page: 'support' },
+  { label: '기업 정보', page: 'company-info' },
+  { label: '커뮤니티', page: 'community' },
+  { label: '이용안내', page: 'guide' },
 ];
 
 export function Navbar({ currentPage, navigate, currentUser, onLogout, onSearch }: NavbarProps) {
@@ -47,31 +47,31 @@ export function Navbar({ currentPage, navigate, currentUser, onLogout, onSearch 
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#E5EAF0] bg-white">
-      <div className="mx-auto flex h-[66px] max-w-[1240px] items-center justify-between gap-5 px-6">
-        <div className="flex min-w-0 flex-1 items-center gap-8">
+      <div className="mx-auto grid h-[66px] max-w-[1240px] grid-cols-[auto_minmax(280px,460px)_auto] items-center gap-8 px-6">
+        <div className="flex min-w-0 items-center">
           <button type="button" onClick={() => goTo('main')} className="shrink-0" aria-label="일이음 홈으로 이동">
             <BrandLogo compact />
           </button>
+        </div>
 
-          <div className="relative hidden w-full max-w-[500px] md:block">
-            <input
-              value={searchQuery}
-              onChange={event => setSearchQuery(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === 'Enter') submitSearch();
-              }}
-              placeholder="직무, 회사, 지역, 키워드 검색"
-              className="h-9 w-full rounded-[4px] border border-[#D3DAE5] bg-white px-4 pr-12 text-[13px] font-semibold text-[#111827] outline-none placeholder:text-[#8B95A6] focus:border-[#2563EB]"
-            />
-            <button
-              type="button"
-              onClick={submitSearch}
-              aria-label="검색"
-              className="absolute right-0 top-0 flex h-9 w-12 items-center justify-center rounded-r-[4px] bg-[#1F64E8] text-white hover:bg-[#1754C8]"
-            >
-              <Search size={17} strokeWidth={2.6} />
-            </button>
-          </div>
+        <div className="relative mx-auto hidden w-full -translate-x-6 md:block">
+          <input
+            value={searchQuery}
+            onChange={event => setSearchQuery(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Enter') submitSearch();
+            }}
+            placeholder="검색으로 딱! 알바 찾기"
+            className="h-10 w-full rounded-full border border-[#1F64E8] bg-white px-5 pr-12 text-[13px] font-semibold text-[#111827] outline-none placeholder:text-[#7A8495] focus:border-[#0D6BEA] focus:ring-4 focus:ring-[#1F64E8]/15"
+          />
+          <button
+            type="button"
+            onClick={submitSearch}
+            aria-label="검색"
+            className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#1F64E8] hover:bg-[#EEF5FF]"
+          >
+            <Search size={18} strokeWidth={2.4} />
+          </button>
         </div>
 
         <div className="hidden items-center gap-5 md:flex">
@@ -137,11 +137,11 @@ export function Navbar({ currentPage, navigate, currentUser, onLogout, onSearch 
               onKeyDown={event => {
                 if (event.key === 'Enter') submitSearch();
               }}
-              placeholder="직무, 회사, 지역, 키워드 검색"
-              className="h-10 w-full rounded-md border border-[#D7DDE5] px-3 pr-12 text-sm font-semibold outline-none"
+              placeholder="검색으로 딱! 알바 찾기"
+              className="h-11 w-full rounded-full border border-[#1F64E8] px-5 pr-12 text-sm font-semibold outline-none focus:ring-4 focus:ring-[#1F64E8]/15"
             />
-            <button type="button" onClick={submitSearch} aria-label="검색" className="absolute right-0 top-0 flex h-10 w-11 items-center justify-center rounded-r-md bg-[#1F64E8] text-white">
-              <Search size={17} />
+            <button type="button" onClick={submitSearch} aria-label="검색" className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#1F64E8] hover:bg-[#EEF5FF]">
+              <Search size={18} />
             </button>
           </div>
           <div className="space-y-1">

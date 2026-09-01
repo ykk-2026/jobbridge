@@ -17,6 +17,10 @@ export interface ProfileDto {
   minSalary: number | null;
   remotePreferred: boolean;
   flexiblePreferred: boolean;
+  wheelchairRequired: boolean;
+  accessibleRestroomRequired: boolean;
+  disabledParkingRequired: boolean;
+  assistiveDeviceRequired: boolean;
   hybridPreferred: boolean;
   onsitePreferred: boolean;
   contactTimeStart: string | null;
