@@ -32,6 +32,10 @@ public class JobSeekerProfileDTO {
 
     private Boolean remotePreferred;
     private Boolean flexiblePreferred;
+    private Boolean wheelchairRequired;
+    private Boolean accessibleRestroomRequired;
+    private Boolean disabledParkingRequired;
+    private Boolean assistiveDeviceRequired;
     private Boolean hybridPreferred;
     private Boolean onsitePreferred;
 

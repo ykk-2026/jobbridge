@@ -68,6 +68,12 @@ public class InterestJobApiController {
         if (isBlank(interestJob.getJobCategory())) interestJob.setJobCategory("기타");
         if (isBlank(interestJob.getEmploymentType())) interestJob.setEmploymentType("FULL_TIME");
         if (isBlank(interestJob.getStatus())) interestJob.setStatus("OPEN");
+        if (interestJob.getWheelchairAccessible() == null) interestJob.setWheelchairAccessible(false);
+        if (interestJob.getAccessibleRestroom() == null) interestJob.setAccessibleRestroom(false);
+        if (interestJob.getDisabledParking() == null) interestJob.setDisabledParking(false);
+        if (interestJob.getRemoteAvailable() == null) interestJob.setRemoteAvailable(false);
+        if (interestJob.getFlexibleWorkAvailable() == null) interestJob.setFlexibleWorkAvailable(false);
+        if (interestJob.getAssistiveDeviceSupport() == null) interestJob.setAssistiveDeviceSupport(false);
     }
 
     private boolean isBlank(String value) {
