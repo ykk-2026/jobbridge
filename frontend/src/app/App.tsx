@@ -552,7 +552,7 @@ export default function App() {
         return <CompanyInfoPage navigate={navigate} />;
 
       case 'community':
-        return <CommunityPage />;
+        return <CommunityPage currentUser={currentUser} />;
 
       case 'guide':
         return <GuidePage navigate={navigate} />;

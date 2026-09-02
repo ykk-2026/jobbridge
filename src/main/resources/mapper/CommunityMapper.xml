@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ykk.jobbridge.mapper.CommunityMapper">
+    <sql id="postColumns">
+        p.id, p.member_id, p.category, p.title, m.name AS author, p.content,
+        (SELECT COUNT(*) FROM community_comment c
+         WHERE c.post_id = p.id AND c.status = 'ACTIVE') AS replies,
+        p.view_count AS views, p.view_count, p.like_count, p.status,
+        p.created_at, p.updated_at
+    </sql>
+
+    <select id="findAllPosts" resultType="org.ykk.jobbridge.dto.CommunityPostDTO">
+        SELECT <include refid="postColumns"/>
+        FROM community_post p
+        JOIN member m ON m.id = p.member_id
+        WHERE p.status = 'ACTIVE'
+        ORDER BY p.created_at DESC, p.id DESC
+    </select>
+
+    <select id="findPostById" resultType="org.ykk.jobbridge.dto.CommunityPostDTO">
+        SELECT <include refid="postColumns"/>
+        FROM community_post p
+        JOIN member m ON m.id = p.member_id
+        WHERE p.id = #{id}
+    </select>
+
+    <insert id="insertPost" parameterType="org.ykk.jobbridge.dto.CommunityPostDTO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO community_post (member_id, category, title, content, status)
+        VALUES (#{memberId}, #{category}, #{title}, #{content}, 'ACTIVE')
+    </insert>
+
+    <update id="incrementViews">
+        UPDATE community_post
+        SET view_count = view_count + 1
+        WHERE id = #{id} AND status = 'ACTIVE'
+    </update>
+
+    <update id="deletePost">
+        UPDATE community_post
+        SET status = 'DELETED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND member_id = #{memberId} AND status = 'ACTIVE'
+    </update>
+
+    <select id="findComments" resultType="org.ykk.jobbridge.dto.CommunityCommentDTO">
+        SELECT c.id, c.post_id, c.member_id, m.name AS author, c.content,
+               c.status, c.created_at, c.updated_at
+        FROM community_comment c
+        JOIN member m ON m.id = c.member_id
+        WHERE c.post_id = #{postId} AND c.status = 'ACTIVE'
+        ORDER BY c.created_at, c.id
+    </select>
+
+    <insert id="insertComment" parameterType="org.ykk.jobbridge.dto.CommunityCommentDTO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO community_comment (post_id, member_id, content, status)
+        VALUES (#{postId}, #{memberId}, #{content}, 'ACTIVE')
+    </insert>
+
+    <update id="deleteComment">
+        UPDATE community_comment
+        SET status = 'DELETED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND member_id = #{memberId} AND status = 'ACTIVE'
+    </update>
+
+    <select id="findReportsByMember" resultType="org.ykk.jobbridge.dto.CommunityReportDTO">
+        SELECT id, post_id, reporter_member_id, reason, detail, status, created_at
+        FROM community_report
+        WHERE post_id = #{postId} AND reporter_member_id = #{memberId}
+    </select>
+
+    <select id="countReport" resultType="int">
+        SELECT COUNT(*) FROM community_report
+        WHERE post_id = #{postId} AND reporter_member_id = #{memberId}
+    </select>
+
+    <insert id="insertReport" parameterType="org.ykk.jobbridge.dto.CommunityReportDTO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO community_report (post_id, reporter_member_id, reason, detail, status)
+        VALUES (#{postId}, #{reporterMemberId}, #{reason}, #{detail}, 'PENDING')
+    </insert>
+</mapper>

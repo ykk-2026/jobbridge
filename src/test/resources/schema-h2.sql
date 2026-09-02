@@ -86,3 +86,29 @@ CREATE TABLE IF NOT EXISTS job_application (
     CONSTRAINT fk_job_application_member FOREIGN KEY (member_id) REFERENCES member(id),
     CONSTRAINT uk_job_application_member_job UNIQUE (member_id, job_id)
 );
+
+CREATE TABLE IF NOT EXISTS community_post (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id BIGINT NOT NULL,
+    category VARCHAR(30) NOT NULL DEFAULT 'FREE',
+    title VARCHAR(200) NOT NULL,
+    content CLOB NOT NULL,
+    view_count INT NOT NULL DEFAULT 0,
+    like_count INT NOT NULL DEFAULT 0,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_community_post_member FOREIGN KEY (member_id) REFERENCES member(id)
+);
+
+CREATE TABLE IF NOT EXISTS community_comment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    member_id BIGINT NOT NULL,
+    content VARCHAR(1000) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_community_comment_post FOREIGN KEY (post_id) REFERENCES community_post(id),
+    CONSTRAINT fk_community_comment_member FOREIGN KEY (member_id) REFERENCES member(id)
+);

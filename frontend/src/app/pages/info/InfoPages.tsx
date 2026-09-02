@@ -24,7 +24,17 @@ import {
   Video,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { Page } from '@/app/types';
+import type { CurrentUser, Page } from '@/app/types';
+import {
+  createCommunityPost,
+  createCommunityComment,
+  deleteCommunityComment,
+  deleteCommunityPost,
+  getCommunityPosts,
+  incrementCommunityPostViews,
+  reportCommunityPost,
+  type ApiCommunityPost,
+} from '@/app/api/communityApi';
 
 interface InfoPageProps {
   navigate: (page: Page) => void;
@@ -162,6 +172,7 @@ const communityPosts: CommunityPost[] = [];
 const communityPostsStorageKey = 'ileeumCommunityPosts';
 const communityViewedPostsStorageKey = 'ileeumCommunityViewedPosts';
 const communityReportedCommentsStorageKey = 'ileeumCommunityReportedComments';
+let communityPostsLoadPromise: Promise<ApiCommunityPost[]> | null = null;
 
 const communityBoards = [
   { title: '취업후기', description: '지원 과정과 합격 경험을 공유합니다.', count: '47개' },
@@ -434,9 +445,30 @@ const normalizeCommunityPost = (post: Partial<CommunityPost>): CommunityPost => 
   };
 };
 
-const hasReportedCommunityPost = (post: CommunityPost) => post.reports.some(report => report.reporterMemberId === '999');
+const hasReportedCommunityPost = (post: CommunityPost) => post.reports.length > 0;
 
-export function CommunityPage() {
+const fromApiCommunityPost = (post: ApiCommunityPost): CommunityPost => normalizeCommunityPost({
+  ...post,
+  id: String(post.id),
+  memberId: String(post.memberId),
+  comments: post.comments.map(comment => ({
+    ...comment,
+    id: String(comment.id),
+    postId: String(comment.postId),
+    memberId: String(comment.memberId),
+    time: comment.createdAt,
+  })),
+  attachments: [],
+  reports: post.reports.map(report => ({
+    ...report,
+    id: String(report.id),
+    postId: String(report.postId),
+    reporterMemberId: String(report.reporterMemberId),
+  })),
+  time: post.createdAt,
+});
+
+export function CommunityPage({ currentUser }: { currentUser: CurrentUser | null }) {
   const [posts, setPosts] = useState<CommunityPost[]>(() => {
     if (typeof window === 'undefined') return communityPosts;
 
@@ -483,13 +515,56 @@ export function CommunityPage() {
   });
   const [showWriter, setShowWriter] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [communityError, setCommunityError] = useState('');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [form, setForm] = useState<{ category: CommunityCategory; title: string; author: string; content: string }>({ category: 'FREE', title: '', author: '나', content: '' });
   const [commentForm, setCommentForm] = useState({ author: '나', content: '' });
 
   useEffect(() => {
-    localStorage.setItem(communityPostsStorageKey, JSON.stringify(posts));
-  }, [posts]);
+    let cancelled = false;
+
+    if (!communityPostsLoadPromise) {
+      communityPostsLoadPromise = getCommunityPosts().then(async databasePosts => {
+        const savedValue = localStorage.getItem(communityPostsStorageKey);
+        if (!savedValue) return databasePosts;
+
+        const localPosts = (JSON.parse(savedValue) as CommunityPost[])
+          .map(normalizeCommunityPost)
+          .filter(post => post.status === 'ACTIVE');
+        if (localPosts.length === 0) {
+          localStorage.removeItem(communityPostsStorageKey);
+          return databasePosts;
+        }
+
+        const migrated = await Promise.all(localPosts.map(post => createCommunityPost({
+          category: post.category,
+          title: post.title,
+          content: post.content,
+        })));
+        localStorage.removeItem(communityPostsStorageKey);
+        return [...migrated, ...databasePosts];
+      }).then(databasePosts => {
+        communityPostsLoadPromise = null;
+        return databasePosts;
+      }, error => {
+        communityPostsLoadPromise = null;
+        throw error;
+      });
+    }
+
+    communityPostsLoadPromise
+      .then(databasePosts => {
+        if (!cancelled) {
+          setPosts(databasePosts.map(fromApiCommunityPost));
+          setCommunityError('');
+        }
+      })
+      .catch(error => {
+        if (!cancelled) setCommunityError(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.');
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(communityViewedPostsStorageKey, JSON.stringify(Array.from(viewedPostIds)));
@@ -511,42 +586,27 @@ export function CommunityPage() {
   }, [activeTab, posts, query]);
   const selectedPost = posts.find(post => post.id === selectedPostId && post.status === 'ACTIVE') || null;
 
-  const submitPost = () => {
+  const submitPost = async () => {
     if (!form.title.trim() || !form.content.trim()) return;
 
-    const now = getCommunityTimestamp();
-    const nextPost: CommunityPost = {
-      id: `post-${Date.now()}`,
-      memberId: '999',
-      category: form.category,
-      title: form.title.trim(),
-      author: form.author.trim() || '나',
-      content: form.content.trim(),
-      comments: [],
-      attachments: [],
-      reports: [],
-      replies: 0,
-      views: 0,
-      viewCount: 0,
-      likeCount: 0,
-      status: 'ACTIVE',
-      time: '방금 전',
-      createdAt: now,
-      updatedAt: now,
-      isNew: true,
-    };
-
-    setPosts(prev => [
-      nextPost,
-      ...prev,
-    ]);
-    setForm({ category: 'FREE', title: '', author: '나', content: '' });
-    setActiveTab('ALL');
-    setQuery('');
-    setShowWriter(false);
+    try {
+      const saved = await createCommunityPost({
+        category: form.category,
+        title: form.title.trim(),
+        content: form.content.trim(),
+      });
+      setPosts(prev => [{ ...fromApiCommunityPost(saved), isNew: true }, ...prev]);
+      setForm({ category: 'FREE', title: '', author: '나', content: '' });
+      setActiveTab('ALL');
+      setQuery('');
+      setShowWriter(false);
+      setCommunityError('');
+    } catch (error) {
+      setCommunityError(error instanceof Error ? error.message : '게시글 저장에 실패했습니다.');
+    }
   };
 
-  const openPost = (post: CommunityPost) => {
+  const openPost = async (post: CommunityPost) => {
     setSelectedPostId(post.id);
     setCommentForm({ author: '나', content: '' });
     if (viewedPostIds.has(post.id)) {
@@ -555,48 +615,66 @@ export function CommunityPage() {
     }
 
     setViewedPostIds(prev => new Set(prev).add(post.id));
-    setPosts(prev => prev.map(item => (item.id === post.id ? { ...item, views: item.views + 1, viewCount: item.viewCount + 1, isNew: false } : item)));
+    try {
+      const updated = await incrementCommunityPostViews(post.id);
+      setPosts(prev => prev.map(item => (item.id === post.id ? { ...item, views: updated.views, viewCount: updated.viewCount, isNew: false } : item)));
+    } catch (error) {
+      setCommunityError(error instanceof Error ? error.message : '조회 수를 반영하지 못했습니다.');
+    }
   };
 
-  const deletePost = (postId: string) => {
-    setPosts(prev => prev.map(post => (post.id === postId ? { ...post, status: 'DELETED', updatedAt: getCommunityTimestamp() } : post)));
-    setSelectedPostId(prev => (prev === postId ? null : prev));
-    setBookmarks(prev => {
-      const next = new Set(prev);
-      next.delete(postId);
-      return next;
-    });
+  const deletePost = async (postId: string) => {
+    try {
+      await deleteCommunityPost(postId);
+      setPosts(prev => prev.filter(post => post.id !== postId));
+      setSelectedPostId(prev => (prev === postId ? null : prev));
+      setBookmarks(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      setCommunityError('');
+    } catch (error) {
+      setCommunityError(error instanceof Error ? error.message : '게시글 삭제에 실패했습니다.');
+    }
   };
 
-  const submitComment = () => {
+  const submitComment = async () => {
     if (!selectedPost || !commentForm.content.trim()) return;
 
-    const nextComment: CommunityComment = {
-      id: `comment-${Date.now()}`,
-      postId: selectedPost.id,
-      memberId: '999',
-      author: commentForm.author.trim() || '나',
-      content: commentForm.content.trim(),
-      status: 'ACTIVE',
-      time: '방금 전',
-      createdAt: getCommunityTimestamp(),
-      updatedAt: getCommunityTimestamp(),
-    };
-
-    setPosts(prev => prev.map(post => {
-      if (post.id !== selectedPost.id) return post;
-      const comments = [...post.comments, nextComment];
-      return { ...post, comments, replies: comments.filter(comment => comment.status === 'ACTIVE').length, updatedAt: getCommunityTimestamp() };
-    }));
-    setCommentForm({ author: '나', content: '' });
+    try {
+      const saved = await createCommunityComment(selectedPost.id, commentForm.content.trim());
+      const nextComment = normalizeCommunityComment({
+        ...saved,
+        id: String(saved.id),
+        postId: String(saved.postId),
+        memberId: String(saved.memberId),
+        time: saved.createdAt,
+      }, selectedPost.id);
+      setPosts(prev => prev.map(post => {
+        if (post.id !== selectedPost.id) return post;
+        const comments = [...post.comments, nextComment];
+        return { ...post, comments, replies: comments.length, updatedAt: saved.updatedAt };
+      }));
+      setCommentForm({ author: '나', content: '' });
+      setCommunityError('');
+    } catch (error) {
+      setCommunityError(error instanceof Error ? error.message : '댓글 저장에 실패했습니다.');
+    }
   };
 
-  const deleteComment = (postId: string, commentId: string) => {
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId) return post;
-      const comments = post.comments.map(comment => (comment.id === commentId ? { ...comment, status: 'DELETED' as const, updatedAt: getCommunityTimestamp() } : comment));
-      return { ...post, comments, replies: comments.filter(comment => comment.status === 'ACTIVE').length, updatedAt: getCommunityTimestamp() };
-    }));
+  const deleteComment = async (postId: string, commentId: string) => {
+    try {
+      await deleteCommunityComment(postId, commentId);
+      setPosts(prev => prev.map(post => {
+        if (post.id !== postId) return post;
+        const comments = post.comments.filter(comment => comment.id !== commentId);
+        return { ...post, comments, replies: comments.length, updatedAt: getCommunityTimestamp() };
+      }));
+      setCommunityError('');
+    } catch (error) {
+      setCommunityError(error instanceof Error ? error.message : '댓글 삭제에 실패했습니다.');
+    }
   };
 
   const reportComment = (commentId: string) => {
@@ -609,21 +687,22 @@ export function CommunityPage() {
     });
   };
 
-  const reportPost = (postId: string) => {
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId || hasReportedCommunityPost(post)) return post;
-
+  const reportPost = async (postId: string) => {
+    try {
+      const saved = await reportCommunityPost(postId);
       const report: CommunityReport = {
-        id: `report-${Date.now()}`,
-        postId,
-        reporterMemberId: '999',
-        reason: 'ETC',
-        status: 'PENDING',
-        createdAt: getCommunityTimestamp(),
+        ...saved,
+        id: String(saved.id),
+        postId: String(saved.postId),
+        reporterMemberId: String(saved.reporterMemberId),
       };
-
-      return { ...post, reports: [...post.reports, report] };
-    }));
+      setPosts(prev => prev.map(post => post.id === postId
+        ? { ...post, reports: [...post.reports, report] }
+        : post));
+      setCommunityError('');
+    } catch (error) {
+      setCommunityError(error instanceof Error ? error.message : '게시글 신고에 실패했습니다.');
+    }
   };
 
   const toggleBookmark = (postId: string) => {
@@ -704,6 +783,12 @@ export function CommunityPage() {
                 </button>
               </div>
             </div>
+
+            {communityError && (
+              <div role="alert" className="border-b border-[#FFD5D2] bg-[#FFF1F1] px-6 py-3 text-sm font-bold text-[#D92D20]">
+                {communityError}
+              </div>
+            )}
 
             {showWriter && (
               <div className="border-b border-[#E7ECF2] bg-[#F8FAFC] px-6 py-4">
@@ -800,9 +885,11 @@ export function CommunityPage() {
                             <Flag size={13} />
                             {reportedCommentIds.has(comment.id) ? '신고완료' : '신고'}
                           </button>
-                          <button type="button" onClick={() => deleteComment(selectedPost.id, comment.id)} className="rounded-lg px-3 py-2 text-xs font-bold text-[#D92D20] hover:bg-[#FFF1F1]">
-                          삭제
-                          </button>
+                          {currentUser?.id === comment.memberId && (
+                            <button type="button" onClick={() => deleteComment(selectedPost.id, comment.id)} className="rounded-lg px-3 py-2 text-xs font-bold text-[#D92D20] hover:bg-[#FFF1F1]">
+                              삭제
+                            </button>
+                          )}
                         </div>
                       </article>
                     ))}
@@ -829,9 +916,11 @@ export function CommunityPage() {
                         <button type="button" onClick={() => toggleBookmark(post.id)} aria-label="게시글 저장" className={`flex h-9 w-9 items-center justify-center rounded-lg hover:bg-[#F8FAFC] ${bookmarks.has(post.id) ? 'text-[#0D6BEA]' : 'text-[#111827]'}`}>
                           <Bookmark size={19} fill={bookmarks.has(post.id) ? 'currentColor' : 'none'} />
                         </button>
-                        <button type="button" onClick={() => deletePost(post.id)} className="rounded-lg px-3 py-2 text-xs font-bold text-[#D92D20] hover:bg-[#FFF1F1]">
-                          삭제
-                        </button>
+                        {currentUser?.id === post.memberId && (
+                          <button type="button" onClick={() => deletePost(post.id)} className="rounded-lg px-3 py-2 text-xs font-bold text-[#D92D20] hover:bg-[#FFF1F1]">
+                            삭제
+                          </button>
+                        )}
                       </div>
                     </article>
                   ))}
