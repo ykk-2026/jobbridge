@@ -1,11 +1,11 @@
-import { ArrowLeft, ClipboardList, Eye, EyeOff, ShieldCheck, Target, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, X } from 'lucide-react';
 import { useState } from 'react';
 import { BrandLogo } from '@/app/components/BrandLogo';
 import type { Page, RegisterFormData } from '@/app/types';
 
 interface LoginPageProps {
   navigate: (page: Page) => void;
-  onLogin: (loginId: string, password: string) => Promise<void>;
+  onLogin: (loginId: string, password: string, keepLoggedIn?: boolean) => Promise<void>;
   onLoginSuccess?: () => void;
   registeredUser: RegisterFormData | null;
   onBack: () => void;
@@ -39,7 +39,7 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const finishLogin = () => {
     if (onLoginSuccess) {
@@ -73,22 +73,20 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
   };
 
   const submitLogin = async () => {
+    if (isSubmitting) return;
+
     if (!loginId.trim() || !password) {
       setError('아이디와 비밀번호를 입력해 주세요.');
       return;
     }
 
-    setIsLoggingIn(true);
-    setError('');
+    setIsSubmitting(true);
     try {
-      await onLogin(loginId, password);
-      if (autoLogin) localStorage.setItem('savedLoginId', loginId.trim());
-      else localStorage.removeItem('savedLoginId');
-      finishLogin();
+      await onLogin(loginId, password, autoLogin);
+      window.setTimeout(finishLogin, 180);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : '로그인에 실패했습니다.');
-    } finally {
-      setIsLoggingIn(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -170,49 +168,9 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
   };
 
   return (
-    <div className="min-h-screen bg-[#F3F7FF] flex items-stretch justify-center">
-      <aside className="hidden lg:flex w-[360px] bg-gradient-to-b from-white to-[#EAF4FF] px-8 py-10 flex-col justify-between border-r border-[#DCEAF3]">
-        <div>
-          <button type="button" onClick={() => navigate('main')} className="flex items-center gap-2 font-bold text-foreground mb-12">
-            <BrandLogo compact />
-          </button>
-
-          <h1 className="text-3xl font-bold leading-tight text-foreground">
-            다시 이어가는
-            <br />
-            <span className="text-primary">나에게 맞는 기회</span>
-          </h1>
-          <p className="text-sm text-muted-foreground leading-6 mt-6">
-            저장한 공고, 지원 현황, 맞춤 추천을 로그인 후 한눈에 확인할 수 있습니다.
-          </p>
-
-          <div className="space-y-7 mt-12">
-            {[
-              { title: '맞춤 추천 유지', desc: '프로필 조건에 맞는 공고를 계속 추천합니다.', icon: Target },
-              { title: '지원 현황 확인', desc: '제출한 지원서와 진행 상태를 확인할 수 있습니다.', icon: ClipboardList },
-              { title: '안전한 계정 관리', desc: '개인정보와 저장 공고를 안전하게 관리합니다.', icon: ShieldCheck },
-            ].map(item => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} className="flex gap-4">
-                  <span className="w-11 h-11 rounded-full bg-[#DDEBFF] text-primary flex items-center justify-center shrink-0">
-                    <Icon size={20} />
-                  </span>
-                  <div>
-                    <p className="font-semibold text-foreground">{item.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1 leading-5">{item.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="h-28 rounded-t-[80px] bg-[#CFE8FF] opacity-70" />
-      </aside>
-
-      <main className="w-full max-w-3xl bg-white px-5 py-8 sm:px-8 lg:px-12 lg:py-10 flex items-center">
-        <div className="w-full max-w-md mx-auto">
+    <div className="flex min-h-screen items-stretch justify-center bg-[#F3F7FF]">
+      <main className="w-full max-w-4xl bg-white px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
+        <div className="mx-auto max-w-3xl">
           <button
             type="button"
             onClick={onBack}
@@ -222,13 +180,13 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
             뒤로가기
           </button>
 
-          <button type="button" onClick={() => navigate('main')} className="lg:hidden flex items-center gap-2 font-bold text-foreground mb-8">
+          <button type="button" onClick={() => navigate('main')} className="mb-8 flex items-center gap-2 font-bold text-foreground">
             <BrandLogo compact />
           </button>
 
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-foreground">로그인</h1>
-            <p className="text-sm text-muted-foreground mt-2">아이디와 비밀번호를 입력해 주세요.</p>
+            <p className="mt-2 text-sm text-muted-foreground">아이디와 비밀번호를 입력해 주세요.</p>
           </div>
 
           <div className="mb-7">
@@ -248,7 +206,7 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
                 onKeyDown={event => {
                   if (event.key === 'Enter') submitLogin();
                 }}
-                className="w-full px-3 py-3 rounded-lg border border-border"
+                className="w-full rounded-lg border border-border px-3 py-3"
                 placeholder="아이디를 입력해 주세요"
               />
             </label>
@@ -266,7 +224,7 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
                     if (event.key === 'Enter') submitLogin();
                   }}
                   type={showPw ? 'text' : 'password'}
-                  className="w-full px-3 py-3 pr-10 rounded-lg border border-border"
+                  className="w-full rounded-lg border border-border px-3 py-3 pr-10"
                   placeholder="비밀번호를 입력해 주세요"
                 />
                 <button
@@ -303,8 +261,8 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
             </div>
           </div>
 
-          <button type="button" onClick={submitLogin} disabled={isLoggingIn} className="mt-6 w-full py-3.5 rounded-lg bg-primary text-white font-medium shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
-            {isLoggingIn ? '로그인 중...' : '로그인'}
+          <button type="button" onClick={submitLogin} disabled={isSubmitting} className="mt-6 w-full rounded-lg bg-primary py-3.5 font-medium text-white shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-80">
+            {isSubmitting ? '로그인 중...' : '로그인'}
           </button>
           <button type="button" onClick={() => navigate('register')} className="w-full mt-4 text-sm text-muted-foreground">
             아직 계정이 없으신가요? <span className="font-semibold text-primary">회원가입</span>

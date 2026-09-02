@@ -8,9 +8,10 @@ export type Page =
   | 'saved'
   | 'applications'
   | 'ai-recommend'
-  | 'support'
+  | 'company-info'
   | 'community'
-  | 'admin'
+  | 'guide'
+  | 'support'
   | 'corporate';
 
 export type UserRole = 'personal' | 'corporate' | 'admin';
@@ -28,6 +29,12 @@ export interface CurrentUser {
   birthDate?: string;
   gender?: string;
   preferredRole?: string;
+  remotePreferred?: boolean;
+  flexiblePreferred?: boolean;
+  wheelchairRequired?: boolean;
+  accessibleRestroomRequired?: boolean;
+  disabledParkingRequired?: boolean;
+  assistiveDeviceRequired?: boolean;
 }
 
 export interface RegisterFormData {

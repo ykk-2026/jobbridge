@@ -175,6 +175,19 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease,
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease,
+      opacity 120ms ease;
+    transform-origin: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(1px) scale(0.985);
   }
 
   input {
