@@ -12,6 +12,7 @@ export type Page =
   | 'community'
   | 'guide'
   | 'support'
+  | 'admin'
   | 'corporate';
 
 export type UserRole = 'personal' | 'corporate' | 'admin';
