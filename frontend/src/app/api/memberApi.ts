@@ -9,8 +9,8 @@ export interface LoginMember {
 
 const responseError = async (response: Response) => {
   try {
-    const body = await response.json() as { message?: string };
-    return body.message || `요청 실패 (${response.status})`;
+    const body = await response.json() as { detail?: string; message?: string; error?: string };
+    return body.detail || body.message || body.error || `요청 실패 (${response.status})`;
   } catch {
     return `요청 실패 (${response.status})`;
   }
@@ -28,7 +28,6 @@ export async function loginMember(loginId: string, password: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ loginId: loginId.trim(), password }),
   });
-
   if (!response.ok) throw new Error(await responseError(response));
   return response.json() as Promise<LoginMember>;
 }
@@ -45,12 +44,6 @@ export async function logoutMember() {
 }
 
 export async function registerMember(form: RegisterFormData, passwordConfirm: string) {
-  const genderCodes: Record<string, string> = {
-    남성: 'MALE',
-    여성: 'FEMALE',
-    '선택 안 함': 'OTHER',
-  };
-
   const response = await fetch('/api/members', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -60,14 +53,13 @@ export async function registerMember(form: RegisterFormData, passwordConfirm: st
       passwordConfirm,
       name: form.name.trim(),
       birthDate: form.birthDate.trim(),
-      gender: ['MALE', 'FEMALE', 'OTHER'].includes(form.gender) ? form.gender : genderCodes[form.gender] || 'OTHER',
+      gender: form.gender || 'OTHER',
       email: form.email.trim(),
       phone: form.phone,
       role: 'JOB_SEEKER',
       desiredJob: form.preferredRole.trim() || null,
     }),
   });
-
   if (!response.ok) throw new Error(await responseError(response));
   return response.json() as Promise<{ memberId: number; loginId: string; name: string; message: string }>;
 }

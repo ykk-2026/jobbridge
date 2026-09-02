@@ -21,6 +21,7 @@ const initialForm: RegisterFormData = {
   preferredRole: '',
 };
 
+const reservedIds = ['admin', 'demo', 'test', 'user', 'jobbridge', 'minjun_kim'];
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,20}$/;
 const phonePattern = /^010-\d{4}-\d{4}$/;
@@ -57,7 +58,6 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
   const [idCheckMessage, setIdCheckMessage] = useState('');
   const [idAvailable, setIdAvailable] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = (field: keyof RegisterFormData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -87,11 +87,11 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
     try {
       const result = await checkLoginIdAvailability(loginId);
       setIdAvailable(result.available);
-      setIdCheckMessage(result.message);
+      setIdCheckMessage(result.message || (result.available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.'));
       if (result.available) setErrors(prev => ({ ...prev, loginId: '' }));
-    } catch (checkError) {
+    } catch (error) {
       setIdAvailable(false);
-      setIdCheckMessage(checkError instanceof Error ? checkError.message : '중복 확인에 실패했습니다.');
+      setIdCheckMessage(error instanceof Error ? error.message : '아이디 중복 확인에 실패했습니다.');
     }
   };
 
@@ -120,7 +120,6 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
   const submitRegister = async () => {
     if (!validateForm()) return;
 
-    setIsSubmitting(true);
     try {
       await onRegister({
         ...form,
@@ -132,10 +131,8 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
       }, passwordConfirm);
       window.alert('회원가입이 완료되었습니다. 로그인해 주세요.');
       navigate('login');
-    } catch (registerError) {
-      window.alert(registerError instanceof Error ? registerError.message : '회원가입에 실패했습니다.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (error) {
+      setErrors(prev => ({ ...prev, submit: error instanceof Error ? error.message : '회원가입에 실패했습니다.' }));
     }
   };
 
@@ -325,8 +322,10 @@ export function RegisterPage({ navigate, onRegister, onBack }: RegisterPageProps
             </label>
           </div>
 
-          <button type="button" onClick={submitRegister} disabled={isSubmitting} className="mt-6 w-full rounded-lg bg-primary py-3.5 font-medium text-white shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
-            {isSubmitting ? '가입 중...' : '회원가입'}
+          {errors.submit && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{errors.submit}</p>}
+
+          <button type="button" onClick={submitRegister} className="mt-6 w-full rounded-lg bg-primary py-3.5 font-medium text-white shadow-sm hover:bg-primary/90">
+            회원가입
           </button>
           <button type="button" onClick={() => navigate('login')} className="mt-4 w-full text-sm text-muted-foreground">
             이미 계정이 있으신가요? <span className="font-semibold text-primary">로그인</span>

@@ -17,8 +17,8 @@ export interface JobApplicationRecord extends JobApplicationForm {
 
 const responseError = async (response: Response) => {
   try {
-    const body = await response.json() as { detail?: string; message?: string };
-    return body.detail || body.message || `요청 실패 (${response.status})`;
+    const body = await response.json() as { detail?: string; message?: string; error?: string };
+    return body.detail || body.message || body.error || `요청 실패 (${response.status})`;
   } catch {
     return `요청 실패 (${response.status})`;
   }

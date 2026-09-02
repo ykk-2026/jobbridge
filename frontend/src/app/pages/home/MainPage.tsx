@@ -117,6 +117,7 @@ function HeroIllustration() {
 export function MainPage({ navigate, bookmarks, onBookmark, onSearch }: MainPageProps) {
   const [selectedLatestCategory, setSelectedLatestCategory] = useState('IT/개발');
   const displayedLatestJobs = latestJobs.filter(job => selectedLatestCategory === '전체' || job.category === selectedLatestCategory);
+
   const runQuickAction = (action: (typeof quickActions)[number]['action']) => {
     if (action === 'ai') navigate('ai-recommend');
     if (action === 'apply') onSearch('');
@@ -272,7 +273,14 @@ export function MainPage({ navigate, bookmarks, onBookmark, onSearch }: MainPage
               </div>
               <div className="mb-3 flex flex-wrap gap-2 border-b border-[#E7ECF2] pb-3 text-xs font-bold text-[#475467]">
                 {latestJobCategories.map(tab => (
-                  <button key={tab} type="button" onClick={() => setSelectedLatestCategory(tab)} className={`rounded-full px-3 py-1.5 ${selectedLatestCategory === tab ? 'bg-[#1F64E8] text-white' : 'bg-[#F1F4F8] hover:bg-[#E4EFFF] hover:text-[#1F64E8]'}`}>
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setSelectedLatestCategory(tab)}
+                    className={`rounded-full px-3 py-1.5 ${
+                      selectedLatestCategory === tab ? 'bg-[#1F64E8] text-white' : 'bg-[#F1F4F8] hover:bg-[#E4EFFF] hover:text-[#1F64E8]'
+                    }`}
+                  >
                     {tab}
                   </button>
                 ))}
@@ -305,14 +313,19 @@ export function MainPage({ navigate, bookmarks, onBookmark, onSearch }: MainPage
                   <div className="mt-4 space-y-3">
                     {notices.map(notice => (
                       <button key={notice.title} type="button" onClick={() => navigate('support')} className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#EDF1F6] bg-[#FBFCFE] px-4 py-3 text-left hover:border-[#B9D6FF] hover:text-[#1F64E8]">
-                        <span className="flex min-w-0 items-center gap-2"><CheckCircle2 size={15} className="shrink-0 text-[#1F64E8]" /><span className="truncate text-[13px] font-bold">{notice.title}</span></span>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <CheckCircle2 size={15} className="shrink-0 text-[#1F64E8]" />
+                          <span className="truncate text-[13px] font-bold">{notice.title}</span>
+                        </span>
                         <span className="shrink-0 text-[11px] font-semibold text-[#7A8495]">{notice.date}</span>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div className="rounded-xl bg-gradient-to-b from-[#EEF5FF] to-[#E5F0FF] p-5">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#1F64E8] shadow-sm"><ShieldCheck size={20} /></span>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#1F64E8] shadow-sm">
+                    <ShieldCheck size={20} />
+                  </span>
                   <p className="mt-4 text-[14px] font-black text-[#1F64E8]">일이음 이용 가이드</p>
                   <p className="mt-3 text-[13px] font-bold leading-6 text-[#344054]">
                     처음 이용하시나요?

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { mockJobs } from '@/app/data/mockData';
 import type { ApplicationFormData, CurrentUser, Job, Page } from '@/app/types';
-import { getProfile, saveProfile } from '@/app/api/profileApi';
+import { getProfile, saveProfile, type ApiJobSeekerProfile } from '@/app/api/profileApi';
 
 interface ProfilePageProps {
   currentUser: CurrentUser | null;
@@ -30,6 +30,7 @@ interface ProfilePageProps {
   applicationForms?: Record<string, ApplicationFormData>;
   initialMenu?: string;
   onBookmark: (id: string) => void;
+  onProfileSaved?: (profile: ApiJobSeekerProfile) => void;
   onUpdateApplication?: (id: string, formData: ApplicationFormData) => void;
   onDeleteApplication?: (id: string) => void;
 }
@@ -140,6 +141,39 @@ const formatSalaryInput = (value: string) => {
 
 const formatCareerYears = (value: string) => value.replace(/\D/g, '').slice(0, 2);
 
+const toNumberOrNull = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  return digits ? Number(digits) : null;
+};
+
+const toProfileFormValues = (profile: ApiJobSeekerProfile) => ({
+  name: profile.name || '',
+  birthDate: profile.birthDate || '',
+  gender: profile.gender || 'OTHER',
+  email: profile.email || '',
+  phone: profile.phone || '',
+  residenceRegion: profile.residenceRegion || '',
+  desiredJob: profile.desiredJob || '',
+  desiredRegion: profile.desiredRegion || '',
+  employmentType: profile.employmentType || 'ANY',
+  careerType: profile.careerType || 'ANY',
+  careerYears: String(profile.careerYears ?? 0),
+  minSalary: profile.minSalary ? Number(profile.minSalary).toLocaleString('ko-KR') : '',
+  remotePreferred: Boolean(profile.remotePreferred),
+  flexiblePreferred: Boolean(profile.flexiblePreferred),
+  hybridPreferred: Boolean(profile.hybridPreferred),
+  onsitePreferred: Boolean(profile.onsitePreferred),
+  wheelchairRequired: Boolean(profile.wheelchairRequired),
+  accessibleRestroomRequired: Boolean(profile.accessibleRestroomRequired),
+  disabledParkingRequired: Boolean(profile.disabledParkingRequired),
+  assistiveDeviceRequired: Boolean(profile.assistiveDeviceRequired),
+  contactTimeStart: profile.contactTimeStart || '09:00',
+  contactTimeEnd: profile.contactTimeEnd || '18:00',
+  contactMethod: profile.contactMethod || 'PHONE',
+  introduction: profile.introduction || '',
+  profilePublic: profile.profilePublic ?? true,
+});
+
 const loadProfilePhoto = (userId: string) => {
   if (typeof window === 'undefined') return { type: 'initial', value: '' } satisfies ProfileAvatar;
 
@@ -170,16 +204,17 @@ export function ProfilePage({
   applicationForms = {},
   initialMenu = '내 프로필',
   onBookmark,
+  onProfileSaved,
   onUpdateApplication,
   onDeleteApplication,
 }: ProfilePageProps) {
-  const memberId = Number(currentUser?.id);
   const initialName = currentUser?.name || '김민준';
   const initialAvatar = currentUser?.avatar || initialName.slice(0, 1);
   const userId = currentUser?.loginId || currentUser?.id || 'guest';
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const [activeMenu, setActiveMenu] = useState('내 프로필');
+  const [activeMenu, setActiveMenu] = useState(initialMenu);
   const [savedMessage, setSavedMessage] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isResidenceRegionOpen, setIsResidenceRegionOpen] = useState(false);
   const [isDesiredRegionOpen, setIsDesiredRegionOpen] = useState(false);
@@ -217,14 +252,14 @@ export function ProfilePage({
     careerType: 'ANY',
     careerYears: '0',
     minSalary: '',
-    remotePreferred: false,
-    flexiblePreferred: false,
-    wheelchairRequired: false,
-    accessibleRestroomRequired: false,
-    disabledParkingRequired: false,
-    assistiveDeviceRequired: false,
+    remotePreferred: Boolean(currentUser?.remotePreferred),
+    flexiblePreferred: Boolean(currentUser?.flexiblePreferred),
     hybridPreferred: false,
     onsitePreferred: false,
+    wheelchairRequired: Boolean(currentUser?.wheelchairRequired),
+    accessibleRestroomRequired: Boolean(currentUser?.accessibleRestroomRequired),
+    disabledParkingRequired: Boolean(currentUser?.disabledParkingRequired),
+    assistiveDeviceRequired: Boolean(currentUser?.assistiveDeviceRequired),
     contactTimeStart: '09:00',
     contactTimeEnd: '18:00',
     contactMethod: 'PHONE',
@@ -233,64 +268,38 @@ export function ProfilePage({
   });
 
   useEffect(() => {
+    if (!currentUser?.id || currentUser.role !== 'personal') return;
+
+    let cancelled = false;
+    getProfile(currentUser.id)
+      .then(profile => {
+        if (cancelled) return;
+        const nextProfile = toProfileFormValues(profile);
+        setProfileForm(nextProfile);
+        setAccountForm(prev => ({
+          ...prev,
+          email: nextProfile.email,
+          phone: nextProfile.phone,
+        }));
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setSavedMessage(error instanceof Error ? error.message : '프로필 정보를 불러오지 못했습니다.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, currentUser?.role]);
+
+  useEffect(() => {
     setProfileAvatar(loadProfilePhoto(userId));
   }, [userId]);
 
   useEffect(() => {
     setActiveMenu(initialMenu);
   }, [initialMenu]);
-
-  useEffect(() => {
-    if (!Number.isFinite(memberId) || memberId <= 0) return;
-
-    let active = true;
-    getProfile(memberId)
-      .then(profile => {
-        if (!active) return;
-        setProfileForm(previous => ({
-          ...previous,
-          name: profile.name || previous.name,
-          birthDate: profile.birthDate || previous.birthDate,
-          gender: profile.gender || previous.gender,
-          email: profile.email || previous.email,
-          phone: profile.phone || previous.phone,
-          residenceRegion: profile.residenceRegion || previous.residenceRegion,
-          desiredJob: profile.desiredJob || previous.desiredJob,
-          desiredRegion: profile.desiredRegion || previous.desiredRegion,
-          employmentType: profile.employmentType || previous.employmentType,
-          careerType: profile.careerType || previous.careerType,
-          careerYears: String(profile.careerYears ?? 0),
-          minSalary: profile.minSalary ? profile.minSalary.toLocaleString('ko-KR') : '',
-          remotePreferred: Boolean(profile.remotePreferred),
-          flexiblePreferred: Boolean(profile.flexiblePreferred),
-          wheelchairRequired: Boolean(profile.wheelchairRequired),
-          accessibleRestroomRequired: Boolean(profile.accessibleRestroomRequired),
-          disabledParkingRequired: Boolean(profile.disabledParkingRequired),
-          assistiveDeviceRequired: Boolean(profile.assistiveDeviceRequired),
-          hybridPreferred: Boolean(profile.hybridPreferred),
-          onsitePreferred: Boolean(profile.onsitePreferred),
-          contactTimeStart: profile.contactTimeStart?.slice(0, 5) || previous.contactTimeStart,
-          contactTimeEnd: profile.contactTimeEnd?.slice(0, 5) || previous.contactTimeEnd,
-          contactMethod: profile.contactMethod || previous.contactMethod,
-          introduction: profile.introduction || '',
-          profilePublic: Boolean(profile.profilePublic),
-        }));
-        setAccountForm(previous => ({
-          ...previous,
-          email: profile.email || previous.email,
-          phone: profile.phone || previous.phone,
-        }));
-        setSavedMessage('');
-      })
-      .catch(error => {
-        if (active) setSavedMessage(`프로필 불러오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [memberId]);
-
   const avatarInitial = (profileForm.name.trim() || initialName).slice(0, 1);
   const selectedDefaultProfile = defaultProfileOptions.find(option => option.id === profileAvatar.value) || defaultProfileOptions[0];
   const savedJobs = mockJobs
@@ -349,53 +358,70 @@ export function ProfilePage({
     );
   };
 
-  const handleSave = async () => {
+  const handlePersistProfile = async () => {
     if (profileForm.contactTimeStart && profileForm.contactTimeEnd && profileForm.contactTimeStart >= profileForm.contactTimeEnd) {
       window.alert('연락 가능 시작시간은 종료시간보다 빨라야 합니다.');
       return;
     }
 
-    if (!Number.isFinite(memberId) || memberId <= 0) {
-      setSavedMessage('로그인 후 프로필을 저장할 수 있습니다.');
-      navigate('login');
+    if (!currentUser?.id || currentUser.role !== 'personal') {
+      window.alert('로그인한 개인회원만 프로필을 저장할 수 있습니다.');
       return;
     }
 
-    setSavedMessage('프로필을 저장하고 있습니다...');
+    const payload: ApiJobSeekerProfile = {
+      memberId: Number(currentUser.id),
+      name: profileForm.name.trim(),
+      birthDate: profileForm.birthDate,
+      gender: profileForm.gender,
+      email: profileForm.email.trim(),
+      phone: profileForm.phone.trim(),
+      residenceRegion: profileForm.residenceRegion,
+      desiredJob: profileForm.desiredJob.trim(),
+      desiredRegion: profileForm.desiredRegion,
+      employmentType: profileForm.employmentType,
+      careerType: profileForm.careerType,
+      careerYears: toNumberOrNull(profileForm.careerYears),
+      minSalary: toNumberOrNull(profileForm.minSalary),
+      remotePreferred: profileForm.remotePreferred,
+      flexiblePreferred: profileForm.flexiblePreferred,
+      wheelchairRequired: profileForm.wheelchairRequired,
+      accessibleRestroomRequired: profileForm.accessibleRestroomRequired,
+      disabledParkingRequired: profileForm.disabledParkingRequired,
+      assistiveDeviceRequired: profileForm.assistiveDeviceRequired,
+      hybridPreferred: profileForm.hybridPreferred,
+      onsitePreferred: profileForm.onsitePreferred,
+      contactTimeStart: profileForm.contactTimeStart,
+      contactTimeEnd: profileForm.contactTimeEnd,
+      contactMethod: profileForm.contactMethod,
+      introduction: profileForm.introduction,
+      profilePublic: profileForm.profilePublic,
+    };
+
+    setIsSavingProfile(true);
+    setSavedMessage('');
     try {
-      await saveProfile(memberId, {
-        name: profileForm.name,
-        birthDate: profileForm.birthDate || null,
-        gender: profileForm.gender,
-        email: profileForm.email,
-        phone: profileForm.phone,
-        profileImageUrl: null,
-        residenceRegion: profileForm.residenceRegion,
-        desiredJob: profileForm.desiredJob,
-        desiredRegion: profileForm.desiredRegion,
-        employmentType: profileForm.employmentType,
-        careerType: profileForm.careerType,
-        careerYears: Number.parseInt(profileForm.careerYears, 10) || 0,
-        minSalary: Number.parseInt(profileForm.minSalary.replace(/\D/g, ''), 10) || 0,
-        remotePreferred: profileForm.remotePreferred,
-        flexiblePreferred: profileForm.flexiblePreferred,
-        wheelchairRequired: profileForm.wheelchairRequired,
-        accessibleRestroomRequired: profileForm.accessibleRestroomRequired,
-        disabledParkingRequired: profileForm.disabledParkingRequired,
-        assistiveDeviceRequired: profileForm.assistiveDeviceRequired,
-        hybridPreferred: profileForm.hybridPreferred,
-        onsitePreferred: profileForm.onsitePreferred,
-        contactTimeStart: profileForm.contactTimeStart || null,
-        contactTimeEnd: profileForm.contactTimeEnd || null,
-        contactMethod: profileForm.contactMethod,
-        introduction: profileForm.introduction,
-        profilePublic: profileForm.profilePublic,
-      });
-      setSavedMessage('프로필 정보가 저장되었습니다.');
-      window.alert('프로필 정보가 저장되었습니다.');
+      await saveProfile(currentUser.id, payload);
+      onProfileSaved?.(payload);
+      setSavedMessage('프로필이 변경되었습니다.');
+      window.alert('프로필이 변경되었습니다.');
     } catch (error) {
-      setSavedMessage(`프로필 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      const message = error instanceof Error ? error.message : '프로필 변경에 실패했습니다.';
+      setSavedMessage(message);
+      window.alert(message);
+    } finally {
+      setIsSavingProfile(false);
     }
+  };
+
+  const handleSave = () => {
+    if (profileForm.contactTimeStart && profileForm.contactTimeEnd && profileForm.contactTimeStart >= profileForm.contactTimeEnd) {
+      window.alert('연락 가능 시작시간은 종료시간보다 빨라야 합니다.');
+      return;
+    }
+
+    setSavedMessage('프로필 정보가 저장되었습니다.');
+    window.alert('프로필 정보가 저장되었습니다.');
   };
 
   const saveAccountSettings = () => {
@@ -553,7 +579,7 @@ export function ProfilePage({
                   <button type="button" onClick={() => setIsPreviewOpen(true)} className="rounded-lg border border-[#D7DDE5] px-4 py-2 text-sm font-bold hover:bg-[#F8FAFC]">
                     미리보기
                   </button>
-                  <button type="button" onClick={handleSave} className="inline-flex items-center gap-2 rounded-lg bg-[#0D6BEA] px-4 py-2 text-sm font-bold text-white hover:bg-[#0959C7]">
+                  <button type="button" onClick={handlePersistProfile} disabled={isSavingProfile} className="inline-flex items-center gap-2 rounded-lg bg-[#0D6BEA] px-4 py-2 text-sm font-bold text-white hover:bg-[#0959C7] disabled:cursor-not-allowed disabled:opacity-60">
                     <Save size={16} />
                     저장
                   </button>

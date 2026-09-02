@@ -5,7 +5,7 @@ import type { Page, RegisterFormData } from '@/app/types';
 
 interface LoginPageProps {
   navigate: (page: Page) => void;
-  onLogin: (loginId: string, password: string) => Promise<void>;
+  onLogin: (loginId: string, password: string, keepLoggedIn?: boolean) => Promise<void>;
   onLoginSuccess?: () => void;
   registeredUser: RegisterFormData | null;
   onBack: () => void;
@@ -81,15 +81,11 @@ export function LoginPage({ navigate, onLogin, onLoginSuccess, registeredUser, o
     }
 
     setIsSubmitting(true);
-    setError('');
     try {
-      await onLogin(loginId.trim(), password);
-      if (autoLogin) localStorage.setItem('savedLoginId', loginId.trim());
-      else localStorage.removeItem('savedLoginId');
-      finishLogin();
+      await onLogin(loginId, password, autoLogin);
+      window.setTimeout(finishLogin, 180);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : '로그인에 실패했습니다.');
-    } finally {
       setIsSubmitting(false);
     }
   };

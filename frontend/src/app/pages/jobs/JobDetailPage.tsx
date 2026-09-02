@@ -169,7 +169,7 @@ export function JobDetailPage({
       });
       setSubmittedApplied(true);
       setIsApplyOpen(false);
-      window.alert('지원서가 MariaDB에 제출되었습니다.');
+      window.alert('지원서가 제출되었습니다.');
     } catch (error) {
       setApplyError(error instanceof Error ? error.message : '지원서 제출에 실패했습니다.');
     }
