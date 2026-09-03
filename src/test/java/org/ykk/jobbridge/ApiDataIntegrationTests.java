@@ -6,10 +6,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JoinRequest;
+import org.ykk.jobbridge.dto.CompanyLoginDTO;
+import org.ykk.jobbridge.dto.CompanySignupDTO;
 import org.ykk.jobbridge.dto.InterestJobDTO;
 import org.ykk.jobbridge.dto.JobApplicationDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.AdminMapper;
+import org.ykk.jobbridge.service.CompanyService;
 import org.ykk.jobbridge.mapper.InterestJobMapper;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
 import org.ykk.jobbridge.service.MemberService;
@@ -33,6 +36,9 @@ class ApiDataIntegrationTests {
 
     @Autowired
     private MemberService memberService;
+
+    @Autowired
+    private CompanyService companyService;
 
     @Autowired
     private InterestJobMapper interestJobMapper;
@@ -68,6 +74,46 @@ class ApiDataIntegrationTests {
         assertThatThrownBy(() -> memberService.join(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("필수 회원 정보를 모두 입력해 주세요.");
+    }
+
+    @Test
+    @Transactional
+    void companyCanSignupAndLogin() {
+        CompanySignupDTO signup = new CompanySignupDTO();
+        signup.setLoginId("company.user");
+        signup.setPassword("Password!1");
+        signup.setPasswordConfirm("Password!1");
+        signup.setName("Company Manager");
+        signup.setEmail("manager@example.com");
+        signup.setPhone("010-2222-3333");
+        signup.setCompanyName("Bridge Company");
+        signup.setBusinessNumber("123-45-67890");
+        signup.setRepresentativeName("CEO Kim");
+        signup.setCompanyAddress("Seoul");
+        signup.setIndustry("IT");
+        signup.setEmployeeCount(10);
+
+        companyService.signup(signup);
+
+        CompanyLoginDTO login = new CompanyLoginDTO();
+        login.setLoginId("company.user");
+        login.setPassword("Password!1");
+
+        CompanyService.CompanyLoginResult result = companyService.login(login);
+        assertThat(result.member().getRole()).isEqualTo("COMPANY");
+        assertThat(result.profile().getCompanyName()).isEqualTo("Bridge Company");
+    }
+
+    @Test
+    @Transactional
+    void jobSeekerCannotUseCompanyLogin() {
+        CompanyLoginDTO login = new CompanyLoginDTO();
+        login.setLoginId("minjun.kim");
+        login.setPassword("Password!1");
+
+        assertThatThrownBy(() -> companyService.login(login))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("기업회원 계정이 아닙니다.");
     }
 
     @Test

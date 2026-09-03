@@ -76,3 +76,24 @@ CREATE TABLE IF NOT EXISTS job_application (
     CONSTRAINT fk_job_application_member FOREIGN KEY (member_id) REFERENCES member(id),
     CONSTRAINT uk_job_application_member_job UNIQUE (member_id, job_id)
 );
+
+CREATE TABLE IF NOT EXISTS company_profile (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id BIGINT NOT NULL UNIQUE,
+    company_name VARCHAR(100) NOT NULL,
+    business_number VARCHAR(50) NOT NULL UNIQUE,
+    representative_name VARCHAR(50) NOT NULL,
+    industry VARCHAR(100),
+    company_address VARCHAR(255) NOT NULL,
+    company_detail_address VARCHAR(255),
+    company_phone VARCHAR(30),
+    website_url VARCHAR(255),
+    logo_url VARCHAR(1000),
+    company_description CLOB,
+    employee_count INT,
+    established_date DATE,
+    verification_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_company_profile_member FOREIGN KEY (member_id) REFERENCES member(id)
+);
