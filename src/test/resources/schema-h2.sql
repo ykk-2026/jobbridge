@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS job_seeker_profile (
     min_salary INT,
     remote_preferred BOOLEAN DEFAULT FALSE,
     flexible_preferred BOOLEAN DEFAULT FALSE,
+    wheelchair_required BOOLEAN DEFAULT FALSE,
+    accessible_restroom_required BOOLEAN DEFAULT FALSE,
+    disabled_parking_required BOOLEAN DEFAULT FALSE,
+    assistive_device_required BOOLEAN DEFAULT FALSE,
     hybrid_preferred BOOLEAN DEFAULT FALSE,
     onsite_preferred BOOLEAN DEFAULT FALSE,
     contact_time_start TIME,
@@ -52,6 +56,12 @@ CREATE TABLE IF NOT EXISTS interest_job (
     requirements CLOB,
     preferred_qualifications CLOB,
     accessibility_info CLOB,
+    wheelchair_accessible BOOLEAN DEFAULT FALSE,
+    accessible_restroom BOOLEAN DEFAULT FALSE,
+    disabled_parking BOOLEAN DEFAULT FALSE,
+    remote_available BOOLEAN DEFAULT FALSE,
+    flexible_work_available BOOLEAN DEFAULT FALSE,
+    assistive_device_support BOOLEAN DEFAULT FALSE,
     deadline DATE,
     status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -96,4 +106,30 @@ CREATE TABLE IF NOT EXISTS company_profile (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_company_profile_member FOREIGN KEY (member_id) REFERENCES member(id)
+);
+ 
+CREATE TABLE IF NOT EXISTS community_post (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id BIGINT NOT NULL,
+    category VARCHAR(30) NOT NULL DEFAULT 'FREE',
+    title VARCHAR(200) NOT NULL,
+    content CLOB NOT NULL,
+    view_count INT NOT NULL DEFAULT 0,
+    like_count INT NOT NULL DEFAULT 0,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_community_post_member FOREIGN KEY (member_id) REFERENCES member(id)
+);
+
+CREATE TABLE IF NOT EXISTS community_comment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    member_id BIGINT NOT NULL,
+    content VARCHAR(1000) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_community_comment_post FOREIGN KEY (post_id) REFERENCES community_post(id),
+    CONSTRAINT fk_community_comment_member FOREIGN KEY (member_id) REFERENCES member(id)
 );

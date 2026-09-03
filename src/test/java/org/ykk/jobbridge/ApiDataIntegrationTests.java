@@ -8,11 +8,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JoinRequest;
 import org.ykk.jobbridge.dto.CompanyLoginDTO;
 import org.ykk.jobbridge.dto.CompanySignupDTO;
+import org.ykk.jobbridge.dto.CommunityPostDTO;
 import org.ykk.jobbridge.dto.InterestJobDTO;
 import org.ykk.jobbridge.dto.JobApplicationDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.AdminMapper;
 import org.ykk.jobbridge.service.CompanyService;
+import org.ykk.jobbridge.mapper.CommunityMapper;
 import org.ykk.jobbridge.mapper.InterestJobMapper;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
 import org.ykk.jobbridge.service.MemberService;
@@ -48,6 +50,9 @@ class ApiDataIntegrationTests {
 
     @Autowired
     private ProfileService profileService;
+
+    @Autowired
+    private CommunityMapper communityMapper;
 
     @Test
     void adminOverviewSourcesCanReadMembersAndJobs() {
@@ -184,5 +189,25 @@ class ApiDataIntegrationTests {
         assertThat(saved.getEmploymentType()).isEqualTo("PART_TIME");
         assertThat(saved.getCareerType()).isEqualTo("EXPERIENCED");
         assertThat(saved.getContactMethod()).isEqualTo("EMAIL");
+    }
+  
+    @Test
+    @Transactional
+    void communityPostIsStoredAndReadFromDatabase() {
+        CommunityPostDTO post = new CommunityPostDTO();
+        post.setMemberId(1L);
+        post.setCategory("FREE");
+        post.setTitle("데이터베이스 저장 테스트");
+        post.setContent("브라우저 저장소가 아니라 community_post에 저장됩니다.");
+
+        assertThat(communityMapper.insertPost(post)).isEqualTo(1);
+        assertThat(post.getId()).isNotNull();
+        assertThat(communityMapper.findPostById(post.getId()).getTitle()).isEqualTo(post.getTitle());
+
+        assertThat(communityMapper.incrementViews(post.getId())).isEqualTo(1);
+        assertThat(communityMapper.findPostById(post.getId()).getViewCount()).isEqualTo(1);
+
+        assertThat(communityMapper.deletePost(post.getId(), 1L)).isEqualTo(1);
+        assertThat(communityMapper.findAllPosts()).isEmpty();
     }
 }

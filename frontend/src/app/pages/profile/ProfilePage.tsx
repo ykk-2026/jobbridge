@@ -163,10 +163,10 @@ const toProfileFormValues = (profile: ApiJobSeekerProfile) => ({
   flexiblePreferred: Boolean(profile.flexiblePreferred),
   hybridPreferred: Boolean(profile.hybridPreferred),
   onsitePreferred: Boolean(profile.onsitePreferred),
-  wheelchairRequired: false,
-  accessibleRestroomRequired: false,
-  disabledParkingRequired: false,
-  assistiveDeviceRequired: false,
+  wheelchairRequired: Boolean(profile.wheelchairRequired),
+  accessibleRestroomRequired: Boolean(profile.accessibleRestroomRequired),
+  disabledParkingRequired: Boolean(profile.disabledParkingRequired),
+  assistiveDeviceRequired: Boolean(profile.assistiveDeviceRequired),
   contactTimeStart: profile.contactTimeStart || '09:00',
   contactTimeEnd: profile.contactTimeEnd || '18:00',
   contactMethod: profile.contactMethod || 'PHONE',
@@ -300,7 +300,6 @@ export function ProfilePage({
   useEffect(() => {
     setActiveMenu(initialMenu);
   }, [initialMenu]);
-
   const avatarInitial = (profileForm.name.trim() || initialName).slice(0, 1);
   const selectedDefaultProfile = defaultProfileOptions.find(option => option.id === profileAvatar.value) || defaultProfileOptions[0];
   const savedJobs = mockJobs
@@ -386,6 +385,10 @@ export function ProfilePage({
       minSalary: toNumberOrNull(profileForm.minSalary),
       remotePreferred: profileForm.remotePreferred,
       flexiblePreferred: profileForm.flexiblePreferred,
+      wheelchairRequired: profileForm.wheelchairRequired,
+      accessibleRestroomRequired: profileForm.accessibleRestroomRequired,
+      disabledParkingRequired: profileForm.disabledParkingRequired,
+      assistiveDeviceRequired: profileForm.assistiveDeviceRequired,
       hybridPreferred: profileForm.hybridPreferred,
       onsitePreferred: profileForm.onsitePreferred,
       contactTimeStart: profileForm.contactTimeStart,
@@ -526,7 +529,6 @@ export function ProfilePage({
   };
 
   const selectedWorkTypes = workTypes.filter(item => profileForm[item.field]).map(item => item.label);
-
   return (
     <div className="min-h-screen bg-[#F3F7FF] text-[#111827]">
       <main className="mx-auto grid max-w-[1256px] gap-5 px-5 py-5 sm:px-8 lg:grid-cols-[260px_1fr]">

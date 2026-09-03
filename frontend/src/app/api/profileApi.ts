@@ -16,6 +16,10 @@ export interface ApiJobSeekerProfile {
   minSalary?: number | null;
   remotePreferred?: boolean | null;
   flexiblePreferred?: boolean | null;
+  wheelchairRequired?: boolean | null;
+  accessibleRestroomRequired?: boolean | null;
+  disabledParkingRequired?: boolean | null;
+  assistiveDeviceRequired?: boolean | null;
   hybridPreferred?: boolean | null;
   onsitePreferred?: boolean | null;
   contactTimeStart?: string | null;

@@ -24,6 +24,12 @@ public class InterestJobDTO {
     private String requirements;
     private String preferredQualifications;
     private String accessibilityInfo;
+    private Boolean wheelchairAccessible;
+    private Boolean accessibleRestroom;
+    private Boolean disabledParking;
+    private Boolean remoteAvailable;
+    private Boolean flexibleWorkAvailable;
+    private Boolean assistiveDeviceSupport;
     private LocalDate deadline;
     private String status;
     private LocalDateTime createdAt;

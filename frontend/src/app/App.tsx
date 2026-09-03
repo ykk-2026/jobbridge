@@ -10,8 +10,15 @@ import { ProfilePage } from '@/app/pages/profile/ProfilePage';
 import { JobDetailPage } from '@/app/pages/jobs/JobDetailPage';
 import { JobsPage } from '@/app/pages/jobs/JobsPage';
 import { SupportPage } from '@/app/pages/support/SupportPage';
+import { AdminPage } from '@/app/pages/admin/AdminPage';
 import { CommunityPage, CompanyInfoPage, GuidePage } from '@/app/pages/info/InfoPages';
-import { getCurrentMember, loginMember, logoutMember, registerMember, type LoginMember } from '@/app/api/memberApi';
+import {
+  getCurrentMember,
+  loginMember,
+  logoutMember,
+  registerMember,
+  type LoginMember,
+} from '@/app/api/memberApi';
 import { deleteInterestJob, getInterestJobs, saveInterestJob } from '@/app/api/interestJobApi';
 import { getJobApplications, saveJobApplication } from '@/app/api/jobApplicationApi';
 import type { ApiJobSeekerProfile } from '@/app/api/profileApi';
@@ -39,6 +46,7 @@ const pageValues: Page[] = [
   'community',
   'guide',
   'support',
+  'admin',
   'corporate',
 ];
 
@@ -552,6 +560,9 @@ export default function App() {
       case 'support':
         return <SupportPage />;
 
+      case 'admin':
+        return currentUser?.role === 'admin' ? <AdminPage /> : <LoginPage navigate={navigate} onLogin={handleLogin} onLoginSuccess={handleLoginSuccess} registeredUser={registeredUser} onBack={handleBack} onResetPassword={handleResetPassword} />;
+
       default:
         return <MainPage navigate={navigate} bookmarks={bookmarks} onBookmark={handleBookmark} onSearch={handleHeaderSearch} />;
     }
@@ -573,7 +584,7 @@ export default function App() {
         {renderPage()}
       </main>
 
-      {showNavFooter && currentPage !== 'user-dashboard' && currentPage !== 'corporate' && currentPage !== 'applications' && (
+      {showNavFooter && currentPage !== 'user-dashboard' && currentPage !== 'corporate' && currentPage !== 'applications' && currentPage !== 'admin' && (
         <Footer navigate={navigate} />
       )}
     </div>

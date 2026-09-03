@@ -64,6 +64,10 @@ public class ProfileApiController {
     private void normalizeBooleanValues(JobSeekerProfileDTO profile) {
         if (profile.getRemotePreferred() == null) profile.setRemotePreferred(false);
         if (profile.getFlexiblePreferred() == null) profile.setFlexiblePreferred(false);
+        if (profile.getWheelchairRequired() == null) profile.setWheelchairRequired(false);
+        if (profile.getAccessibleRestroomRequired() == null) profile.setAccessibleRestroomRequired(false);
+        if (profile.getDisabledParkingRequired() == null) profile.setDisabledParkingRequired(false);
+        if (profile.getAssistiveDeviceRequired() == null) profile.setAssistiveDeviceRequired(false);
         if (profile.getHybridPreferred() == null) profile.setHybridPreferred(false);
         if (profile.getOnsitePreferred() == null) profile.setOnsitePreferred(false);
         if (profile.getProfilePublic() == null) profile.setProfilePublic(false);

@@ -20,6 +20,12 @@
                requirements,
                preferred_qualifications,
                accessibility_info,
+               wheelchair_accessible,
+               accessible_restroom,
+               disabled_parking,
+               remote_available,
+               flexible_work_available,
+               assistive_device_support,
                deadline,
                status,
                created_at,
@@ -45,12 +51,16 @@
         (member_id, company_name, title, job_category, employment_type, location,
          salary_min, salary_max, experience_level, education_level,
          description, requirements, preferred_qualifications,
-         accessibility_info, deadline, status)
+         accessibility_info, wheelchair_accessible, accessible_restroom,
+         disabled_parking, remote_available, flexible_work_available,
+         assistive_device_support, deadline, status)
         VALUES
         (#{memberId}, #{companyName}, #{title}, #{jobCategory}, #{employmentType}, #{location},
          #{salaryMin}, #{salaryMax}, #{experienceLevel}, #{educationLevel},
          #{description}, #{requirements}, #{preferredQualifications},
-         #{accessibilityInfo}, #{deadline}, #{status})
+         #{accessibilityInfo}, #{wheelchairAccessible}, #{accessibleRestroom},
+         #{disabledParking}, #{remoteAvailable}, #{flexibleWorkAvailable},
+         #{assistiveDeviceSupport}, #{deadline}, #{status})
     </insert>
 
     <delete id="deleteByCompanyAndTitle">
