@@ -3,7 +3,7 @@ KEY (id)
 VALUES (
     1,
     'minjun.kim',
-    '$2a$10$hYnASJFCavu3k8/zvud10Os1vWhNFlUq6XWRwRzLPw4ItUO5XbrIu',
+    '$2a$10$3LOunRqVBPjIl1lKAvbzued6VFjl4Oho3b1IjOv9f/Y/dDPasuqyO',
     '테스트 사용자',
     DATE '1998-05-23',
     'OTHER',
