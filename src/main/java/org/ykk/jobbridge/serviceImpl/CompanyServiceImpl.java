@@ -35,7 +35,7 @@ public class CompanyServiceImpl implements CompanyService {
             throw new IllegalStateException("이미 사용 중인 아이디입니다.");
         }
         if (companyMapper.countByEmail(email) > 0) {
-            throw new IllegalStateException("이미 사용 중인 이메일입니다.");
+            throw new IllegalStateException("이미 가입된 이메일입니다.");
         }
         if (companyMapper.countByBusinessNumber(businessNumber) > 0) {
             throw new IllegalStateException("이미 등록된 사업자등록번호입니다.");
@@ -53,18 +53,18 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyLoginResult login(CompanyLoginDTO login) {
         if (login == null || isBlank(login.getLoginId()) || isBlank(login.getPassword())) {
-            throw new IllegalArgumentException("아이디와 비밀번호를 입력해 주세요.");
+            throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
         MemberLoginResult member = companyMapper.findMemberByLoginId(normalizeLoginId(login.getLoginId()));
         if (member == null || !passwordEncoder.matches(login.getPassword(), member.getPassword())) {
             throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
-        if (!"ACTIVE".equals(member.getStatus())) {
-            throw new IllegalArgumentException("사용할 수 없는 회원 계정입니다.");
-        }
         if (!"COMPANY".equals(member.getRole())) {
             throw new IllegalArgumentException("기업회원 계정이 아닙니다.");
+        }
+        if (!"ACTIVE".equals(member.getStatus())) {
+            throw new IllegalArgumentException("사용할 수 없는 계정입니다.");
         }
 
         CompanyProfileDTO profile = companyMapper.findProfileByMemberId(member.getId());
@@ -86,7 +86,7 @@ public class CompanyServiceImpl implements CompanyService {
             throw new IllegalArgumentException("필수 기업회원 정보를 모두 입력해 주세요.");
         }
         if (!signup.getPassword().equals(signup.getPasswordConfirm())) {
-            throw new IllegalArgumentException("비밀번호 확인이 일치하지 않습니다.");
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
         if (signup.getEmployeeCount() != null && signup.getEmployeeCount() < 0) {
             throw new IllegalArgumentException("직원 수는 0 이상이어야 합니다.");

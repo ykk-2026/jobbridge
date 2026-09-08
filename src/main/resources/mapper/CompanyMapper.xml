@@ -30,9 +30,9 @@
             keyProperty="id"
             keyColumn="id">
         INSERT INTO member (
-            login_id, password, name, email, phone, role
+            login_id, password, name, birth_date, gender, email, phone, role, status
         ) VALUES (
-            #{loginId}, #{password}, #{name}, #{email}, #{phone}, 'COMPANY'
+            #{loginId}, #{password}, #{name}, NULL, NULL, #{email}, #{phone}, 'COMPANY', 'ACTIVE'
         )
     </insert>
 

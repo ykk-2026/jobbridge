@@ -3,6 +3,7 @@ package org.ykk.jobbridge.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +18,11 @@ import java.util.Map;
 @RequestMapping("/api/companies")
 public class CompanyController {
 
-    private static final String LOGIN_MEMBER = "loginMember";
+    public static final String LOGIN_MEMBER = "loginMember";
+    public static final String LOGIN_MEMBER_ID = "loginMemberId";
+    public static final String LOGIN_ID = "loginId";
+    public static final String LOGIN_ROLE = "loginRole";
+    public static final String COMPANY_NAME = "companyName";
 
     private final CompanyService companyService;
 
@@ -55,12 +60,45 @@ public class CompanyController {
             }
 
             HttpSession newSession = request.getSession(true);
-            newSession.setAttribute(LOGIN_MEMBER, result.member());
+            saveCompanySession(newSession, result);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(Map.of("message", e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> currentCompany(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || !"COMPANY".equals(session.getAttribute(LOGIN_ROLE))) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "loginMemberId", session.getAttribute(LOGIN_MEMBER_ID),
+                "loginId", session.getAttribute(LOGIN_ID),
+                "loginRole", session.getAttribute(LOGIN_ROLE),
+                "companyName", session.getAttribute(COMPANY_NAME),
+                "member", session.getAttribute(LOGIN_MEMBER)
+        ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    public static void saveCompanySession(HttpSession session, CompanyService.CompanyLoginResult result) {
+        session.setAttribute(LOGIN_MEMBER, result.member());
+        session.setAttribute(LOGIN_MEMBER_ID, result.member().getId());
+        session.setAttribute(LOGIN_ID, result.member().getLoginId());
+        session.setAttribute(LOGIN_ROLE, result.member().getRole());
+        session.setAttribute(COMPANY_NAME, result.profile().getCompanyName());
     }
 }
