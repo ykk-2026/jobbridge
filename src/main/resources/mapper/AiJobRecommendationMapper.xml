@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ykk.jobbridge.mapper.AiJobRecommendationMapper">
+    <update id="ensureTable">
+        CREATE TABLE IF NOT EXISTS ai_job_recommendation (
+            id BIGINT NOT NULL AUTO_INCREMENT,
+            member_id BIGINT NOT NULL,
+            job_id BIGINT NOT NULL,
+            total_score INT NOT NULL,
+            job_score INT NOT NULL,
+            region_score INT NOT NULL,
+            employment_score INT NOT NULL,
+            career_score INT NOT NULL,
+            salary_score INT NOT NULL,
+            work_style_score INT NOT NULL,
+            accessibility_score INT NOT NULL,
+            recommendation_reason VARCHAR(2000) NOT NULL,
+            mismatch_reason VARCHAR(2000) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            CONSTRAINT uk_ai_recommendation_member_job UNIQUE (member_id, job_id),
+            CONSTRAINT fk_ai_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
+            CONSTRAINT fk_ai_recommendation_job FOREIGN KEY (job_id) REFERENCES interest_job(id)
+        )
+    </update>
+
+    <select id="findProfile" resultType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
+        SELECT member_id,
+               desired_job,
+               desired_region,
+               employment_type,
+               career_type,
+               career_years,
+               min_salary,
+               remote_preferred,
+               flexible_preferred,
+               wheelchair_required,
+               accessible_restroom_required,
+               disabled_parking_required,
+               assistive_device_required
+        FROM job_seeker_profile
+        WHERE member_id = #{memberId}
+    </select>
+
+    <select id="findEligibleJobs" resultType="org.ykk.jobbridge.dto.InterestJobDTO">
+        SELECT id,
+               member_id,
+               company_name,
+               title,
+               job_category,
+               employment_type,
+               location,
+               salary_min,
+               salary_max,
+               experience_level,
+               education_level,
+               description,
+               requirements,
+               preferred_qualifications,
+               accessibility_info,
+               wheelchair_accessible,
+               accessible_restroom,
+               disabled_parking,
+               remote_available,
+               flexible_work_available,
+               assistive_device_support,
+               deadline,
+               status,
+               created_at,
+               updated_at
+        FROM interest_job
+        WHERE status = 'OPEN'
+          AND (deadline IS NULL OR deadline &gt;= CURRENT_DATE)
+        ORDER BY deadline IS NULL, deadline, id
+    </select>
+
+    <update id="updateRecommendation" parameterType="org.ykk.jobbridge.dto.AiJobRecommendationDTO">
+        UPDATE ai_job_recommendation
+        SET total_score = #{totalScore},
+            job_score = #{jobScore},
+            region_score = #{regionScore},
+            employment_score = #{employmentTypeScore},
+            career_score = #{careerScore},
+            salary_score = #{salaryScore},
+            work_style_score = #{workStyleScore},
+            accessibility_score = #{accessibilityScore},
+            recommendation_reason = #{recommendationReason},
+            mismatch_reason = #{mismatchReason},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE member_id = #{memberId}
+          AND job_id = #{jobId}
+    </update>
+
+    <insert id="insertRecommendation" parameterType="org.ykk.jobbridge.dto.AiJobRecommendationDTO">
+        INSERT INTO ai_job_recommendation (
+            member_id, job_id, total_score, job_score, region_score,
+            employment_score, career_score, salary_score, work_style_score,
+            accessibility_score, recommendation_reason, mismatch_reason
+        ) VALUES (
+            #{memberId}, #{jobId}, #{totalScore}, #{jobScore}, #{regionScore},
+            #{employmentTypeScore}, #{careerScore}, #{salaryScore}, #{workStyleScore},
+            #{accessibilityScore}, #{recommendationReason}, #{mismatchReason}
+        )
+    </insert>
+</mapper>

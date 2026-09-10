@@ -24,6 +24,7 @@ target/
 /*.log
 /.chrome-*/
 /.tools/
+/src/main/resources/static/frontend-version.txt
 
 ### NetBeans ###
 /nbproject/private/

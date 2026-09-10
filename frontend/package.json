@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "build:linked": "vite build --config vite.linked.config.ts",
+    "watch:linked": "vite build --watch --config vite.linked.config.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

@@ -11,14 +11,26 @@
       <meta name="robots" content="noindex, nofollow" />
       <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
       
-      <script type="module" crossorigin src="/assets/index-C66Qzroy.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-DL9heutB.css">
+      <script type="module" crossorigin src="/assets/index-DYevuskO.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-B191j1J4.css">
     </head>
 
     <body>
       
       <div id="root"></div>
       
+      <script>
+          let frontendVersion;
+          window.setInterval(async () => {
+            try {
+              const response = await fetch('/frontend-version.txt?t=' + Date.now(), { cache: 'no-store' });
+              if (!response.ok) return;
+              const nextVersion = await response.text();
+              if (frontendVersion === undefined) frontendVersion = nextVersion;
+              else if (frontendVersion !== nextVersion) window.location.reload();
+            } catch (_) {}
+          }, 1000);
+        </script>
     </body>
   </html>
   

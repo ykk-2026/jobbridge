@@ -70,6 +70,27 @@ CREATE TABLE IF NOT EXISTS interest_job (
     CONSTRAINT uk_interest_job_member_post UNIQUE (member_id, company_name, title)
 );
 
+CREATE TABLE IF NOT EXISTS ai_job_recommendation (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id BIGINT NOT NULL,
+    job_id BIGINT NOT NULL,
+    total_score INT NOT NULL,
+    job_score INT NOT NULL,
+    region_score INT NOT NULL,
+    employment_score INT NOT NULL,
+    career_score INT NOT NULL,
+    salary_score INT NOT NULL,
+    work_style_score INT NOT NULL,
+    accessibility_score INT NOT NULL,
+    recommendation_reason VARCHAR(2000) NOT NULL,
+    mismatch_reason VARCHAR(2000) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ai_recommendation_member_job UNIQUE (member_id, job_id),
+    CONSTRAINT fk_ai_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
+    CONSTRAINT fk_ai_recommendation_job FOREIGN KEY (job_id) REFERENCES interest_job(id)
+);
+
 CREATE TABLE IF NOT EXISTS job_application (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
