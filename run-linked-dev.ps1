@@ -20,27 +20,29 @@ if (-not (Test-Path -LiteralPath (Join-Path $frontendRoot 'src\main.tsx'))) {
     throw "YKK-Frontend was not found at $frontendRoot"
 }
 
-$env:YKK_FRONTEND_DIR = $frontendRoot
-$watchOutput = Join-Path $projectRoot 'frontend-linked-watch.log'
-$watchError = Join-Path $projectRoot 'frontend-linked-watch-error.log'
-$viteCli = Join-Path $projectRoot 'frontend\node_modules\vite\bin\vite.js'
-$viteConfig = Join-Path $projectRoot 'frontend\vite.linked.config.ts'
+$viteOutput = Join-Path $projectRoot 'ykk-vite-dev.log'
+$viteError = Join-Path $projectRoot 'ykk-vite-dev-error.log'
+$viteCli = Join-Path $frontendRoot 'node_modules\vite\bin\vite.js'
 
-$watchProcess = Start-Process -FilePath $nodeExe `
-    -ArgumentList @($viteCli, 'build', '--watch', '--config', $viteConfig) `
-    -WorkingDirectory $projectRoot `
-    -RedirectStandardOutput $watchOutput `
-    -RedirectStandardError $watchError `
+if (-not (Test-Path -LiteralPath $viteCli)) {
+    throw "YKK-Frontend dependencies were not found. Run npm install in $frontendRoot"
+}
+
+$viteProcess = Start-Process -FilePath $nodeExe `
+    -ArgumentList @($viteCli) `
+    -WorkingDirectory $frontendRoot `
+    -RedirectStandardOutput $viteOutput `
+    -RedirectStandardError $viteError `
     -WindowStyle Hidden `
     -PassThru
 
-Write-Host "YKK-Frontend watcher started (PID $($watchProcess.Id))."
-Write-Host 'Open http://localhost:8080 after Spring Boot starts.'
+Write-Host "YKK-Frontend dev server started (PID $($viteProcess.Id))."
+Write-Host 'Open http://localhost:5173 after Spring Boot starts.'
 
 try {
     & (Join-Path $projectRoot 'mvnw.cmd') spring-boot:run
 } finally {
-    if (-not $watchProcess.HasExited) {
-        Stop-Process -Id $watchProcess.Id -Force
+    if (-not $viteProcess.HasExited) {
+        Stop-Process -Id $viteProcess.Id -Force
     }
 }

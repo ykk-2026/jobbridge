@@ -1,11 +1,16 @@
-# YKK-Frontend 자동 연결
+# YKK-Frontend 연결
 
-`C:\Users\data8320-13\Desktop\YKK\YKK-Frontend`가 프론트엔드 원본입니다.
-원본 파일을 저장하면 Vite가 `src/main/resources/static`을 자동 빌드하고,
-열려 있는 `http://localhost:8080` 화면도 자동으로 새로고침됩니다.
+프런트엔드의 단일 원본은 기본적으로 다음 경로를 사용합니다.
 
-백엔드와 프론트 감시기를 함께 실행하려면 프로젝트 루트의
-`run-linked-dev.cmd`를 실행합니다.
+`C:\Users\data8320-13\Desktop\YKK\YKK-Frontend`
 
-원본 위치가 바뀌면 실행 전에 `YKK_FRONTEND_DIR` 환경 변수에 새 경로를 지정합니다.
-백엔드를 IntelliJ에서 따로 실행할 때는 `frontend/run-linked-watch.cmd`도 함께 실행합니다.
+개발할 때는 YKK-Frontend가 `http://localhost:5173`, Spring Boot가
+`http://localhost:8080`에서 실행됩니다. Vite가 `/api` 요청을 백엔드로
+프록시합니다.
+
+두 서버를 함께 실행하려면 프로젝트 루트에서 `run-linked-dev.cmd`를 실행합니다.
+프런트엔드 위치가 바뀌면 실행 전에 `YKK_FRONTEND_DIR` 환경 변수에 새 경로를
+지정합니다.
+
+배포용 정적 파일이 필요하면 YKK-Frontend에서 `npm run build`를 실행한 뒤
+`dist` 결과물을 배포 대상으로 사용합니다.
