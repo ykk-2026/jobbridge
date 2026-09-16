@@ -4,19 +4,17 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="org.ykk.jobbridge.mapper.MemberMapper">
+<mapper namespace="org.ykk.jobbridge.mapper.JoinMapper">
 
     <!-- 로그인 아이디 중복 확인 -->
-    <select id="countByLoginId"
-            resultType="int">
+    <select id="countByLoginId" resultType="int">
         SELECT COUNT(*)
         FROM member
         WHERE login_id = #{loginId}
     </select>
 
     <!-- 이메일 중복 확인 -->
-    <select id="countByEmail"
-            resultType="int">
+    <select id="countByEmail" resultType="int">
         SELECT COUNT(*)
         FROM member
         WHERE email = #{email}
@@ -24,44 +22,27 @@
 
     <!-- 회원 저장 -->
     <insert id="insertMember"
-            parameterType="org.ykk.jobbridge.dto.JoinRequest"
+            parameterType="org.ykk.jobbridge.dto.JoinDTO"
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
-
         INSERT INTO member (
-        login_id,
-        password,
-        name,
-        birth_date,
-        gender,
-        email,
-        phone,
-        role
+            login_id, password, name, birth_date, gender, email, phone, role
         )
         VALUES (
-        #{loginId},
-        #{password},
-        #{name},
-        #{birthDate},
-        #{gender},
-        #{email},
-        #{phone},
-        #{role}
+            #{loginId}, #{password}, #{name}, #{birthDate},
+            #{gender}, #{email}, #{phone}, #{role}
         )
     </insert>
 
     <!-- 구직자 프로필 저장 -->
     <insert id="insertJobSeekerProfile"
-            parameterType="org.ykk.jobbridge.dto.JoinRequest">
-
+            parameterType="org.ykk.jobbridge.dto.JoinDTO">
         INSERT INTO job_seeker_profile (
-        member_id,
-        desired_job
+            member_id, desired_job
         )
         VALUES (
-        #{id},
-        #{desiredJob}
+            #{id}, #{desiredJob}
         )
     </insert>
 

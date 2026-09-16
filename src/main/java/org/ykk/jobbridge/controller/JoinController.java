@@ -7,25 +7,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.ykk.jobbridge.dto.JoinRequest;
-import org.ykk.jobbridge.service.MemberService;
+import org.ykk.jobbridge.dto.JoinDTO;
+import org.ykk.jobbridge.service.JoinService;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/members")
-public class MemberController {
+public class JoinController {
 
-    private final MemberService memberService;
+    private final JoinService joinService;
 
-    public MemberController(MemberService memberService) {
-        this.memberService = memberService;
+    public JoinController(JoinService joinService) {
+        this.joinService = joinService;
     }
 
     @GetMapping("/check-login-id")
     public Map<String, Object> checkLoginId(@RequestParam String loginId) {
-        boolean available = memberService.isLoginIdAvailable(loginId);
+        boolean available = joinService.isLoginIdAvailable(loginId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("available", available);
@@ -38,14 +38,14 @@ public class MemberController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> join(@RequestBody JoinRequest request) {
+    public ResponseEntity<Map<String, Object>> join(@RequestBody JoinDTO joinDTO) {
         try {
-            memberService.join(request);
+            joinService.join(joinDTO);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("memberId", request.getId());
-            response.put("loginId", request.getLoginId());
-            response.put("name", request.getName());
+            response.put("memberId", joinDTO.getId());
+            response.put("loginId", joinDTO.getLoginId());
+            response.put("name", joinDTO.getName());
             response.put("message", "회원가입이 완료되었습니다.");
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
@@ -54,5 +54,4 @@ public class MemberController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         }
     }
-
 }

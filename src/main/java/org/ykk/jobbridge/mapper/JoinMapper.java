@@ -1,15 +1,15 @@
 package org.ykk.jobbridge.mapper;
 
 import org.apache.ibatis.annotations.Param;
-import org.ykk.jobbridge.dto.JoinRequest;
+import org.ykk.jobbridge.dto.JoinDTO;
 
-public interface MemberMapper {
+public interface JoinMapper {
 
     int countByLoginId(@Param("loginId") String loginId);
 
     int countByEmail(@Param("email") String email);
 
-    int insertMember(JoinRequest request);
+    int insertMember(JoinDTO joinDTO);
 
-    int insertJobSeekerProfile(JoinRequest request);
+    int insertJobSeekerProfile(JoinDTO joinDTO);
 }
