@@ -1,25 +1,24 @@
-package org.ykk.jobbridge.serviceImpl;
+package org.ykk.jobbridge.service.serviceImpl;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JoinRequest;
-import org.ykk.jobbridge.dto.LoginRequest;
-import org.ykk.jobbridge.dto.MemberLoginResult;
-import org.ykk.jobbridge.dto.SessionMember;
 import org.ykk.jobbridge.mapper.MemberMapper;
 import org.ykk.jobbridge.service.MemberService;
 
 import java.util.Locale;
 
 @Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class MemberServiceImpl implements MemberService {
 
     private final MemberMapper memberMapper;
     private final PasswordEncoder passwordEncoder;
+
+    public MemberServiceImpl(MemberMapper memberMapper, PasswordEncoder passwordEncoder) {
+        this.memberMapper = memberMapper;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     @Transactional
@@ -44,23 +43,6 @@ public class MemberServiceImpl implements MemberService {
         if ("JOB_SEEKER".equals(request.getRole())) {
             memberMapper.insertJobSeekerProfile(request);
         }
-    }
-
-    @Override
-    public SessionMember login(LoginRequest request) {
-        if (request == null || isBlank(request.getLoginId()) || isBlank(request.getPassword())) {
-            throw new IllegalArgumentException("아이디와 비밀번호를 입력해 주세요.");
-        }
-
-        MemberLoginResult member = memberMapper.findByLoginId(normalizeLoginId(request.getLoginId()));
-        if (member == null || !passwordEncoder.matches(request.getPassword(), member.getPassword())) {
-            throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
-        }
-        if (!"ACTIVE".equals(member.getStatus())) {
-            throw new IllegalArgumentException("사용할 수 없는 회원 계정입니다.");
-        }
-
-        return new SessionMember(member.getId(), member.getLoginId(), member.getName(), member.getRole());
     }
 
     @Override

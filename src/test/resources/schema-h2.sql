@@ -154,3 +154,16 @@ CREATE TABLE IF NOT EXISTS community_comment (
     CONSTRAINT fk_community_comment_post FOREIGN KEY (post_id) REFERENCES community_post(id),
     CONSTRAINT fk_community_comment_member FOREIGN KEY (member_id) REFERENCES member(id)
 );
+
+CREATE TABLE IF NOT EXISTS community_report (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    reporter_member_id BIGINT NOT NULL,
+    reason VARCHAR(30) NOT NULL,
+    detail VARCHAR(1000),
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_community_report_post FOREIGN KEY (post_id) REFERENCES community_post(id),
+    CONSTRAINT fk_community_report_member FOREIGN KEY (reporter_member_id) REFERENCES member(id),
+    CONSTRAINT uk_community_report UNIQUE (post_id, reporter_member_id)
+);

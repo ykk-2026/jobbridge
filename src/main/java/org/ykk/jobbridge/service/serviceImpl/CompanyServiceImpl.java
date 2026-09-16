@@ -1,10 +1,10 @@
-package org.ykk.jobbridge.serviceImpl;
+package org.ykk.jobbridge.service.serviceImpl;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.CompanyLoginDTO;
+import org.ykk.jobbridge.dto.CompanyLoginResultDTO;
 import org.ykk.jobbridge.dto.CompanyProfileDTO;
 import org.ykk.jobbridge.dto.CompanySignupDTO;
 import org.ykk.jobbridge.dto.MemberLoginResult;
@@ -15,12 +15,15 @@ import org.ykk.jobbridge.service.CompanyService;
 import java.util.Locale;
 
 @Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyMapper companyMapper;
     private final PasswordEncoder passwordEncoder;
+
+    public CompanyServiceImpl(CompanyMapper companyMapper, PasswordEncoder passwordEncoder) {
+        this.companyMapper = companyMapper;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     @Transactional
@@ -51,7 +54,7 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    public CompanyLoginResult login(CompanyLoginDTO login) {
+    public CompanyLoginResultDTO login(CompanyLoginDTO login) {
         if (login == null || isBlank(login.getLoginId()) || isBlank(login.getPassword())) {
             throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
@@ -75,7 +78,7 @@ public class CompanyServiceImpl implements CompanyService {
         SessionMember sessionMember = new SessionMember(
                 member.getId(), member.getLoginId(), member.getName(), member.getRole()
         );
-        return new CompanyLoginResult(sessionMember, profile);
+        return new CompanyLoginResultDTO(sessionMember, profile);
     }
 
     private void validateSignup(CompanySignupDTO signup) {

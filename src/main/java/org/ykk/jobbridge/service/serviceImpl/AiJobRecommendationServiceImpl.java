@@ -1,6 +1,5 @@
-package org.ykk.jobbridge.serviceImpl;
+package org.ykk.jobbridge.service.serviceImpl;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.stereotype.Service;
@@ -18,17 +17,26 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AiJobRecommendationServiceImpl implements AiJobRecommendationService {
 
     private final AiJobRecommendationMapper recommendationMapper;
     private final JobRecommendationCalculator calculator;
     private final DataSource dataSource;
     private volatile boolean schemaReady;
+
+    public AiJobRecommendationServiceImpl(AiJobRecommendationMapper recommendationMapper,
+                                          JobRecommendationCalculator calculator,
+                                          DataSource dataSource) {
+        this.recommendationMapper = recommendationMapper;
+        this.calculator = calculator;
+        this.dataSource = dataSource;
+    }
 
     @Override
     @Transactional
@@ -43,13 +51,28 @@ public class AiJobRecommendationServiceImpl implements AiJobRecommendationServic
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "구직자 프로필을 먼저 등록해 주세요.");
         }
 
-        List<AiJobRecommendationDTO> recommendations = recommendationMapper.findEligibleJobs().stream()
-                .map(job -> calculator.calculate(memberId, profile, job))
-                .sorted(Comparator.comparing(AiJobRecommendationDTO::getTotalScore).reversed()
-                        .thenComparing(AiJobRecommendationDTO::getJobId))
-                .toList();
+        List<InterestJobDTO> jobs = recommendationMapper.findEligibleJobs();
+        List<AiJobRecommendationDTO> recommendations = new ArrayList<>();
 
-        recommendations.forEach(this::saveOrUpdate);
+        for (InterestJobDTO job : jobs) {
+            AiJobRecommendationDTO recommendation = calculator.calculate(memberId, profile, job);
+            recommendations.add(recommendation);
+        }
+
+        Collections.sort(recommendations, new Comparator<AiJobRecommendationDTO>() {
+            @Override
+            public int compare(AiJobRecommendationDTO first, AiJobRecommendationDTO second) {
+                int scoreComparison = second.getTotalScore().compareTo(first.getTotalScore());
+                if (scoreComparison != 0) {
+                    return scoreComparison;
+                }
+                return first.getJobId().compareTo(second.getJobId());
+            }
+        });
+
+        for (AiJobRecommendationDTO recommendation : recommendations) {
+            saveOrUpdate(recommendation);
+        }
         return recommendations;
     }
 
@@ -60,8 +83,12 @@ public class AiJobRecommendationServiceImpl implements AiJobRecommendationServic
     }
 
     private synchronized void ensureSchema() {
-        if (schemaReady) return;
-        if (!recommendationTableExists()) recommendationMapper.ensureTable();
+        if (schemaReady) {
+            return;
+        }
+        if (!recommendationTableExists()) {
+            recommendationMapper.ensureTable();
+        }
         schemaReady = true;
     }
 
@@ -71,7 +98,9 @@ public class AiJobRecommendationServiceImpl implements AiJobRecommendationServic
             DatabaseMetaData metadata = connection.getMetaData();
             try (ResultSet tables = metadata.getTables(connection.getCatalog(), null, null, new String[]{"TABLE"})) {
                 while (tables.next()) {
-                    if ("ai_job_recommendation".equalsIgnoreCase(tables.getString("TABLE_NAME"))) return true;
+                    if ("ai_job_recommendation".equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
+                        return true;
+                    }
                 }
             }
             return false;

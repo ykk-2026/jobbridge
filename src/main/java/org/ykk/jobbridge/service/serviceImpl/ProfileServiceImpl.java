@@ -1,6 +1,5 @@
-package org.ykk.jobbridge.serviceImpl;
+package org.ykk.jobbridge.service.serviceImpl;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
@@ -11,8 +10,6 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ProfileServiceImpl implements ProfileService {
 
     private static final Map<String, String> GENDER_CODES = Map.of(
@@ -43,6 +40,10 @@ public class ProfileServiceImpl implements ProfileService {
 
     private final ProfileMapper profileMapper;
     private volatile boolean profileSchemaReady;
+
+    public ProfileServiceImpl(ProfileMapper profileMapper) {
+        this.profileMapper = profileMapper;
+    }
 
     @Override
     public JobSeekerProfileDTO getProfile(Long memberId) {
