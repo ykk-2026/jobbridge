@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.ykk.jobbridge.mapper.LoginMapper">
+
+    <!-- 로그인할 회원의 계정 정보를 아이디로 조회 -->
+    <select id="findByLoginId"
+            resultType="org.ykk.jobbridge.dto.MemberLoginResult">
+        SELECT
+            id,
+            login_id AS loginId,
+            password,
+            name,
+            role,
+            status
+        FROM member
+        WHERE login_id = #{loginId}
+    </select>
+
+</mapper>
