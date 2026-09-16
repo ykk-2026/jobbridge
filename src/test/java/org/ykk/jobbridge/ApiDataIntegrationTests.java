@@ -9,13 +9,20 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JoinRequest;
 import org.ykk.jobbridge.dto.CompanyLoginDTO;
+import org.ykk.jobbridge.dto.CompanyLoginResultDTO;
 import org.ykk.jobbridge.dto.CompanySignupDTO;
 import org.ykk.jobbridge.dto.CommunityPostDTO;
 import org.ykk.jobbridge.dto.InterestJobDTO;
 import org.ykk.jobbridge.dto.JobApplicationDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
+import org.ykk.jobbridge.dto.LoginDTO;
+import org.ykk.jobbridge.dto.SessionMember;
 import org.ykk.jobbridge.mapper.AdminMapper;
 import org.ykk.jobbridge.service.CompanyService;
+import org.ykk.jobbridge.service.CommunityService;
+import org.ykk.jobbridge.service.InterestJobService;
+import org.ykk.jobbridge.service.JobApplicationService;
+import org.ykk.jobbridge.service.LoginService;
 import org.ykk.jobbridge.mapper.CommunityMapper;
 import org.ykk.jobbridge.mapper.InterestJobMapper;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
@@ -43,6 +50,9 @@ class ApiDataIntegrationTests {
     private MemberService memberService;
 
     @Autowired
+    private LoginService loginService;
+
+    @Autowired
     private CompanyService companyService;
 
     @Autowired
@@ -62,6 +72,15 @@ class ApiDataIntegrationTests {
 
     @Autowired
     private CommunityMapper communityMapper;
+
+    @Autowired
+    private InterestJobService interestJobService;
+
+    @Autowired
+    private JobApplicationService jobApplicationService;
+
+    @Autowired
+    private CommunityService communityService;
 
     @Test
     void adminOverviewSourcesCanReadMembersAndJobs() {
@@ -88,6 +107,31 @@ class ApiDataIntegrationTests {
         assertThatThrownBy(() -> memberService.join(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("필수 회원 정보를 모두 입력해 주세요.");
+    }
+
+    @Test
+    @Transactional
+    void personalMemberCanJoinAndLogin() {
+        JoinRequest request = new JoinRequest();
+        request.setLoginId("personal.login.test");
+        request.setPassword("Password!1");
+        request.setPasswordConfirm("Password!1");
+        request.setName("개인 로그인 테스트");
+        request.setBirthDate(LocalDate.of(2000, 1, 1));
+        request.setGender("OTHER");
+        request.setEmail("personal.login.test@example.com");
+        request.setPhone("010-7777-8888");
+        request.setRole("JOB_SEEKER");
+        request.setDesiredJob("개발자");
+        memberService.join(request);
+
+        LoginDTO loginDTO = new LoginDTO();
+        loginDTO.setLoginId("personal.login.test");
+        loginDTO.setPassword("Password!1");
+
+        SessionMember loginMember = loginService.login(loginDTO);
+        assertThat(loginMember.getId()).isEqualTo(request.getId());
+        assertThat(loginMember.getRole()).isEqualTo("JOB_SEEKER");
     }
 
     @Test
@@ -128,9 +172,9 @@ class ApiDataIntegrationTests {
         login.setLoginId("company.user");
         login.setPassword("Password!1");
 
-        CompanyService.CompanyLoginResult result = companyService.login(login);
-        assertThat(result.member().getRole()).isEqualTo("COMPANY");
-        assertThat(result.profile().getCompanyName()).isEqualTo("Bridge Company");
+        CompanyLoginResultDTO result = companyService.login(login);
+        assertThat(result.getMember().getRole()).isEqualTo("COMPANY");
+        assertThat(result.getProfile().getCompanyName()).isEqualTo("Bridge Company");
     }
 
     @Test
@@ -226,7 +270,6 @@ class ApiDataIntegrationTests {
     @Transactional
     void interestJobCanBeSavedAndRemoved() {
         InterestJobDTO interestJob = new InterestJobDTO();
-        interestJob.setMemberId(1L);
         interestJob.setCompanyName("Samsung SDS");
         interestJob.setTitle("Java 백엔드 개발자");
         interestJob.setJobCategory("IT");
@@ -234,31 +277,21 @@ class ApiDataIntegrationTests {
         interestJob.setLocation("서울 송파구");
         interestJob.setStatus("OPEN");
 
-        assertThat(interestJobMapper.insert(interestJob)).isEqualTo(1);
+        interestJobService.saveInterestJob(1L, interestJob);
         assertThat(interestJob.getId()).isNotNull();
         assertThat(interestJobMapper.countByCompanyAndTitle(
                 interestJob.getMemberId(), interestJob.getCompanyName(), interestJob.getTitle())).isEqualTo(1);
         assertThat(interestJobMapper.findAll(interestJob.getMemberId())).hasSize(1);
 
-        assertThat(interestJobMapper.deleteByCompanyAndTitle(
-                interestJob.getMemberId(), interestJob.getCompanyName(), interestJob.getTitle())).isEqualTo(1);
+        interestJobService.deleteInterestJob(
+                interestJob.getMemberId(), interestJob.getCompanyName(), interestJob.getTitle());
         assertThat(interestJobMapper.findAll(interestJob.getMemberId())).isEmpty();
     }
 
     @Test
     @Transactional
     void jobApplicationIsInsertedForLoggedInMemberData() {
-        jobApplicationMapper.ensureCompanyNameColumn();
-        jobApplicationMapper.ensureJobTitleColumn();
-        jobApplicationMapper.ensureApplicantNameColumn();
-        jobApplicationMapper.ensurePhoneColumn();
-        jobApplicationMapper.ensureEmailColumn();
-        jobApplicationMapper.ensureEmploymentTypeColumn();
-        jobApplicationMapper.ensureStatusColumn();
-        jobApplicationMapper.ensureCreatedAtColumn();
-
         JobApplicationDTO application = new JobApplicationDTO();
-        application.setMemberId(1L);
         application.setJobId("2");
         application.setCompanyName("Kakao");
         application.setJobTitle("Frontend Developer");
@@ -266,9 +299,8 @@ class ApiDataIntegrationTests {
         application.setPhone("010-1234-5678");
         application.setEmail("test@example.com");
         application.setEmploymentType("FULL_TIME");
-        application.setStatus("APPLIED");
 
-        assertThat(jobApplicationMapper.insert(application)).isEqualTo(1);
+        jobApplicationService.apply(1L, application);
         assertThat(application.getId()).isNotNull();
         assertThat(jobApplicationMapper.countByMemberAndJob(1L, "2")).isEqualTo(1);
         assertThat(jobApplicationMapper.findAllByMemberId(1L)).hasSize(1);
@@ -296,19 +328,19 @@ class ApiDataIntegrationTests {
     @Transactional
     void communityPostIsStoredAndReadFromDatabase() {
         CommunityPostDTO post = new CommunityPostDTO();
-        post.setMemberId(1L);
         post.setCategory("FREE");
         post.setTitle("데이터베이스 저장 테스트");
         post.setContent("브라우저 저장소가 아니라 community_post에 저장됩니다.");
 
-        assertThat(communityMapper.insertPost(post)).isEqualTo(1);
+        SessionMember member = new SessionMember(1L, "minjun.kim", "테스트 사용자", "JOB_SEEKER");
+        communityService.createPost(post, member);
         assertThat(post.getId()).isNotNull();
         assertThat(communityMapper.findPostById(post.getId()).getTitle()).isEqualTo(post.getTitle());
 
-        assertThat(communityMapper.incrementViews(post.getId())).isEqualTo(1);
+        communityService.increaseViews(post.getId(), member);
         assertThat(communityMapper.findPostById(post.getId()).getViewCount()).isEqualTo(1);
 
-        assertThat(communityMapper.deletePost(post.getId(), 1L)).isEqualTo(1);
+        communityService.deletePost(post.getId(), 1L);
         assertThat(communityMapper.findAllPosts()).isEmpty();
     }
 }

@@ -1,7 +1,8 @@
 package org.ykk.jobbridge.dto;
 
-public class LoginRequest {
+public class LoginDTO {
 
+    // 로그인 화면에서 입력한 값을 저장한다.
     private String loginId;
     private String password;
 

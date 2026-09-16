@@ -6,6 +6,7 @@ import org.ykk.jobbridge.dto.InterestJobDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -15,6 +16,13 @@ import java.util.regex.Pattern;
 public class JobRecommendationCalculator {
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+)");
+    private static final int JOB_POINTS = 30;
+    private static final int REGION_POINTS = 15;
+    private static final int EMPLOYMENT_TYPE_POINTS = 10;
+    private static final int CAREER_POINTS = 10;
+    private static final int SALARY_POINTS = 10;
+    private static final int WORK_STYLE_POINTS = 10;
+    private static final int ACCESSIBILITY_POINTS = 15;
 
     public AiJobRecommendationDTO calculate(Long memberId,
                                              JobSeekerProfileDTO profile,
@@ -22,10 +30,10 @@ public class JobRecommendationCalculator {
         List<String> matches = new ArrayList<>();
         List<String> mismatches = new ArrayList<>();
 
-        int jobScore = textScore(profile.getDesiredJob(), 30,
-                List.of(job.getTitle(), job.getJobCategory()), "희망 직무", matches, mismatches);
-        int regionScore = textScore(profile.getDesiredRegion(), 15,
-                List.of(job.getLocation()), "희망 지역", matches, mismatches);
+        int jobScore = textScore(profile.getDesiredJob(), JOB_POINTS,
+                Arrays.asList(job.getTitle(), job.getJobCategory()), "희망 직무", matches, mismatches);
+        int regionScore = textScore(profile.getDesiredRegion(), REGION_POINTS,
+                Arrays.asList(job.getLocation()), "희망 지역", matches, mismatches);
         int employmentTypeScore = employmentTypeScore(profile, job, matches, mismatches);
         int careerScore = careerScore(profile, job, matches, mismatches);
         int salaryScore = salaryScore(profile, job, matches, mismatches);
@@ -44,8 +52,16 @@ public class JobRecommendationCalculator {
         result.setAccessibilityScore(accessibilityScore);
         result.setTotalScore(jobScore + regionScore + employmentTypeScore + careerScore
                 + salaryScore + workStyleScore + accessibilityScore);
-        result.setRecommendationReason(matches.isEmpty() ? "일반 추천 조건에 해당합니다." : String.join(", ", matches));
-        result.setMismatchReason(mismatches.isEmpty() ? "없음" : String.join(", ", mismatches));
+        if (matches.isEmpty()) {
+            result.setRecommendationReason("일반 추천 조건에 해당합니다.");
+        } else {
+            result.setRecommendationReason(String.join(", ", matches));
+        }
+        if (mismatches.isEmpty()) {
+            result.setMismatchReason("없음");
+        } else {
+            result.setMismatchReason(String.join(", ", mismatches));
+        }
         result.setJob(job);
         return result;
     }
@@ -58,12 +74,20 @@ public class JobRecommendationCalculator {
         }
 
         String normalizedPreference = normalize(preference);
-        boolean matched = candidates.stream()
-                .filter(value -> value != null && !value.isBlank())
-                .map(this::normalize)
-                .anyMatch(value -> value.contains(normalizedPreference)
-                        || normalizedPreference.contains(value)
-                        || tokenMatches(preference, value));
+        boolean matched = false;
+        for (String candidate : candidates) {
+            if (candidate == null || candidate.isBlank()) {
+                continue;
+            }
+
+            String normalizedCandidate = normalize(candidate);
+            if (normalizedCandidate.contains(normalizedPreference)
+                    || normalizedPreference.contains(normalizedCandidate)
+                    || tokenMatches(preference, normalizedCandidate)) {
+                matched = true;
+                break;
+            }
+        }
         if (matched) {
             matches.add(label + " 일치");
             return points;
@@ -75,7 +99,9 @@ public class JobRecommendationCalculator {
     private boolean tokenMatches(String preference, String normalizedCandidate) {
         for (String token : preference.split("[,/|]")) {
             String normalizedToken = normalize(token);
-            if (normalizedToken.length() >= 2 && normalizedCandidate.contains(normalizedToken)) return true;
+            if (normalizedToken.length() >= 2 && normalizedCandidate.contains(normalizedToken)) {
+                return true;
+            }
         }
         return false;
     }
@@ -85,11 +111,11 @@ public class JobRecommendationCalculator {
         String preferred = employmentCode(profile.getEmploymentType());
         if (unrestricted(preferred)) {
             matches.add("고용형태 제한 없음");
-            return 10;
+            return EMPLOYMENT_TYPE_POINTS;
         }
         if (preferred.equals(employmentCode(job.getEmploymentType()))) {
             matches.add("고용형태 일치");
-            return 10;
+            return EMPLOYMENT_TYPE_POINTS;
         }
         mismatches.add("고용형태 불일치");
         return 0;
@@ -100,13 +126,13 @@ public class JobRecommendationCalculator {
         String careerType = normalizeCode(profile.getCareerType());
         if (unrestricted(careerType)) {
             matches.add("경력 제한 없음");
-            return 10;
+            return CAREER_POINTS;
         }
 
         String level = normalizeCode(job.getExperienceLevel());
         if (unrestricted(level)) {
             matches.add("공고 경력 제한 없음");
-            return 10;
+            return CAREER_POINTS;
         }
         boolean matched;
         if ("ENTRY".equals(careerType)) {
@@ -123,7 +149,7 @@ public class JobRecommendationCalculator {
 
         if (matched) {
             matches.add("경력 조건 충족");
-            return 10;
+            return CAREER_POINTS;
         }
         mismatches.add("경력 조건 미충족");
         return 0;
@@ -134,14 +160,18 @@ public class JobRecommendationCalculator {
         Integer desiredSalary = profile.getMinSalary();
         if (desiredSalary == null || desiredSalary <= 0) {
             matches.add("연봉 제한 없음");
-            return 10;
+            return SALARY_POINTS;
         }
         Integer offeredMaximum = job.getSalaryMax();
         if (offeredMaximum != null && offeredMaximum >= desiredSalary) {
             matches.add("희망 최소 연봉 충족");
-            return 10;
+            return SALARY_POINTS;
         }
-        mismatches.add(offeredMaximum == null ? "연봉 정보 없음" : "희망 최소 연봉 미충족");
+        if (offeredMaximum == null) {
+            mismatches.add("연봉 정보 없음");
+        } else {
+            mismatches.add("희망 최소 연봉 미충족");
+        }
         return 0;
     }
 
@@ -160,9 +190,9 @@ public class JobRecommendationCalculator {
         }
         if (results.isEmpty()) {
             matches.add("근무방식 제한 없음");
-            return 10;
+            return WORK_STYLE_POINTS;
         }
-        return proportionalScore(10, results);
+        return proportionalScore(WORK_STYLE_POINTS, results);
     }
 
     private int accessibilityScore(JobSeekerProfileDTO profile, InterestJobDTO job,
@@ -178,9 +208,9 @@ public class JobRecommendationCalculator {
                 "보조기기 지원", "보조기기 미지원", results, matches, mismatches);
         if (results.isEmpty()) {
             matches.add("접근성 필수조건 없음");
-            return 15;
+            return ACCESSIBILITY_POINTS;
         }
-        return proportionalScore(15, results);
+        return proportionalScore(ACCESSIBILITY_POINTS, results);
     }
 
     private void addRequired(Boolean required, Boolean supported, String match, String mismatch,
@@ -193,25 +223,43 @@ public class JobRecommendationCalculator {
 
     private void addReason(boolean matched, String match, String mismatch,
                            List<String> matches, List<String> mismatches) {
-        (matched ? matches : mismatches).add(matched ? match : mismatch);
+        if (matched) {
+            matches.add(match);
+        } else {
+            mismatches.add(mismatch);
+        }
     }
 
     private int proportionalScore(int maximum, List<Boolean> results) {
-        long matched = results.stream().filter(Boolean.TRUE::equals).count();
-        return (int) Math.round(maximum * matched / (double) results.size());
+        int matchedCount = 0;
+        for (Boolean result : results) {
+            if (Boolean.TRUE.equals(result)) {
+                matchedCount++;
+            }
+        }
+        return (int) Math.round(maximum * matchedCount / (double) results.size());
     }
 
     private String employmentCode(String value) {
         String code = normalizeCode(value);
-        return "INTERNSHIP".equals(code) ? "INTERN" : code;
+        if ("INTERNSHIP".equals(code)) {
+            return "INTERN";
+        }
+        return code;
     }
 
     private String normalizeCode(String value) {
-        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+        if (value == null) {
+            return "";
+        }
+        return value.trim().toUpperCase(Locale.ROOT);
     }
 
     private String normalize(String value) {
-        return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
     }
 
     private boolean unrestricted(String value) {
@@ -220,13 +268,22 @@ public class JobRecommendationCalculator {
     }
 
     private boolean containsAny(String value, String... candidates) {
-        for (String candidate : candidates) if (value.contains(candidate)) return true;
+        for (String candidate : candidates) {
+            if (value.contains(candidate)) {
+                return true;
+            }
+        }
         return false;
     }
 
     private Integer firstNumber(String value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         Matcher matcher = NUMBER_PATTERN.matcher(value);
-        return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;
+        if (matcher.find()) {
+            return Integer.valueOf(matcher.group(1));
+        }
+        return null;
     }
 }

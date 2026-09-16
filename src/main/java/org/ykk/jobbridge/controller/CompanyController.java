@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.ykk.jobbridge.dto.CompanyLoginDTO;
+import org.ykk.jobbridge.dto.CompanyLoginResultDTO;
 import org.ykk.jobbridge.dto.CompanySignupDTO;
 import org.ykk.jobbridge.service.CompanyService;
 
@@ -53,7 +54,7 @@ public class CompanyController {
             HttpServletRequest request
     ) {
         try {
-            CompanyService.CompanyLoginResult result = companyService.login(login);
+            CompanyLoginResultDTO result = companyService.login(login);
             HttpSession oldSession = request.getSession(false);
             if (oldSession != null) {
                 oldSession.invalidate();
@@ -94,11 +95,11 @@ public class CompanyController {
         return ResponseEntity.noContent().build();
     }
 
-    public static void saveCompanySession(HttpSession session, CompanyService.CompanyLoginResult result) {
-        session.setAttribute(LOGIN_MEMBER, result.member());
-        session.setAttribute(LOGIN_MEMBER_ID, result.member().getId());
-        session.setAttribute(LOGIN_ID, result.member().getLoginId());
-        session.setAttribute(LOGIN_ROLE, result.member().getRole());
-        session.setAttribute(COMPANY_NAME, result.profile().getCompanyName());
+    public static void saveCompanySession(HttpSession session, CompanyLoginResultDTO result) {
+        session.setAttribute(LOGIN_MEMBER, result.getMember());
+        session.setAttribute(LOGIN_MEMBER_ID, result.getMember().getId());
+        session.setAttribute(LOGIN_ID, result.getMember().getLoginId());
+        session.setAttribute(LOGIN_ROLE, result.getMember().getRole());
+        session.setAttribute(COMPANY_NAME, result.getProfile().getCompanyName());
     }
 }

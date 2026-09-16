@@ -1,7 +1,6 @@
 package org.ykk.jobbridge.controller;
 
 import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,11 +15,14 @@ import org.ykk.jobbridge.dto.SessionMember;
 import org.ykk.jobbridge.service.ProfileService;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/profiles")
 public class ProfileApiController {
 
     private final ProfileService profileService;
+
+    public ProfileApiController(ProfileService profileService) {
+        this.profileService = profileService;
+    }
 
     @GetMapping("/{memberId}")
     public JobSeekerProfileDTO getProfile(@PathVariable Long memberId) {
@@ -50,9 +52,19 @@ public class ProfileApiController {
     }
 
     private void refreshSessionMemberName(JobSeekerProfileDTO profile, HttpSession session) {
-        if (session == null || profile.getName() == null || profile.getName().isBlank()) return;
+        if (session == null || profile.getName() == null || profile.getName().isBlank()) {
+            return;
+        }
+
         Object value = session.getAttribute("loginMember");
-        if (!(value instanceof SessionMember member) || !member.getId().equals(profile.getMemberId())) return;
+        if (!(value instanceof SessionMember)) {
+            return;
+        }
+
+        SessionMember member = (SessionMember) value;
+        if (!member.getId().equals(profile.getMemberId())) {
+            return;
+        }
         session.setAttribute("loginMember", new SessionMember(
                 member.getId(),
                 member.getLoginId(),
@@ -74,7 +86,10 @@ public class ProfileApiController {
     }
 
     private SessionMember requireMember(HttpSession session) {
-        SessionMember member = session == null ? null : (SessionMember) session.getAttribute("loginMember");
+        SessionMember member = null;
+        if (session != null) {
+            member = (SessionMember) session.getAttribute("loginMember");
+        }
         if (member == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
         }

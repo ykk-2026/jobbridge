@@ -65,19 +65,4 @@
         )
     </insert>
 
-    <!-- 로그인 회원 조회 -->
-    <select id="findByLoginId"
-            resultType="org.ykk.jobbridge.dto.MemberLoginResult">
-
-        SELECT
-        id,
-        login_id AS loginId,
-        password,
-        name,
-        role,
-        status
-        FROM member
-        WHERE login_id = #{loginId}
-    </select>
-
 </mapper>
