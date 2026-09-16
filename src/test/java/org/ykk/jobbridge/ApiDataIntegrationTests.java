@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.ykk.jobbridge.dto.JoinRequest;
+import org.ykk.jobbridge.dto.JoinDTO;
 import org.ykk.jobbridge.dto.CompanyLoginDTO;
 import org.ykk.jobbridge.dto.CompanyLoginResultDTO;
 import org.ykk.jobbridge.dto.CompanySignupDTO;
@@ -26,7 +26,7 @@ import org.ykk.jobbridge.service.LoginService;
 import org.ykk.jobbridge.mapper.CommunityMapper;
 import org.ykk.jobbridge.mapper.InterestJobMapper;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
-import org.ykk.jobbridge.service.MemberService;
+import org.ykk.jobbridge.service.JoinService;
 import org.ykk.jobbridge.service.JobCatalogService;
 import org.ykk.jobbridge.service.ProfileService;
 
@@ -47,7 +47,7 @@ class ApiDataIntegrationTests {
     private JobCatalogService jobCatalogService;
 
     @Autowired
-    private MemberService memberService;
+    private JoinService joinService;
 
     @Autowired
     private LoginService loginService;
@@ -93,7 +93,7 @@ class ApiDataIntegrationTests {
     @Test
     @Transactional
     void memberCannotJoinWithoutRequiredEmail() {
-        JoinRequest request = new JoinRequest();
+        JoinDTO request = new JoinDTO();
         request.setLoginId("noemailuser");
         request.setPassword("Password!1");
         request.setPasswordConfirm("Password!1");
@@ -104,7 +104,7 @@ class ApiDataIntegrationTests {
         request.setPhone("010-1234-5678");
         request.setRole("JOB_SEEKER");
 
-        assertThatThrownBy(() -> memberService.join(request))
+        assertThatThrownBy(() -> joinService.join(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("필수 회원 정보를 모두 입력해 주세요.");
     }
@@ -112,7 +112,7 @@ class ApiDataIntegrationTests {
     @Test
     @Transactional
     void personalMemberCanJoinAndLogin() {
-        JoinRequest request = new JoinRequest();
+        JoinDTO request = new JoinDTO();
         request.setLoginId("personal.login.test");
         request.setPassword("Password!1");
         request.setPasswordConfirm("Password!1");
@@ -123,7 +123,7 @@ class ApiDataIntegrationTests {
         request.setPhone("010-7777-8888");
         request.setRole("JOB_SEEKER");
         request.setDesiredJob("개발자");
-        memberService.join(request);
+        joinService.join(request);
 
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setLoginId("personal.login.test");

@@ -4,7 +4,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 
-public class JoinRequest {
+public class JoinDTO {
 
     private Long id;
 
