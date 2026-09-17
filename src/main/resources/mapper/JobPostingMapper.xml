@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.ykk.jobbridge.mapper.JobPostingMapper">
+
+    <update id="ensureTable">
+        CREATE TABLE IF NOT EXISTS job_posting (
+            id BIGINT NOT NULL AUTO_INCREMENT,
+            company_member_id BIGINT NOT NULL,
+            company_name VARCHAR(100) NOT NULL,
+            title VARCHAR(200) NOT NULL,
+            job_category VARCHAR(100) NOT NULL,
+            employment_type VARCHAR(30) NOT NULL,
+            location VARCHAR(150) NOT NULL,
+            salary_min INT DEFAULT NULL,
+            salary_max INT DEFAULT NULL,
+            experience_level VARCHAR(50) DEFAULT NULL,
+            education_level VARCHAR(50) DEFAULT NULL,
+            description TEXT DEFAULT NULL,
+            requirements TEXT DEFAULT NULL,
+            preferred_qualifications TEXT DEFAULT NULL,
+            accessibility_info TEXT DEFAULT NULL,
+            wheelchair_accessible BOOLEAN NOT NULL DEFAULT FALSE,
+            accessible_restroom BOOLEAN NOT NULL DEFAULT FALSE,
+            disabled_parking BOOLEAN NOT NULL DEFAULT FALSE,
+            remote_available BOOLEAN NOT NULL DEFAULT FALSE,
+            flexible_work_available BOOLEAN NOT NULL DEFAULT FALSE,
+            assistive_device_support BOOLEAN NOT NULL DEFAULT FALSE,
+            deadline DATE DEFAULT NULL,
+            status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            CONSTRAINT fk_job_posting_member FOREIGN KEY (company_member_id) REFERENCES member(id)
+        )
+    </update>
+
+    <update id="ensureCompanyNameColumn">
+        ALTER TABLE job_posting
+        ADD COLUMN IF NOT EXISTS company_name VARCHAR(100) DEFAULT NULL
+    </update>
+
+    <sql id="jobColumns">
+        j.id, j.company_member_id, COALESCE(j.company_name, c.company_name) AS company_name,
+        j.title, j.job_category,
+        j.employment_type, j.location, j.salary_min, j.salary_max,
+        j.experience_level, j.education_level, j.description, j.requirements,
+        j.preferred_qualifications, j.accessibility_info,
+        j.wheelchair_accessible, j.accessible_restroom, j.disabled_parking,
+        j.remote_available, j.flexible_work_available, j.assistive_device_support,
+        j.deadline, j.status, j.created_at, j.updated_at
+    </sql>
+
+    <select id="findOpenJobs" resultType="org.ykk.jobbridge.dto.JobPostingDTO">
+        SELECT <include refid="jobColumns"/>
+        FROM job_posting j
+        JOIN company_profile c ON c.member_id = j.company_member_id
+        WHERE j.status = 'OPEN'
+          AND (j.deadline IS NULL OR j.deadline &gt;= CURRENT_DATE)
+        ORDER BY j.created_at DESC, j.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findById" resultType="org.ykk.jobbridge.dto.JobPostingDTO">
+        SELECT <include refid="jobColumns"/>
+        FROM job_posting j
+        JOIN company_profile c ON c.member_id = j.company_member_id
+        WHERE j.id = #{id} AND j.status != 'DELETED'
+    </select>
+
+    <select id="findByCompanyMemberId" resultType="org.ykk.jobbridge.dto.JobPostingDTO">
+        SELECT <include refid="jobColumns"/>
+        FROM job_posting j
+        JOIN company_profile c ON c.member_id = j.company_member_id
+        WHERE j.company_member_id = #{companyMemberId}
+          AND j.status != 'DELETED'
+        ORDER BY j.created_at DESC, j.id DESC
+    </select>
+
+    <insert id="insert" parameterType="org.ykk.jobbridge.dto.JobPostingDTO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job_posting (
+            company_member_id, company_name, title, job_category, employment_type, location,
+            salary_min, salary_max, experience_level, education_level,
+            description, requirements, preferred_qualifications, accessibility_info,
+            wheelchair_accessible, accessible_restroom, disabled_parking,
+            remote_available, flexible_work_available, assistive_device_support,
+            deadline, status
+        ) VALUES (
+            #{companyMemberId}, #{companyName}, #{title}, #{jobCategory}, #{employmentType}, #{location},
+            #{salaryMin}, #{salaryMax}, #{experienceLevel}, #{educationLevel},
+            #{description}, #{requirements}, #{preferredQualifications}, #{accessibilityInfo},
+            #{wheelchairAccessible}, #{accessibleRestroom}, #{disabledParking},
+            #{remoteAvailable}, #{flexibleWorkAvailable}, #{assistiveDeviceSupport},
+            #{deadline}, #{status}
+        )
+    </insert>
+
+    <update id="update" parameterType="org.ykk.jobbridge.dto.JobPostingDTO">
+        UPDATE job_posting
+        SET company_name = #{companyName}, title = #{title}, job_category = #{jobCategory},
+            employment_type = #{employmentType}, location = #{location},
+            salary_min = #{salaryMin}, salary_max = #{salaryMax},
+            experience_level = #{experienceLevel}, education_level = #{educationLevel},
+            description = #{description}, requirements = #{requirements},
+            preferred_qualifications = #{preferredQualifications},
+            accessibility_info = #{accessibilityInfo},
+            wheelchair_accessible = #{wheelchairAccessible},
+            accessible_restroom = #{accessibleRestroom},
+            disabled_parking = #{disabledParking}, remote_available = #{remoteAvailable},
+            flexible_work_available = #{flexibleWorkAvailable},
+            assistive_device_support = #{assistiveDeviceSupport},
+            deadline = #{deadline}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND company_member_id = #{companyMemberId} AND status != 'DELETED'
+    </update>
+
+    <update id="close">
+        UPDATE job_posting SET status = 'CLOSED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND company_member_id = #{companyMemberId} AND status = 'OPEN'
+    </update>
+
+    <update id="delete">
+        UPDATE job_posting SET status = 'DELETED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND company_member_id = #{companyMemberId} AND status != 'DELETED'
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM job_posting WHERE status != 'DELETED'
+    </select>
+
+</mapper>

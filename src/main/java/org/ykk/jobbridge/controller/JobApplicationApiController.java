@@ -30,6 +30,12 @@ public class JobApplicationApiController {
         return jobApplicationService.getApplications(memberId);
     }
 
+    @GetMapping("/company")
+    public List<JobApplicationDTO> companyApplications(HttpSession session) {
+        Long companyMemberId = requireCompany(session).getId();
+        return jobApplicationService.getCompanyApplications(companyMemberId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public JobApplicationDTO apply(@RequestBody JobApplicationDTO application, HttpSession session) {
@@ -44,6 +50,17 @@ public class JobApplicationApiController {
         }
         if (!"JOB_SEEKER".equals(member.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "구직자 계정만 지원할 수 있습니다.");
+        }
+        return member;
+    }
+
+    private SessionMember requireCompany(HttpSession session) {
+        SessionMember member = (SessionMember) session.getAttribute("loginMember");
+        if (member == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        if (!"COMPANY".equals(member.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "기업회원만 지원자를 확인할 수 있습니다.");
         }
         return member;
     }

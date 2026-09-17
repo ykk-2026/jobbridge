@@ -70,7 +70,36 @@ CREATE TABLE IF NOT EXISTS interest_job (
     CONSTRAINT uk_interest_job_member_post UNIQUE (member_id, company_name, title)
 );
 
-CREATE TABLE IF NOT EXISTS ai_job_recommendation (
+CREATE TABLE IF NOT EXISTS job_posting (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    company_member_id BIGINT NOT NULL,
+    company_name VARCHAR(100) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    job_category VARCHAR(100) NOT NULL,
+    employment_type VARCHAR(30) NOT NULL,
+    location VARCHAR(150) NOT NULL,
+    salary_min INT,
+    salary_max INT,
+    experience_level VARCHAR(50),
+    education_level VARCHAR(50),
+    description CLOB,
+    requirements CLOB,
+    preferred_qualifications CLOB,
+    accessibility_info CLOB,
+    wheelchair_accessible BOOLEAN NOT NULL DEFAULT FALSE,
+    accessible_restroom BOOLEAN NOT NULL DEFAULT FALSE,
+    disabled_parking BOOLEAN NOT NULL DEFAULT FALSE,
+    remote_available BOOLEAN NOT NULL DEFAULT FALSE,
+    flexible_work_available BOOLEAN NOT NULL DEFAULT FALSE,
+    assistive_device_support BOOLEAN NOT NULL DEFAULT FALSE,
+    deadline DATE,
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_job_posting_member FOREIGN KEY (company_member_id) REFERENCES member(id)
+);
+
+CREATE TABLE IF NOT EXISTS ai_job_posting_recommendation (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
     job_id BIGINT NOT NULL,
@@ -86,9 +115,9 @@ CREATE TABLE IF NOT EXISTS ai_job_recommendation (
     mismatch_reason VARCHAR(2000) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_ai_recommendation_member_job UNIQUE (member_id, job_id),
-    CONSTRAINT fk_ai_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
-    CONSTRAINT fk_ai_recommendation_job FOREIGN KEY (job_id) REFERENCES interest_job(id)
+    CONSTRAINT uk_ai_posting_recommendation_member_job UNIQUE (member_id, job_id),
+    CONSTRAINT fk_ai_posting_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
+    CONSTRAINT fk_ai_posting_recommendation_job FOREIGN KEY (job_id) REFERENCES job_posting(id)
 );
 
 CREATE TABLE IF NOT EXISTS job_application (

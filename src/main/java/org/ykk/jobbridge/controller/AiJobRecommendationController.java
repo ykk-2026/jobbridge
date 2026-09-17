@@ -22,33 +22,18 @@ public class AiJobRecommendationController {
 
     @GetMapping({"/recommendations", "/api/recommendations"})
     public List<AiJobRecommendationDTO> recommendations(HttpSession session) {
-        return recommendationService.getRecommendations(requireLoginMemberId(session));
+        return recommendationService.getRecommendations(requireJobSeekerId(session));
     }
 
-    private Long requireLoginMemberId(HttpSession session) {
-        Object memberId = null;
-        if (session != null) {
-            memberId = session.getAttribute("loginMemberId");
+    private Long requireJobSeekerId(HttpSession session) {
+        SessionMember member = (SessionMember) session.getAttribute("loginMember");
+        if (member == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
         }
-        if (memberId instanceof Number) {
-            return ((Number) memberId).longValue();
+        if (!"JOB_SEEKER".equals(member.getRole())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "구직자만 AI 추천을 이용할 수 있습니다.");
         }
-        if (memberId instanceof String) {
-            try {
-                return Long.valueOf((String) memberId);
-            } catch (NumberFormatException ignored) {
-                // Invalid session values are handled as unauthenticated below.
-            }
-        }
-
-        // Compatibility with the login implementation currently used by this project.
-        Object loginMember = null;
-        if (session != null) {
-            loginMember = session.getAttribute("loginMember");
-        }
-        if (loginMember instanceof SessionMember) {
-            return ((SessionMember) loginMember).getId();
-        }
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+        return member.getId();
     }
 }
