@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.ykk.jobbridge.dto.JobApplicationDTO;
+import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
 import org.ykk.jobbridge.service.JobApplicationService;
+import org.ykk.jobbridge.service.JobPostingService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -22,11 +24,15 @@ import java.util.List;
 public class JobApplicationServiceImpl implements JobApplicationService {
 
     private final JobApplicationMapper jobApplicationMapper;
+    private final JobPostingService jobPostingService;
     private final DataSource dataSource;
     private volatile boolean schemaReady;
 
-    public JobApplicationServiceImpl(JobApplicationMapper jobApplicationMapper, DataSource dataSource) {
+    public JobApplicationServiceImpl(JobApplicationMapper jobApplicationMapper,
+                                     JobPostingService jobPostingService,
+                                     DataSource dataSource) {
         this.jobApplicationMapper = jobApplicationMapper;
+        this.jobPostingService = jobPostingService;
         this.dataSource = dataSource;
     }
 
@@ -37,15 +43,34 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     }
 
     @Override
+    public List<JobApplicationDTO> getCompanyApplications(Long companyMemberId) {
+        ensureSchema();
+        return jobApplicationMapper.findAllByCompanyMemberId(companyMemberId);
+    }
+
+    @Override
     @Transactional
     public JobApplicationDTO apply(Long memberId, JobApplicationDTO application) {
         validate(application);
         ensureSchema();
 
+        String normalizedJobId = application.getJobId().trim().replaceFirst("^job-", "");
+        Long jobId;
+        try {
+            jobId = Long.valueOf(normalizedJobId);
+        } catch (NumberFormatException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바르지 않은 채용공고 번호입니다.");
+        }
+
+        JobPostingDTO jobPosting = jobPostingService.getJob(jobId);
+        if (!"OPEN".equals(jobPosting.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "마감된 채용공고에는 지원할 수 없습니다.");
+        }
+
         application.setMemberId(memberId);
-        application.setJobId(application.getJobId().trim().replaceFirst("^job-", ""));
-        application.setCompanyName(application.getCompanyName().trim());
-        application.setJobTitle(application.getJobTitle().trim());
+        application.setJobId(normalizedJobId);
+        application.setCompanyName(jobPosting.getCompanyName());
+        application.setJobTitle(jobPosting.getTitle());
         application.setApplicantName(application.getApplicantName().trim());
         application.setEmail(application.getEmail().trim());
         application.setPhone(application.getPhone().trim());
@@ -152,8 +177,6 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     private void validate(JobApplicationDTO application) {
         if (application == null
                 || isBlank(application.getJobId())
-                || isBlank(application.getCompanyName())
-                || isBlank(application.getJobTitle())
                 || isBlank(application.getApplicantName())
                 || isBlank(application.getPhone())
                 || isBlank(application.getEmail())) {

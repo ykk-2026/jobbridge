@@ -4,17 +4,17 @@ import org.springframework.stereotype.Service;
 import org.ykk.jobbridge.dto.AdminOverviewDTO;
 import org.ykk.jobbridge.mapper.AdminMapper;
 import org.ykk.jobbridge.service.AdminService;
-import org.ykk.jobbridge.service.JobCatalogService;
+import org.ykk.jobbridge.service.JobPostingService;
 
 @Service
 public class AdminServiceImpl implements AdminService {
 
     private final AdminMapper adminMapper;
-    private final JobCatalogService jobCatalogService;
+    private final JobPostingService jobPostingService;
 
-    public AdminServiceImpl(AdminMapper adminMapper, JobCatalogService jobCatalogService) {
+    public AdminServiceImpl(AdminMapper adminMapper, JobPostingService jobPostingService) {
         this.adminMapper = adminMapper;
-        this.jobCatalogService = jobCatalogService;
+        this.jobPostingService = jobPostingService;
     }
 
     @Override
@@ -22,12 +22,12 @@ public class AdminServiceImpl implements AdminService {
         return new AdminOverviewDTO(
                 adminMapper.countMembers(),
                 adminMapper.countCompanies(),
-                jobCatalogService.count(),
+                jobPostingService.countJobs(),
                 0,
                 0,
                 0,
                 adminMapper.findMembers(),
-                jobCatalogService.findAll()
+                jobPostingService.getOpenJobs(100)
         );
     }
 }

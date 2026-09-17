@@ -13,7 +13,7 @@ public class AiJobRecommendationDTO {
     private Integer accessibilityScore;
     private String recommendationReason;
     private String mismatchReason;
-    private InterestJobDTO job;
+    private JobPostingDTO job;
 
     public Long getMemberId() { return memberId; }
     public void setMemberId(Long memberId) { this.memberId = memberId; }
@@ -39,6 +39,6 @@ public class AiJobRecommendationDTO {
     public void setRecommendationReason(String recommendationReason) { this.recommendationReason = recommendationReason; }
     public String getMismatchReason() { return mismatchReason; }
     public void setMismatchReason(String mismatchReason) { this.mismatchReason = mismatchReason; }
-    public InterestJobDTO getJob() { return job; }
-    public void setJob(InterestJobDTO job) { this.job = job; }
+    public JobPostingDTO getJob() { return job; }
+    public void setJob(JobPostingDTO job) { this.job = job; }
 }
