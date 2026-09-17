@@ -67,5 +67,16 @@
         ORDER BY created_at DESC, id DESC
     </select>
 
+    <select id="findAllByCompanyMemberId" resultType="org.ykk.jobbridge.dto.JobApplicationDTO">
+        SELECT a.id, a.member_id, a.job_id, a.company_name, a.job_title,
+               a.applicant_name, a.phone, a.email, a.employment_type,
+               a.status, a.created_at, a.updated_at
+        FROM job_application a
+        JOIN job_posting j ON CONCAT(j.id, '') = a.job_id
+        WHERE j.company_member_id = #{companyMemberId}
+          AND j.status != 'DELETED'
+        ORDER BY a.created_at DESC, a.id DESC
+    </select>
+
     <select id="countAll" resultType="long">SELECT COUNT(*) FROM job_application</select>
 </mapper>

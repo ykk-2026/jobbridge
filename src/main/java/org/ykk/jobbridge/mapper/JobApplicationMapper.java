@@ -18,5 +18,6 @@ public interface JobApplicationMapper {
     int countByMemberAndJob(@Param("memberId") Long memberId, @Param("jobId") String jobId);
     int insert(JobApplicationDTO application);
     List<JobApplicationDTO> findAllByMemberId(@Param("memberId") Long memberId);
+    List<JobApplicationDTO> findAllByCompanyMemberId(@Param("companyMemberId") Long companyMemberId);
     long countAll();
 }

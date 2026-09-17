@@ -6,7 +6,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.ykk.jobbridge.controller.JobPostingController;
 import org.ykk.jobbridge.dto.JoinDTO;
 import org.ykk.jobbridge.dto.CompanyLoginDTO;
 import org.ykk.jobbridge.dto.CompanyLoginResultDTO;
@@ -14,6 +17,7 @@ import org.ykk.jobbridge.dto.CompanySignupDTO;
 import org.ykk.jobbridge.dto.CommunityPostDTO;
 import org.ykk.jobbridge.dto.InterestJobDTO;
 import org.ykk.jobbridge.dto.JobApplicationDTO;
+import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.dto.LoginDTO;
 import org.ykk.jobbridge.dto.SessionMember;
@@ -27,7 +31,7 @@ import org.ykk.jobbridge.mapper.CommunityMapper;
 import org.ykk.jobbridge.mapper.InterestJobMapper;
 import org.ykk.jobbridge.mapper.JobApplicationMapper;
 import org.ykk.jobbridge.service.JoinService;
-import org.ykk.jobbridge.service.JobCatalogService;
+import org.ykk.jobbridge.service.JobPostingService;
 import org.ykk.jobbridge.service.ProfileService;
 
 import java.time.LocalDate;
@@ -44,7 +48,7 @@ class ApiDataIntegrationTests {
     private AdminMapper adminMapper;
 
     @Autowired
-    private JobCatalogService jobCatalogService;
+    private JobPostingService jobPostingService;
 
     @Autowired
     private JoinService joinService;
@@ -82,12 +86,15 @@ class ApiDataIntegrationTests {
     @Autowired
     private CommunityService communityService;
 
+    @Autowired
+    private JobPostingController jobPostingController;
+
     @Test
     void adminOverviewSourcesCanReadMembersAndJobs() {
         assertThat(adminMapper.countMembers()).isEqualTo(1);
         assertThat(adminMapper.findMembers()).hasSize(1);
         assertThat(adminMapper.findMembers().get(0).getName()).isNotBlank();
-        assertThat(jobCatalogService.findAll()).hasSize(4);
+        assertThat(jobPostingService.getOpenJobs(20)).isEmpty();
     }
 
     @Test
@@ -291,10 +298,15 @@ class ApiDataIntegrationTests {
     @Test
     @Transactional
     void jobApplicationIsInsertedForLoggedInMemberData() {
+        CompanySignupDTO company = companySignup(
+                "application.company", "application.company@example.com", "321-54-98760");
+        companyService.signup(company);
+
+        JobPostingDTO jobPosting = sampleJobPosting();
+        jobPostingService.createJob(company.getId(), jobPosting);
+
         JobApplicationDTO application = new JobApplicationDTO();
-        application.setJobId("2");
-        application.setCompanyName("Kakao");
-        application.setJobTitle("Frontend Developer");
+        application.setJobId(jobPosting.getId().toString());
         application.setApplicantName("Test User");
         application.setPhone("010-1234-5678");
         application.setEmail("test@example.com");
@@ -302,8 +314,75 @@ class ApiDataIntegrationTests {
 
         jobApplicationService.apply(1L, application);
         assertThat(application.getId()).isNotNull();
-        assertThat(jobApplicationMapper.countByMemberAndJob(1L, "2")).isEqualTo(1);
+        assertThat(application.getCompanyName()).isEqualTo("Job Posting Company");
+        assertThat(application.getJobTitle()).isEqualTo("백엔드 개발자");
+        assertThat(jobApplicationMapper.countByMemberAndJob(
+                1L, jobPosting.getId().toString())).isEqualTo(1);
         assertThat(jobApplicationMapper.findAllByMemberId(1L)).hasSize(1);
+        assertThat(jobApplicationService.getCompanyApplications(company.getId())).hasSize(1);
+    }
+
+    @Test
+    @Transactional
+    void onlyCompanyCanCreateAndManageItsOwnJobPosting() {
+        CompanySignupDTO company = companySignup(
+                "posting.company", "posting.company@example.com", "111-22-33334");
+        companyService.signup(company);
+
+        MockHttpSession companySession = new MockHttpSession();
+        companySession.setAttribute("loginMember", new SessionMember(
+                company.getId(), company.getLoginId(), company.getName(), "COMPANY"));
+
+        JobPostingDTO created = jobPostingController.createJob(sampleJobPosting(), companySession);
+        assertThat(created.getId()).isNotNull();
+        assertThat(created.getCompanyMemberId()).isEqualTo(company.getId());
+        assertThat(created.getCompanyName()).isEqualTo("Job Posting Company");
+        assertThat(jobPostingController.getMyJobs(companySession)).hasSize(1);
+        assertThat(jobPostingController.getOpenJobs(20)).hasSize(1);
+
+        JobPostingDTO update = sampleJobPosting();
+        update.setTitle("수정된 백엔드 개발자");
+        JobPostingDTO updated = jobPostingController.updateJob(
+                created.getId(), update, companySession);
+        assertThat(updated.getTitle()).isEqualTo("수정된 백엔드 개발자");
+
+        MockHttpSession jobSeekerSession = new MockHttpSession();
+        jobSeekerSession.setAttribute("loginMember", new SessionMember(
+                1L, "minjun.kim", "테스트 사용자", "JOB_SEEKER"));
+        assertThatThrownBy(() -> jobPostingController.createJob(
+                sampleJobPosting(), jobSeekerSession))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("기업회원만");
+
+        MockHttpSession otherCompanySession = new MockHttpSession();
+        otherCompanySession.setAttribute("loginMember", new SessionMember(
+                999L, "other.company", "다른 기업", "COMPANY"));
+        assertThatThrownBy(() -> jobPostingController.updateJob(
+                created.getId(), sampleJobPosting(), otherCompanySession))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("본인 회사");
+
+        jobPostingController.closeJob(created.getId(), companySession);
+        assertThat(jobPostingController.getJob(created.getId()).getStatus()).isEqualTo("CLOSED");
+
+        jobPostingController.deleteJob(created.getId(), companySession);
+        assertThatThrownBy(() -> jobPostingController.getJob(created.getId()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("찾을 수 없습니다");
+    }
+
+    private JobPostingDTO sampleJobPosting() {
+        JobPostingDTO jobPosting = new JobPostingDTO();
+        jobPosting.setCompanyName("Job Posting Company");
+        jobPosting.setTitle("백엔드 개발자");
+        jobPosting.setJobCategory("개발");
+        jobPosting.setEmploymentType("FULL_TIME");
+        jobPosting.setLocation("서울");
+        jobPosting.setSalaryMin(3000);
+        jobPosting.setSalaryMax(5000);
+        jobPosting.setDeadline(LocalDate.now().plusDays(30));
+        jobPosting.setRemoteAvailable(true);
+        return jobPosting;
     }
 
     @Test

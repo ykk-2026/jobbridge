@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.ykk.jobbridge.mapper.AiJobRecommendationMapper">
     <update id="ensureTable">
-        CREATE TABLE IF NOT EXISTS ai_job_recommendation (
+        CREATE TABLE IF NOT EXISTS ai_job_posting_recommendation (
             id BIGINT NOT NULL AUTO_INCREMENT,
             member_id BIGINT NOT NULL,
             job_id BIGINT NOT NULL,
@@ -19,14 +19,15 @@
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            CONSTRAINT uk_ai_recommendation_member_job UNIQUE (member_id, job_id),
-            CONSTRAINT fk_ai_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
-            CONSTRAINT fk_ai_recommendation_job FOREIGN KEY (job_id) REFERENCES interest_job(id)
+            CONSTRAINT uk_ai_posting_recommendation_member_job UNIQUE (member_id, job_id),
+            CONSTRAINT fk_ai_posting_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
+            CONSTRAINT fk_ai_posting_recommendation_job FOREIGN KEY (job_id) REFERENCES job_posting(id)
         )
     </update>
 
     <select id="findProfile" resultType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
         SELECT member_id,
+               residence_region,
                desired_job,
                desired_region,
                employment_type,
@@ -43,40 +44,25 @@
         WHERE member_id = #{memberId}
     </select>
 
-    <select id="findEligibleJobs" resultType="org.ykk.jobbridge.dto.InterestJobDTO">
-        SELECT id,
-               member_id,
-               company_name,
-               title,
-               job_category,
-               employment_type,
-               location,
-               salary_min,
-               salary_max,
-               experience_level,
-               education_level,
-               description,
-               requirements,
-               preferred_qualifications,
-               accessibility_info,
-               wheelchair_accessible,
-               accessible_restroom,
-               disabled_parking,
-               remote_available,
-               flexible_work_available,
-               assistive_device_support,
-               deadline,
-               status,
-               created_at,
-               updated_at
-        FROM interest_job
-        WHERE status = 'OPEN'
-          AND (deadline IS NULL OR deadline &gt;= CURRENT_DATE)
-        ORDER BY deadline IS NULL, deadline, id
+    <select id="findEligibleJobs" resultType="org.ykk.jobbridge.dto.JobPostingDTO">
+        SELECT j.id, j.company_member_id,
+               COALESCE(j.company_name, c.company_name) AS company_name,
+               j.title, j.job_category,
+               j.employment_type, j.location, j.salary_min, j.salary_max,
+               j.experience_level, j.education_level, j.description, j.requirements,
+               j.preferred_qualifications, j.accessibility_info,
+               j.wheelchair_accessible, j.accessible_restroom, j.disabled_parking,
+               j.remote_available, j.flexible_work_available, j.assistive_device_support,
+               j.deadline, j.status, j.created_at, j.updated_at
+        FROM job_posting j
+        JOIN company_profile c ON c.member_id = j.company_member_id
+        WHERE j.status = 'OPEN'
+          AND (j.deadline IS NULL OR j.deadline &gt;= CURRENT_DATE)
+        ORDER BY j.deadline IS NULL, j.deadline, j.id
     </select>
 
     <update id="updateRecommendation" parameterType="org.ykk.jobbridge.dto.AiJobRecommendationDTO">
-        UPDATE ai_job_recommendation
+        UPDATE ai_job_posting_recommendation
         SET total_score = #{totalScore},
             job_score = #{jobScore},
             region_score = #{regionScore},
@@ -93,7 +79,7 @@
     </update>
 
     <insert id="insertRecommendation" parameterType="org.ykk.jobbridge.dto.AiJobRecommendationDTO">
-        INSERT INTO ai_job_recommendation (
+        INSERT INTO ai_job_posting_recommendation (
             member_id, job_id, total_score, job_score, region_score,
             employment_score, career_score, salary_score, work_style_score,
             accessibility_score, recommendation_reason, mismatch_reason

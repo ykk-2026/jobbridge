@@ -11,12 +11,12 @@ public class AdminOverviewDTO {
     private long newUsersThisMonth;
     private long newJobsThisMonth;
     private List<AdminMemberDTO> members;
-    private List<JobSummaryDTO> jobs;
+    private List<JobPostingDTO> jobs;
 
     public AdminOverviewDTO(long totalUsers, long totalCompanies, long totalJobs,
                             long totalApplications, long newUsersThisMonth,
                             long newJobsThisMonth, List<AdminMemberDTO> members,
-                            List<JobSummaryDTO> jobs) {
+                            List<JobPostingDTO> jobs) {
         this.totalUsers = totalUsers;
         this.totalCompanies = totalCompanies;
         this.totalJobs = totalJobs;
@@ -34,5 +34,5 @@ public class AdminOverviewDTO {
     public long getNewUsersThisMonth() { return newUsersThisMonth; }
     public long getNewJobsThisMonth() { return newJobsThisMonth; }
     public List<AdminMemberDTO> getMembers() { return members; }
-    public List<JobSummaryDTO> getJobs() { return jobs; }
+    public List<JobPostingDTO> getJobs() { return jobs; }
 }
