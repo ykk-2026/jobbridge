@@ -1,59 +1,38 @@
 package org.ykk.jobbridge.dto;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * COMPANY_PROFILE 테이블(기업정보)과 매핑되는 DTO
+ */
+@Getter
+@Setter
 public class CompanyProfileDTO {
-    private Long id;
-    private Long memberId;
-    private String companyName;
-    private String businessNumber;
-    private String representativeName;
-    private String industry;
-    private String companyAddress;
-    private String companyDetailAddress;
-    private String companyPhone;
-    private String websiteUrl;
-    private String logoUrl;
-    private String companyDescription;
-    private Integer employeeCount;
-    private LocalDate establishedDate;
-    private String verificationStatus;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getCompanyName() { return companyName; }
-    public void setCompanyName(String companyName) { this.companyName = companyName; }
-    public String getBusinessNumber() { return businessNumber; }
-    public void setBusinessNumber(String businessNumber) { this.businessNumber = businessNumber; }
-    public String getRepresentativeName() { return representativeName; }
-    public void setRepresentativeName(String representativeName) { this.representativeName = representativeName; }
-    public String getIndustry() { return industry; }
-    public void setIndustry(String industry) { this.industry = industry; }
-    public String getCompanyAddress() { return companyAddress; }
-    public void setCompanyAddress(String companyAddress) { this.companyAddress = companyAddress; }
-    public String getCompanyDetailAddress() { return companyDetailAddress; }
-    public void setCompanyDetailAddress(String companyDetailAddress) { this.companyDetailAddress = companyDetailAddress; }
-    public String getCompanyPhone() { return companyPhone; }
-    public void setCompanyPhone(String companyPhone) { this.companyPhone = companyPhone; }
-    public String getWebsiteUrl() { return websiteUrl; }
-    public void setWebsiteUrl(String websiteUrl) { this.websiteUrl = websiteUrl; }
-    public String getLogoUrl() { return logoUrl; }
-    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
-    public String getCompanyDescription() { return companyDescription; }
-    public void setCompanyDescription(String companyDescription) { this.companyDescription = companyDescription; }
-    public Integer getEmployeeCount() { return employeeCount; }
-    public void setEmployeeCount(Integer employeeCount) { this.employeeCount = employeeCount; }
-    public LocalDate getEstablishedDate() { return establishedDate; }
-    public void setEstablishedDate(LocalDate establishedDate) { this.establishedDate = establishedDate; }
-    public String getVerificationStatus() { return verificationStatus; }
-    public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    private Long id; // 기본키
+    private Long memberId; // MEMBER 테이블의 회원 고유번호
+    private String companyName; // 회사명
+    private String businessNumber; // 사업자등록번호
+    private String representativeName; // 대표자명
+    private String industry; // 업종
+    private String companyAddress; // 회사 주소
+    private String companyDetailAddress; // 회사 상세 주소
+    private String companyPhone; // 회사 전화번호
+    private String websiteUrl; // 홈페이지
+    private String logoUrl; // 로고 이미지
+    private String companyDescription; // 회사 소개
+    private Integer employeeCount; // 직원 수
+    private String establishedDate; // 설립일
+    private String verificationStatus; // 인증 상태
+    private String createdAt; // 등록일
+    private String updatedAt; // 수정일
+
+    // MEMBER 테이블과 JOIN하여 가져오는 값
+    private String loginId; // 로그인 아이디
+    private String name; // 담당자 이름
+    private String role; // 회원 구분
+
+    private String existsYn; // 사업자등록번호 중복 여부(Y/N)
+
 }

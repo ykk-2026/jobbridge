@@ -10,11 +10,15 @@ import org.ykk.jobbridge.dto.AiJobRecommendationDTO;
 import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.recommendation.JobRecommendationCalculator;
-import org.ykk.jobbridge.service.AiJobRecommendationService;
-import org.ykk.jobbridge.service.JobPostingService;
+import org.ykk.jobbridge.recommendation.IAiJobMatchService.JobMatchAssessment;
+import org.ykk.jobbridge.recommendation.KakaoMapDistanceService;
+import org.ykk.jobbridge.service.IAiJobRecommendationService;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+
+import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,14 +26,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("h2")
 class AiJobRecommendationTests {
 
+    // 서비스 함수가 throws Exception 이므로 테스트 함수도 throws Exception 선언
+
     @Autowired
     private JobRecommendationCalculator calculator;
 
     @Autowired
-    private AiJobRecommendationService recommendationService;
-
-    @Autowired
-    private JobPostingService jobPostingService;
+    private IAiJobRecommendationService recommendationService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -55,7 +58,9 @@ class AiJobRecommendationTests {
 
         assertThat(result.getTotalScore()).isEqualTo(100);
         assertThat(result.getEmploymentTypeScore()).isEqualTo(10);
-        assertThat(result.getAccessibilityScore()).isEqualTo(10);
+        assertThat(result.getJobScore()).isEqualTo(30);
+        assertThat(result.getAccessibilityScore()).isEqualTo(15);
+        assertThat(result.getJobMatchSource()).isEqualTo("RULE_FALLBACK");
         assertThat(result.getMismatchReason()).isEqualTo("없음");
     }
 
@@ -76,9 +81,9 @@ class AiJobRecommendationTests {
         AiJobRecommendationDTO farAway = calculator.calculate(
                 1L, profile, job("개발자", "FULL_TIME", "부산광역시 해운대구", "ANY", 3000));
 
-        assertThat(sameDistrict.getRegionScore()).isEqualTo(20);
-        assertThat(sameCity.getRegionScore()).isBetween(15, 19);
-        assertThat(nearby.getRegionScore()).isEqualTo(8);
+        assertThat(sameDistrict.getRegionScore()).isEqualTo(15);
+        assertThat(sameCity.getRegionScore()).isBetween(11, 14);
+        assertThat(nearby.getRegionScore()).isEqualTo(6);
         assertThat(farAway.getRegionScore()).isEqualTo(2);
     }
 
@@ -94,14 +99,14 @@ class AiJobRecommendationTests {
                 1L, profile, job("Developer", "FULL_TIME",
                         "\uC11C\uC6B8\uD2B9\uBCC4\uC2DC \uC1A1\uD30C\uAD6C", "ANY", 3000));
 
-        assertThat(result.getRegionScore()).isBetween(8, 19);
-        assertThat(result.getJobScore()).isBetween(0, 25);
-        assertThat(result.getRegionScore()).isBetween(0, 20);
+        assertThat(result.getRegionScore()).isBetween(6, 14);
+        assertThat(result.getJobScore()).isBetween(0, 30);
+        assertThat(result.getRegionScore()).isBetween(0, 15);
         assertThat(result.getEmploymentTypeScore()).isBetween(0, 10);
         assertThat(result.getCareerScore()).isBetween(0, 10);
-        assertThat(result.getSalaryScore()).isBetween(0, 15);
+        assertThat(result.getSalaryScore()).isBetween(0, 10);
         assertThat(result.getWorkStyleScore()).isBetween(0, 10);
-        assertThat(result.getAccessibilityScore()).isBetween(0, 10);
+        assertThat(result.getAccessibilityScore()).isBetween(0, 15);
         assertThat(result.getTotalScore()).isBetween(0, 100);
         assertThat(result.getRecommendationReason() + result.getMismatchReason()).contains("km");
     }
@@ -129,11 +134,50 @@ class AiJobRecommendationTests {
     }
 
     @Test
-    @Transactional
-    void serviceUsesOnlyOpenUnexpiredJobsAndUpdatesDuplicateRecommendation() {
-        // Runtime table creation can commit an H2 transaction, so prepare it before test data.
-        jobPostingService.countJobs();
+    void calculatorUsesGenerativeAiJobAssessmentWhenAvailable() {
+        KakaoMapDistanceService disabledMap = new KakaoMapDistanceService(false, "", new ObjectMapper());
+        JobRecommendationCalculator aiCalculator = new JobRecommendationCalculator(
+                disabledMap,
+                (profile, job) -> Optional.of(new JobMatchAssessment(
+                        27, "Spring Boot 백엔드 업무와 희망 직무가 일치합니다.", "GENERATIVE_AI")));
 
+        JobSeekerProfileDTO profile = new JobSeekerProfileDTO();
+        profile.setDesiredJob("Java 서버 개발자");
+        profile.setDesiredRegion("서울");
+        profile.setEmploymentType("ANY");
+        profile.setCareerType("ANY");
+
+        AiJobRecommendationDTO result = aiCalculator.calculate(
+                1L, profile, job("Spring Boot 백엔드 엔지니어", "FULL_TIME", "서울", "ANY", 3000));
+
+        assertThat(result.getJobScore()).isEqualTo(27);
+        assertThat(result.getJobMatchSource()).isEqualTo("GENERATIVE_AI");
+        assertThat(result.getJobMatchReason()).contains("Spring Boot");
+        assertThat(result.getRecommendationReason()).doesNotContain("AI 직무 분석", "/30점");
+        assertThat(result.getRecommendationReason()).contains("부족한 조건은 없습니다");
+    }
+
+    @Test
+    void recommendationReasonExplainsMissingConditionsWithoutScoreFormula() {
+        JobSeekerProfileDTO profile = new JobSeekerProfileDTO();
+        profile.setDesiredJob("백엔드 개발자");
+        profile.setDesiredRegion("서울 강남구");
+        profile.setEmploymentType("FULL_TIME");
+        profile.setCareerType("EXPERIENCED");
+        profile.setCareerYears(1);
+        profile.setMinSalary(5000);
+        profile.setRemotePreferred(true);
+
+        JobPostingDTO job = job("매장 서비스 직원", "PART_TIME", "부산 해운대구", "경력 5년", 2800);
+        AiJobRecommendationDTO result = calculator.calculate(1L, profile, job);
+
+        assertThat(result.getRecommendationReason()).contains("아쉬운 부분은");
+        assertThat(result.getRecommendationReason()).doesNotContain("/30점", "/15점", "/10점");
+    }
+
+    @Test
+    @Transactional
+    void serviceUsesOnlyOpenUnexpiredJobsAndUpdatesDuplicateRecommendation() throws Exception {
         jdbcTemplate.update("""
                 INSERT INTO job_seeker_profile (
                     member_id, desired_job, desired_region, employment_type, career_type,
@@ -180,8 +224,11 @@ class AiJobRecommendationTests {
                           'ANY', ?, 'OPEN')
                 """, companyMemberId, LocalDate.now().minusDays(1));
 
-        List<AiJobRecommendationDTO> first = recommendationService.getRecommendations(1L);
-        List<AiJobRecommendationDTO> second = recommendationService.getRecommendations(1L);
+        AiJobRecommendationDTO pDTO = new AiJobRecommendationDTO();
+        pDTO.setMemberId(1L);
+
+        List<AiJobRecommendationDTO> first = recommendationService.getRecommendationList(pDTO);
+        List<AiJobRecommendationDTO> second = recommendationService.getRecommendationList(pDTO);
 
         assertThat(first).hasSize(1);
         assertThat(first.get(0).getJob().getCompanyName()).isEqualTo("추천 공고 회사");

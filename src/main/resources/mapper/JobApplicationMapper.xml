@@ -1,82 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.ykk.jobbridge.mapper.JobApplicationMapper">
-    <update id="ensureTable">
-        CREATE TABLE IF NOT EXISTS job_application (
-            id BIGINT NOT NULL AUTO_INCREMENT,
-            member_id BIGINT NOT NULL,
-            job_id VARCHAR(50) NOT NULL,
-            company_name VARCHAR(100) NOT NULL,
-            job_title VARCHAR(200) NOT NULL,
-            applicant_name VARCHAR(50) NOT NULL,
-            phone VARCHAR(20) NOT NULL,
-            email VARCHAR(100) NOT NULL,
-            employment_type VARCHAR(50) DEFAULT NULL,
-            status VARCHAR(30) NOT NULL DEFAULT 'APPLIED',
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY uk_job_application_member_job (member_id, job_id),
-            CONSTRAINT fk_job_application_member FOREIGN KEY (member_id)
-                REFERENCES member(id) ON DELETE CASCADE ON UPDATE CASCADE
-        )
-    </update>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-    <update id="ensureCompanyNameColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS company_name VARCHAR(100) DEFAULT NULL
-    </update>
-    <update id="ensureJobTitleColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS job_title VARCHAR(200) DEFAULT NULL
-    </update>
-    <update id="ensureApplicantNameColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS applicant_name VARCHAR(50) DEFAULT NULL
-    </update>
-    <update id="ensurePhoneColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT NULL
-    </update>
-    <update id="ensureEmailColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS email VARCHAR(100) DEFAULT NULL
-    </update>
-    <update id="ensureEmploymentTypeColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50) DEFAULT NULL
-    </update>
-    <update id="ensureStatusColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'APPLIED'
-    </update>
-    <update id="ensureCreatedAtColumn">
-        ALTER TABLE job_application ADD COLUMN IF NOT EXISTS created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    </update>
+<!-- JAVA와 연결할 Mapper 파일 설정 -->
+<mapper namespace="org.ykk.jobbridge.mapper.IJobApplicationMapper">
 
-    <select id="countByMemberAndJob" resultType="int">
-        SELECT COUNT(*) FROM job_application WHERE member_id = #{memberId} AND job_id = #{jobId}
+    <!-- 구직자가 지원한 리스트 쿼리 -->
+    <select id="getApplicationList" parameterType="JobApplicationDTO" resultType="JobApplicationDTO">
+        SELECT A.id, A.member_id, A.job_id,
+               COALESCE(J.company_name, C.company_name) AS company_name,
+               J.title AS job_title,
+               M.name AS applicant_name,
+               M.phone,
+               M.email,
+               A.employment_type,
+               A.status, A.created_at, A.updated_at
+          FROM job_application A
+          JOIN job_posting J ON J.id = A.job_id
+          JOIN member M ON M.id = A.member_id
+          LEFT JOIN company_profile C ON C.member_id = J.company_member_id
+         WHERE A.member_id = #{memberId}
+         ORDER BY A.created_at DESC, A.id DESC
     </select>
 
-    <insert id="insert" parameterType="org.ykk.jobbridge.dto.JobApplicationDTO"
-            useGeneratedKeys="true" keyProperty="id">
+    <!-- 기업회원 공고에 지원한 지원자 리스트 쿼리 : 채용공고와 JOIN -->
+    <select id="getCompanyApplicationList" parameterType="JobApplicationDTO" resultType="JobApplicationDTO">
+        SELECT A.id, A.member_id, A.job_id,
+               COALESCE(J.company_name, C.company_name) AS company_name,
+               J.title AS job_title,
+               M.name AS applicant_name,
+               M.phone,
+               M.email,
+               A.employment_type,
+               A.status, A.created_at, A.updated_at, A.cover_letter
+          FROM job_application A
+          JOIN job_posting J ON J.id = A.job_id
+          JOIN member M ON M.id = A.member_id
+          LEFT JOIN company_profile C ON C.member_id = J.company_member_id
+         WHERE J.company_member_id = #{companyMemberId}
+           AND J.status != 'DELETED'
+         ORDER BY A.created_at DESC, A.id DESC
+    </select>
+
+    <!-- 이미 지원한 공고인지 체크 쿼리 -->
+    <select id="getApplicationExists" parameterType="JobApplicationDTO" resultType="JobApplicationDTO">
+        SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS EXISTS_YN
+          FROM job_application
+         WHERE member_id = #{memberId}
+           AND job_id = #{jobId}
+    </select>
+
+    <!-- 입사 지원 등록 쿼리 -->
+    <insert id="insertApplicationInfo" parameterType="JobApplicationDTO" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO job_application
-            (member_id, job_id, company_name, job_title, applicant_name, phone, email, employment_type, status)
-        VALUES
-            (#{memberId}, #{jobId}, #{companyName}, #{jobTitle}, #{applicantName}, #{phone}, #{email}, #{employmentType}, #{status})
+            (
+                member_id, job_id, employment_type, status,cover_letter
+            )
+        VALUES (
+            #{memberId}, #{jobId}, #{employmentType}, 'APPLIED',#{coverLetter}
+        )
     </insert>
 
-    <select id="findAllByMemberId" resultType="org.ykk.jobbridge.dto.JobApplicationDTO">
-        SELECT id, member_id, job_id, company_name, job_title, applicant_name,
-               phone, email, employment_type, status, created_at, updated_at
-        FROM job_application
-        WHERE member_id = #{memberId}
-        ORDER BY created_at DESC, id DESC
+    <!-- 전체 지원 수 쿼리 -->
+    <select id="getApplicationCount" resultType="int">
+        SELECT COUNT(1)
+          FROM job_application
     </select>
 
-    <select id="findAllByCompanyMemberId" resultType="org.ykk.jobbridge.dto.JobApplicationDTO">
-        SELECT a.id, a.member_id, a.job_id, a.company_name, a.job_title,
-               a.applicant_name, a.phone, a.email, a.employment_type,
-               a.status, a.created_at, a.updated_at
-        FROM job_application a
-        JOIN job_posting j ON CONCAT(j.id, '') = a.job_id
-        WHERE j.company_member_id = #{companyMemberId}
-          AND j.status != 'DELETED'
-        ORDER BY a.created_at DESC, a.id DESC
-    </select>
-
-    <select id="countAll" resultType="long">SELECT COUNT(*) FROM job_application</select>
 </mapper>

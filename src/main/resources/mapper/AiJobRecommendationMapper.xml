@@ -1,70 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.ykk.jobbridge.mapper.AiJobRecommendationMapper">
-    <update id="ensureTable">
-        CREATE TABLE IF NOT EXISTS ai_job_posting_recommendation (
-            id BIGINT NOT NULL AUTO_INCREMENT,
-            member_id BIGINT NOT NULL,
-            job_id BIGINT NOT NULL,
-            total_score INT NOT NULL,
-            job_score INT NOT NULL,
-            region_score INT NOT NULL,
-            employment_score INT NOT NULL,
-            career_score INT NOT NULL,
-            salary_score INT NOT NULL,
-            work_style_score INT NOT NULL,
-            accessibility_score INT NOT NULL,
-            recommendation_reason VARCHAR(2000) NOT NULL,
-            mismatch_reason VARCHAR(2000) NOT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            CONSTRAINT uk_ai_posting_recommendation_member_job UNIQUE (member_id, job_id),
-            CONSTRAINT fk_ai_posting_recommendation_member FOREIGN KEY (member_id) REFERENCES member(id),
-            CONSTRAINT fk_ai_posting_recommendation_job FOREIGN KEY (job_id) REFERENCES job_posting(id)
-        )
-    </update>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-    <select id="findProfile" resultType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
-        SELECT member_id,
-               residence_region,
-               desired_job,
-               desired_region,
-               employment_type,
-               career_type,
-               career_years,
-               min_salary,
-               remote_preferred,
-               flexible_preferred,
-               wheelchair_required,
-               accessible_restroom_required,
-               disabled_parking_required,
-               assistive_device_required
-        FROM job_seeker_profile
-        WHERE member_id = #{memberId}
+<!-- JAVA와 연결할 Mapper 파일 설정 -->
+<mapper namespace="org.ykk.jobbridge.mapper.IAiJobRecommendationMapper">
+
+    <!-- 추천 계산에 사용할 구직자 프로필 조회 쿼리 -->
+    <select id="getProfileInfo" parameterType="AiJobRecommendationDTO" resultType="JobSeekerProfileDTO">
+        SELECT member_id, residence_region, desired_job, desired_region, employment_type,
+               career_type, career_years, min_salary, introduction,
+               remote_preferred, flexible_preferred, hybrid_preferred, onsite_preferred,
+               wheelchair_required, accessible_restroom_required,
+               disabled_parking_required, assistive_device_required
+          FROM job_seeker_profile
+         WHERE member_id = #{memberId}
     </select>
 
-    <select id="findEligibleJobs" resultType="org.ykk.jobbridge.dto.JobPostingDTO">
-        SELECT j.id, j.company_member_id,
-               COALESCE(j.company_name, c.company_name) AS company_name,
-               j.title, j.job_category,
-               j.employment_type, j.location, j.salary_min, j.salary_max,
-               j.experience_level, j.education_level, j.description, j.requirements,
-               j.preferred_qualifications, j.accessibility_info,
-               j.wheelchair_accessible, j.accessible_restroom, j.disabled_parking,
-               j.remote_available, j.flexible_work_available, j.assistive_device_support,
-               j.deadline, j.status, j.created_at, j.updated_at
-        FROM job_posting j
-        JOIN company_profile c ON c.member_id = j.company_member_id
-        WHERE j.status = 'OPEN'
-          AND (j.deadline IS NULL OR j.deadline &gt;= CURRENT_DATE)
-        ORDER BY j.deadline IS NULL, j.deadline, j.id
+    <!-- 추천 대상 채용공고 리스트 쿼리 : OPEN 상태이고 마감되지 않은 공고 -->
+    <select id="getJobList" resultType="JobPostingDTO">
+        SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
+               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.salary_max,
+               J.experience_level, J.education_level, J.description, J.requirements,
+               J.preferred_qualifications, J.accessibility_info,
+               J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
+               J.remote_available, J.flexible_work_available, J.assistive_device_support,
+               J.deadline, J.status, J.created_at, J.updated_at
+          FROM job_posting J, company_profile C
+         WHERE J.company_member_id = C.member_id
+           AND J.status = 'OPEN'
+           AND (J.deadline IS NULL OR J.deadline &gt;= CURRENT_DATE)
+         ORDER BY J.deadline IS NULL, J.deadline, J.id
     </select>
 
-    <update id="updateRecommendation" parameterType="org.ykk.jobbridge.dto.AiJobRecommendationDTO">
-        UPDATE ai_job_posting_recommendation
-        SET total_score = #{totalScore},
+    <!-- 추천 결과 수정 쿼리 : 회원과 공고 조합이 이미 저장된 경우 -->
+    <update id="updateRecommendation" parameterType="AiJobRecommendationDTO">
+        UPDATE ai_job_posting_recommendation SET
+            total_score = #{totalScore},
             job_score = #{jobScore},
+            job_match_source = #{jobMatchSource},
+            job_match_reason = #{jobMatchReason},
             region_score = #{regionScore},
             employment_score = #{employmentTypeScore},
             career_score = #{careerScore},
@@ -74,19 +47,24 @@
             recommendation_reason = #{recommendationReason},
             mismatch_reason = #{mismatchReason},
             updated_at = CURRENT_TIMESTAMP
-        WHERE member_id = #{memberId}
-          AND job_id = #{jobId}
+        WHERE
+            member_id = #{memberId}
+            AND job_id = #{jobId}
     </update>
 
-    <insert id="insertRecommendation" parameterType="org.ykk.jobbridge.dto.AiJobRecommendationDTO">
-        INSERT INTO ai_job_posting_recommendation (
-            member_id, job_id, total_score, job_score, region_score,
-            employment_score, career_score, salary_score, work_style_score,
-            accessibility_score, recommendation_reason, mismatch_reason
-        ) VALUES (
-            #{memberId}, #{jobId}, #{totalScore}, #{jobScore}, #{regionScore},
-            #{employmentTypeScore}, #{careerScore}, #{salaryScore}, #{workStyleScore},
+    <!-- 추천 결과 등록 쿼리 -->
+    <insert id="insertRecommendation" parameterType="AiJobRecommendationDTO">
+        INSERT INTO ai_job_posting_recommendation
+            (
+                member_id, job_id, total_score, job_score, job_match_source, job_match_reason,
+                region_score, employment_score, career_score, salary_score, work_style_score,
+                accessibility_score, recommendation_reason, mismatch_reason
+            )
+        VALUES (
+            #{memberId}, #{jobId}, #{totalScore}, #{jobScore}, #{jobMatchSource}, #{jobMatchReason},
+            #{regionScore}, #{employmentTypeScore}, #{careerScore}, #{salaryScore}, #{workStyleScore},
             #{accessibilityScore}, #{recommendationReason}, #{mismatchReason}
         )
     </insert>
+
 </mapper>

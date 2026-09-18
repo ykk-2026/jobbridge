@@ -1,54 +1,33 @@
 package org.ykk.jobbridge.dto;
 
-import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * COMMUNITY_POST 테이블(커뮤니티 게시글)과 매핑되는 DTO
+ */
+@Getter
+@Setter
 public class CommunityPostDTO {
-    private Long id;
-    private Long memberId;
-    private String category;
-    private String title;
-    private String author;
-    private String content;
-    private int replies;
-    private int views;
-    private int viewCount;
-    private int likeCount;
-    private String status;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private List<CommunityCommentDTO> comments = new ArrayList<>();
-    private List<CommunityReportDTO> reports = new ArrayList<>();
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getAuthor() { return author; }
-    public void setAuthor(String author) { this.author = author; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-    public int getReplies() { return replies; }
-    public void setReplies(int replies) { this.replies = replies; }
-    public int getViews() { return views; }
-    public void setViews(int views) { this.views = views; }
-    public int getViewCount() { return viewCount; }
-    public void setViewCount(int viewCount) { this.viewCount = viewCount; }
-    public int getLikeCount() { return likeCount; }
-    public void setLikeCount(int likeCount) { this.likeCount = likeCount; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-    public List<CommunityCommentDTO> getComments() { return comments; }
-    public void setComments(List<CommunityCommentDTO> comments) { this.comments = comments; }
-    public List<CommunityReportDTO> getReports() { return reports; }
-    public void setReports(List<CommunityReportDTO> reports) { this.reports = reports; }
+    private Long id; // 기본키, 게시글 번호
+    private Long memberId; // 작성자 회원 고유번호
+    private String category; // 분류(FREE, QUESTION, TIP, INFO)
+    private String title; // 제목
+    private String author; // 작성자명(MEMBER 테이블 JOIN)
+    private String content; // 내용
+    private int replies; // 댓글 수
+    private int views; // 조회수
+    private int viewCount; // 조회수
+    private int likeCount; // 좋아요 수
+    private String status; // 상태(ACTIVE, DELETED)
+    private String createdAt; // 등록일
+    private String updatedAt; // 수정일
+
+    private List<CommunityCommentDTO> comments = new ArrayList<>(); // 댓글 목록
+    private List<CommunityReportDTO> reports = new ArrayList<>(); // 로그인 사용자의 신고 내역
+
 }

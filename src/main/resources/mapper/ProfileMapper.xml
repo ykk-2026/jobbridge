@@ -1,142 +1,81 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="org.ykk.jobbridge.mapper.ProfileMapper">
-    <update id="ensureNameColumn">
-        ALTER TABLE job_seeker_profile ADD COLUMN IF NOT EXISTS name VARCHAR(50) DEFAULT NULL
-    </update>
+<!-- JAVA와 연결할 Mapper 파일 설정 -->
+<mapper namespace="org.ykk.jobbridge.mapper.IProfileMapper">
 
-    <update id="ensureBirthDateColumn">
-        ALTER TABLE job_seeker_profile ADD COLUMN IF NOT EXISTS birth_date DATE DEFAULT NULL
-    </update>
+    <!-- 구직자 프로필 조회 쿼리 : 프로필이 없어도 회원 기본 정보는 보여주기 위해 LEFT JOIN 사용 -->
+    <select id="getProfileInfo" parameterType="JobSeekerProfileDTO" resultType="JobSeekerProfileDTO">
+        SELECT M.id                                  AS member_id,
+               M.name,
+               M.birth_date,
+               M.gender,
+               M.email,
+               M.phone,
+               P.id                                  AS profile_id,
+               P.profile_image_url,
+               P.residence_region,
+               P.desired_job,
+               P.desired_region,
+               P.employment_type,
+               P.career_type,
+               P.career_years,
+               P.min_salary,
+               P.remote_preferred,
+               P.flexible_preferred,
+               P.wheelchair_required,
+               P.accessible_restroom_required,
+               P.disabled_parking_required,
+               P.assistive_device_required,
+               P.hybrid_preferred,
+               P.onsite_preferred,
+               P.contact_time_start,
+               P.contact_time_end,
+               P.contact_method,
+               P.introduction,
+               P.profile_public,
+               P.created_at,
+               P.updated_at
+          FROM member M
+          LEFT JOIN job_seeker_profile P ON M.id = P.member_id
+         WHERE M.id = #{memberId}
+    </select>
 
-    <update id="ensureGenderColumn">
-        ALTER TABLE job_seeker_profile ADD COLUMN IF NOT EXISTS gender VARCHAR(20) DEFAULT NULL
-    </update>
+    <!-- 프로필 존재 여부 체크 쿼리 -->
+    <select id="getProfileExists" parameterType="JobSeekerProfileDTO" resultType="JobSeekerProfileDTO">
+        SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS EXISTS_YN
+          FROM job_seeker_profile
+         WHERE member_id = #{memberId}
+    </select>
 
-    <update id="ensureEmailColumn">
-        ALTER TABLE job_seeker_profile ADD COLUMN IF NOT EXISTS email VARCHAR(100) DEFAULT NULL
-    </update>
-
-    <update id="ensurePhoneColumn">
-        ALTER TABLE job_seeker_profile ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT NULL
-    </update>
-
-    <insert id="insertProfile"
-            parameterType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
+    <!-- 프로필 등록 쿼리 -->
+    <insert id="insertProfileInfo" parameterType="JobSeekerProfileDTO">
         INSERT INTO job_seeker_profile
-        (
-            member_id,
-            name,
-            birth_date,
-            gender,
-            email,
-            phone,
-            profile_image_url,
-            residence_region,
-            desired_job,
-            desired_region,
-            employment_type,
-            career_type,
-            career_years,
-            min_salary,
-            remote_preferred,
-            flexible_preferred,
-            wheelchair_required,
-            accessible_restroom_required,
-            disabled_parking_required,
-            assistive_device_required,
-            hybrid_preferred,
-            onsite_preferred,
-            contact_time_start,
-            contact_time_end,
-            contact_method,
-            introduction,
-            profile_public
-        )
-        VALUES
-        (
+            (
+                member_id,
+                profile_image_url, residence_region, desired_job, desired_region,
+                employment_type, career_type, career_years, min_salary,
+                remote_preferred, flexible_preferred, wheelchair_required,
+                accessible_restroom_required, disabled_parking_required,
+                assistive_device_required, hybrid_preferred, onsite_preferred,
+                contact_time_start, contact_time_end, contact_method,
+                introduction, profile_public
+            )
+        VALUES (
             #{memberId},
-            #{name},
-            #{birthDate},
-            #{gender},
-            #{email},
-            #{phone},
-            #{profileImageUrl},
-            #{residenceRegion},
-            #{desiredJob},
-            #{desiredRegion},
-            #{employmentType},
-            #{careerType},
-            #{careerYears},
-            #{minSalary},
-            #{remotePreferred},
-            #{flexiblePreferred},
-            #{wheelchairRequired},
-            #{accessibleRestroomRequired},
-            #{disabledParkingRequired},
-            #{assistiveDeviceRequired},
-            #{hybridPreferred},
-            #{onsitePreferred},
-            #{contactTimeStart},
-            #{contactTimeEnd},
-            #{contactMethod},
-            #{introduction},
-            #{profilePublic}
+            #{profileImageUrl}, #{residenceRegion}, #{desiredJob}, #{desiredRegion},
+            #{employmentType}, #{careerType}, #{careerYears}, #{minSalary},
+            #{remotePreferred}, #{flexiblePreferred}, #{wheelchairRequired},
+            #{accessibleRestroomRequired}, #{disabledParkingRequired},
+            #{assistiveDeviceRequired}, #{hybridPreferred}, #{onsitePreferred},
+            NULLIF(#{contactTimeStart}, ''), NULLIF(#{contactTimeEnd}, ''), #{contactMethod},
+            #{introduction}, #{profilePublic}
         )
     </insert>
 
-    <select id="findProfileByMemberId"
-            parameterType="Long"
-            resultType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
-        SELECT
-            m.id                       AS memberId,
-            COALESCE(p.name, m.name)   AS name,
-            COALESCE(p.birth_date, m.birth_date) AS birthDate,
-            COALESCE(p.gender, m.gender) AS gender,
-            COALESCE(p.email, m.email) AS email,
-            COALESCE(p.phone, m.phone) AS phone,
-            p.id                       AS profileId,
-            p.profile_image_url        AS profileImageUrl,
-            p.residence_region         AS residenceRegion,
-            p.desired_job              AS desiredJob,
-            p.desired_region           AS desiredRegion,
-            p.employment_type          AS employmentType,
-            p.career_type              AS careerType,
-            p.career_years             AS careerYears,
-            p.min_salary               AS minSalary,
-            p.remote_preferred         AS remotePreferred,
-            p.flexible_preferred       AS flexiblePreferred,
-            p.wheelchair_required      AS wheelchairRequired,
-            p.accessible_restroom_required AS accessibleRestroomRequired,
-            p.disabled_parking_required AS disabledParkingRequired,
-            p.assistive_device_required AS assistiveDeviceRequired,
-            p.hybrid_preferred         AS hybridPreferred,
-            p.onsite_preferred         AS onsitePreferred,
-            p.contact_time_start       AS contactTimeStart,
-            p.contact_time_end         AS contactTimeEnd,
-            p.contact_method           AS contactMethod,
-            p.introduction             AS introduction,
-            p.profile_public           AS profilePublic,
-            p.created_at               AS createdAt,
-            p.updated_at               AS updatedAt
-        FROM member m
-        LEFT JOIN job_seeker_profile p
-            ON m.id = p.member_id
-        WHERE m.id = #{memberId}
-    </select>
-
-    <update id="updateProfile"
-            parameterType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
-        UPDATE job_seeker_profile
-        SET
-            name = #{name},
-            birth_date = #{birthDate},
-            gender = #{gender},
-            email = #{email},
-            phone = #{phone},
+    <!-- 프로필 수정 쿼리 -->
+    <update id="updateProfileInfo" parameterType="JobSeekerProfileDTO">
+        UPDATE job_seeker_profile SET
             profile_image_url = #{profileImageUrl},
             residence_region = #{residenceRegion},
             desired_job = #{desiredJob},
@@ -153,30 +92,26 @@
             assistive_device_required = #{assistiveDeviceRequired},
             hybrid_preferred = #{hybridPreferred},
             onsite_preferred = #{onsitePreferred},
-            contact_time_start = #{contactTimeStart},
-            contact_time_end = #{contactTimeEnd},
+            contact_time_start = NULLIF(#{contactTimeStart}, ''),
+            contact_time_end = NULLIF(#{contactTimeEnd}, ''),
             contact_method = #{contactMethod},
             introduction = #{introduction},
-            profile_public = #{profilePublic}
-        WHERE member_id = #{memberId}
+            profile_public = #{profilePublic},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            member_id = #{memberId}
     </update>
 
-    <update id="updateMember"
-            parameterType="org.ykk.jobbridge.dto.JobSeekerProfileDTO">
-        UPDATE member
-        SET name = #{name},
-            birth_date = #{birthDate},
+    <!-- 회원 기본 정보 수정 쿼리 -->
+    <update id="updateMemberInfo" parameterType="JobSeekerProfileDTO">
+        UPDATE member SET
+            name = #{name},
+            birth_date = NULLIF(#{birthDate}, ''),
             gender = #{gender},
             email = #{email},
             phone = #{phone}
-        WHERE id = #{memberId}
+        WHERE
+            id = #{memberId}
     </update>
 
-    <select id="countProfileByMemberId"
-            parameterType="Long"
-            resultType="int">
-        SELECT COUNT(*)
-        FROM job_seeker_profile
-        WHERE member_id = #{memberId}
-    </select>
 </mapper>

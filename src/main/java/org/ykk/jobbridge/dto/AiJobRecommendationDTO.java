@@ -1,44 +1,30 @@
 package org.ykk.jobbridge.dto;
 
-public class AiJobRecommendationDTO {
-    private Long memberId;
-    private Long jobId;
-    private Integer totalScore;
-    private Integer jobScore;
-    private Integer regionScore;
-    private Integer employmentTypeScore;
-    private Integer careerScore;
-    private Integer salaryScore;
-    private Integer workStyleScore;
-    private Integer accessibilityScore;
-    private String recommendationReason;
-    private String mismatchReason;
-    private JobPostingDTO job;
+import lombok.Getter;
+import lombok.Setter;
 
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public Long getJobId() { return jobId; }
-    public void setJobId(Long jobId) { this.jobId = jobId; }
-    public Integer getTotalScore() { return totalScore; }
-    public void setTotalScore(Integer totalScore) { this.totalScore = totalScore; }
-    public Integer getJobScore() { return jobScore; }
-    public void setJobScore(Integer jobScore) { this.jobScore = jobScore; }
-    public Integer getRegionScore() { return regionScore; }
-    public void setRegionScore(Integer regionScore) { this.regionScore = regionScore; }
-    public Integer getEmploymentTypeScore() { return employmentTypeScore; }
-    public void setEmploymentTypeScore(Integer employmentTypeScore) { this.employmentTypeScore = employmentTypeScore; }
-    public Integer getCareerScore() { return careerScore; }
-    public void setCareerScore(Integer careerScore) { this.careerScore = careerScore; }
-    public Integer getSalaryScore() { return salaryScore; }
-    public void setSalaryScore(Integer salaryScore) { this.salaryScore = salaryScore; }
-    public Integer getWorkStyleScore() { return workStyleScore; }
-    public void setWorkStyleScore(Integer workStyleScore) { this.workStyleScore = workStyleScore; }
-    public Integer getAccessibilityScore() { return accessibilityScore; }
-    public void setAccessibilityScore(Integer accessibilityScore) { this.accessibilityScore = accessibilityScore; }
-    public String getRecommendationReason() { return recommendationReason; }
-    public void setRecommendationReason(String recommendationReason) { this.recommendationReason = recommendationReason; }
-    public String getMismatchReason() { return mismatchReason; }
-    public void setMismatchReason(String mismatchReason) { this.mismatchReason = mismatchReason; }
-    public JobPostingDTO getJob() { return job; }
-    public void setJob(JobPostingDTO job) { this.job = job; }
+/**
+ * AI_JOB_POSTING_RECOMMENDATION 테이블(AI 채용공고 추천 결과)과 매핑되는 DTO
+ */
+@Getter
+@Setter
+public class AiJobRecommendationDTO {
+
+    private Long memberId; // 구직자 회원 고유번호
+    private Long jobId; // 채용공고 번호
+    private Integer totalScore; // 총점(100점 만점)
+    private Integer jobScore; // 직무·기술 적합도(30점)
+    private String jobMatchSource; // 직무 점수 출처(GENERATIVE_AI, RULE_FALLBACK)
+    private String jobMatchReason; // 직무 점수 근거
+    private Integer regionScore; // 지역·출퇴근(15점)
+    private Integer employmentTypeScore; // 고용형태(10점)
+    private Integer careerScore; // 경력(10점)
+    private Integer salaryScore; // 급여(10점)
+    private Integer workStyleScore; // 근무방식(10점)
+    private Integer accessibilityScore; // 접근성(15점)
+    private String recommendationReason; // 추천 이유
+    private String mismatchReason; // 부족한 조건
+
+    private JobPostingDTO job; // 추천된 채용공고 정보
+
 }

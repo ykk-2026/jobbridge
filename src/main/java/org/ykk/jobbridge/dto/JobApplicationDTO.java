@@ -1,43 +1,30 @@
 package org.ykk.jobbridge.dto;
 
-import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * JOB_APPLICATION 테이블(입사 지원)과 매핑되는 DTO
+ */
+@Getter
+@Setter
 public class JobApplicationDTO {
-    private Long id;
-    private Long memberId;
-    private String jobId;
-    private String companyName;
-    private String jobTitle;
-    private String applicantName;
-    private String phone;
-    private String email;
-    private String employmentType;
-    private String status;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getJobId() { return jobId; }
-    public void setJobId(String jobId) { this.jobId = jobId; }
-    public String getCompanyName() { return companyName; }
-    public void setCompanyName(String companyName) { this.companyName = companyName; }
-    public String getJobTitle() { return jobTitle; }
-    public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
-    public String getApplicantName() { return applicantName; }
-    public void setApplicantName(String applicantName) { this.applicantName = applicantName; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getEmploymentType() { return employmentType; }
-    public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    private Long id; // 기본키
+    private Long memberId; // 지원한 구직자 회원 고유번호
+    private Long jobId; // job_posting.id 외래키
+    private String companyName; // job_posting/company_profile JOIN 조회값(테이블에 저장하지 않음)
+    private String jobTitle; // job_posting.title JOIN 조회값(테이블에 저장하지 않음)
+    private String applicantName; // 지원자 이름
+    private String phone; // 전화번호
+    private String email; // 이메일
+    private String employmentType; // 고용형태
+    private String status; // 지원 상태(APPLIED 등)
+    private String createdAt; // 지원일
+    private String updatedAt; // 수정일
+    private String coverLetter;
+
+    private Long companyMemberId; // 기업회원이 지원자 목록 조회할 때 사용
+    private String existsYn; // 이미 지원한 공고인지 여부(Y/N)
+
 }
