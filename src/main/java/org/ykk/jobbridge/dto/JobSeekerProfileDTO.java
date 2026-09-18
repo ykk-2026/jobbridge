@@ -1,107 +1,54 @@
 package org.ykk.jobbridge.dto;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * JOB_SEEKER_PROFILE 테이블(구직자 프로필)과 매핑되는 DTO
+ * MEMBER 테이블의 기본 정보도 함께 담아 화면에 전달함
+ */
+@Getter
+@Setter
 public class JobSeekerProfileDTO {
 
-    // member 테이블 정보
-    private Long memberId;
-    private String name;
-    private LocalDate birthDate;
-    private String gender;
-    private String email;
-    private String phone;
+    // MEMBER 테이블 정보
+    private Long memberId; // 회원 고유번호
+    private String name; // 이름
+    private String birthDate; // 생년월일
+    private String gender; // 성별
+    private String email; // 이메일
+    private String phone; // 전화번호
 
-    // job_seeker_profile 테이블 정보
-    private Long profileId;
-    private String profileImageUrl;
-    private String residenceRegion;
-    private String desiredJob;
-    private String desiredRegion;
-    private String employmentType;
-    private String careerType;
-    private Integer careerYears;
-    private Integer minSalary;
+    // JOB_SEEKER_PROFILE 테이블 정보
+    private Long profileId; // 프로필 기본키
+    private String profileImageUrl; // 프로필 이미지
+    private String residenceRegion; // 거주 지역
+    private String desiredJob; // 희망 직무
+    private String desiredRegion; // 희망 지역
+    private String employmentType; // 희망 고용형태
+    private String careerType; // 경력 구분(신입, 경력)
+    private Integer careerYears; // 경력 연수
+    private Integer minSalary; // 희망 최소 연봉
 
-    private Boolean remotePreferred;
-    private Boolean flexiblePreferred;
-    private Boolean wheelchairRequired;
-    private Boolean accessibleRestroomRequired;
-    private Boolean disabledParkingRequired;
-    private Boolean assistiveDeviceRequired;
-    private Boolean hybridPreferred;
-    private Boolean onsitePreferred;
+    private Boolean remotePreferred; // 재택근무 선호
+    private Boolean flexiblePreferred; // 유연근무 선호
+    private Boolean wheelchairRequired; // 휠체어 접근 필요
+    private Boolean accessibleRestroomRequired; // 장애인 화장실 필요
+    private Boolean disabledParkingRequired; // 장애인 주차 필요
+    private Boolean assistiveDeviceRequired; // 보조공학기기 필요
+    private Boolean hybridPreferred; // 하이브리드 근무 선호
+    private Boolean onsitePreferred; // 출근 근무 선호
 
-    private LocalTime contactTimeStart;
-    private LocalTime contactTimeEnd;
-    private String contactMethod;
+    private String contactTimeStart; // 연락 가능 시작 시간
+    private String contactTimeEnd; // 연락 가능 종료 시간
+    private String contactMethod; // 연락 방법
 
-    private String introduction;
-    private Boolean profilePublic;
+    private String introduction; // 자기소개
+    private Boolean profilePublic; // 프로필 공개 여부
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String createdAt; // 등록일
+    private String updatedAt; // 수정일
 
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public LocalDate getBirthDate() { return birthDate; }
-    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public Long getProfileId() { return profileId; }
-    public void setProfileId(Long profileId) { this.profileId = profileId; }
-    public String getProfileImageUrl() { return profileImageUrl; }
-    public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
-    public String getResidenceRegion() { return residenceRegion; }
-    public void setResidenceRegion(String residenceRegion) { this.residenceRegion = residenceRegion; }
-    public String getDesiredJob() { return desiredJob; }
-    public void setDesiredJob(String desiredJob) { this.desiredJob = desiredJob; }
-    public String getDesiredRegion() { return desiredRegion; }
-    public void setDesiredRegion(String desiredRegion) { this.desiredRegion = desiredRegion; }
-    public String getEmploymentType() { return employmentType; }
-    public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
-    public String getCareerType() { return careerType; }
-    public void setCareerType(String careerType) { this.careerType = careerType; }
-    public Integer getCareerYears() { return careerYears; }
-    public void setCareerYears(Integer careerYears) { this.careerYears = careerYears; }
-    public Integer getMinSalary() { return minSalary; }
-    public void setMinSalary(Integer minSalary) { this.minSalary = minSalary; }
-    public Boolean getRemotePreferred() { return remotePreferred; }
-    public void setRemotePreferred(Boolean remotePreferred) { this.remotePreferred = remotePreferred; }
-    public Boolean getFlexiblePreferred() { return flexiblePreferred; }
-    public void setFlexiblePreferred(Boolean flexiblePreferred) { this.flexiblePreferred = flexiblePreferred; }
-    public Boolean getWheelchairRequired() { return wheelchairRequired; }
-    public void setWheelchairRequired(Boolean wheelchairRequired) { this.wheelchairRequired = wheelchairRequired; }
-    public Boolean getAccessibleRestroomRequired() { return accessibleRestroomRequired; }
-    public void setAccessibleRestroomRequired(Boolean accessibleRestroomRequired) { this.accessibleRestroomRequired = accessibleRestroomRequired; }
-    public Boolean getDisabledParkingRequired() { return disabledParkingRequired; }
-    public void setDisabledParkingRequired(Boolean disabledParkingRequired) { this.disabledParkingRequired = disabledParkingRequired; }
-    public Boolean getAssistiveDeviceRequired() { return assistiveDeviceRequired; }
-    public void setAssistiveDeviceRequired(Boolean assistiveDeviceRequired) { this.assistiveDeviceRequired = assistiveDeviceRequired; }
-    public Boolean getHybridPreferred() { return hybridPreferred; }
-    public void setHybridPreferred(Boolean hybridPreferred) { this.hybridPreferred = hybridPreferred; }
-    public Boolean getOnsitePreferred() { return onsitePreferred; }
-    public void setOnsitePreferred(Boolean onsitePreferred) { this.onsitePreferred = onsitePreferred; }
-    public LocalTime getContactTimeStart() { return contactTimeStart; }
-    public void setContactTimeStart(LocalTime contactTimeStart) { this.contactTimeStart = contactTimeStart; }
-    public LocalTime getContactTimeEnd() { return contactTimeEnd; }
-    public void setContactTimeEnd(LocalTime contactTimeEnd) { this.contactTimeEnd = contactTimeEnd; }
-    public String getContactMethod() { return contactMethod; }
-    public void setContactMethod(String contactMethod) { this.contactMethod = contactMethod; }
-    public String getIntroduction() { return introduction; }
-    public void setIntroduction(String introduction) { this.introduction = introduction; }
-    public Boolean getProfilePublic() { return profilePublic; }
-    public void setProfilePublic(Boolean profilePublic) { this.profilePublic = profilePublic; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    private String existsYn; // 프로필 존재 여부(Y/N)
+
 }

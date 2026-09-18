@@ -1,82 +1,123 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.ykk.jobbridge.mapper.CommunityMapper">
-    <sql id="postColumns">
-        p.id, p.member_id, p.category, p.title, m.name AS author, p.content,
-        (SELECT COUNT(*) FROM community_comment c
-         WHERE c.post_id = p.id AND c.status = 'ACTIVE') AS replies,
-        p.view_count AS views, p.view_count, p.like_count, p.status,
-        p.created_at, p.updated_at
-    </sql>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-    <select id="findAllPosts" resultType="org.ykk.jobbridge.dto.CommunityPostDTO">
-        SELECT <include refid="postColumns"/>
-        FROM community_post p
-        JOIN member m ON m.id = p.member_id
-        WHERE p.status = 'ACTIVE'
-        ORDER BY p.created_at DESC, p.id DESC
+<!-- JAVA와 연결할 Mapper 파일 설정 -->
+<mapper namespace="org.ykk.jobbridge.mapper.ICommunityMapper">
+
+    <!-- 게시글 리스트 쿼리 : 회원정보와 JOIN 통해 작성자명 가져오기, 서브쿼리로 댓글 수 계산 -->
+    <select id="getPostList" resultType="CommunityPostDTO">
+        SELECT P.id, P.member_id, P.category, P.title, M.name AS author, P.content,
+               (SELECT COUNT(1) FROM community_comment C
+                 WHERE C.post_id = P.id AND C.status = 'ACTIVE') AS replies,
+               P.view_count AS views, P.view_count, P.like_count, P.status,
+               P.created_at, P.updated_at
+          FROM community_post P, member M
+         WHERE P.member_id = M.id
+           AND P.status = 'ACTIVE'
+         ORDER BY P.created_at DESC, P.id DESC
     </select>
 
-    <select id="findPostById" resultType="org.ykk.jobbridge.dto.CommunityPostDTO">
-        SELECT <include refid="postColumns"/>
-        FROM community_post p
-        JOIN member m ON m.id = p.member_id
-        WHERE p.id = #{id}
+    <!-- 게시글 상세보기 쿼리 -->
+    <select id="getPostInfo" parameterType="CommunityPostDTO" resultType="CommunityPostDTO">
+        SELECT P.id, P.member_id, P.category, P.title, M.name AS author, P.content,
+               (SELECT COUNT(1) FROM community_comment C
+                 WHERE C.post_id = P.id AND C.status = 'ACTIVE') AS replies,
+               P.view_count AS views, P.view_count, P.like_count, P.status,
+               P.created_at, P.updated_at
+          FROM community_post P, member M
+         WHERE P.member_id = M.id
+           AND P.id = #{id}
     </select>
 
-    <insert id="insertPost" parameterType="org.ykk.jobbridge.dto.CommunityPostDTO"
-            useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO community_post (member_id, category, title, content, status)
-        VALUES (#{memberId}, #{category}, #{title}, #{content}, 'ACTIVE')
+    <!-- 게시글 등록 쿼리 -->
+    <insert id="insertPostInfo" parameterType="CommunityPostDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO community_post
+            (
+                member_id, category, title, content, status
+            )
+        VALUES (
+            #{memberId}, #{category}, #{title}, #{content}, 'ACTIVE'
+        )
     </insert>
 
-    <update id="incrementViews">
-        UPDATE community_post
-        SET view_count = view_count + 1
-        WHERE id = #{id} AND status = 'ACTIVE'
+    <!-- 조회수 증가 쿼리 -->
+    <update id="updatePostViews" parameterType="CommunityPostDTO">
+        UPDATE community_post SET
+            view_count = view_count + 1
+        WHERE
+            id = #{id}
+            AND status = 'ACTIVE'
     </update>
 
-    <update id="deletePost">
-        UPDATE community_post
-        SET status = 'DELETED', updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{id} AND member_id = #{memberId} AND status = 'ACTIVE'
+    <!-- 게시글 삭제 쿼리 : 본인 글만 삭제, 실제 삭제 대신 상태값만 DELETED로 변경 -->
+    <update id="deletePostInfo" parameterType="CommunityPostDTO">
+        UPDATE community_post SET
+            status = 'DELETED',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            id = #{id}
+            AND member_id = #{memberId}
+            AND status = 'ACTIVE'
     </update>
 
-    <select id="findComments" resultType="org.ykk.jobbridge.dto.CommunityCommentDTO">
-        SELECT c.id, c.post_id, c.member_id, m.name AS author, c.content,
-               c.status, c.created_at, c.updated_at
-        FROM community_comment c
-        JOIN member m ON m.id = c.member_id
-        WHERE c.post_id = #{postId} AND c.status = 'ACTIVE'
-        ORDER BY c.created_at, c.id
+    <!-- 댓글 리스트 쿼리 -->
+    <select id="getCommentList" parameterType="CommunityCommentDTO" resultType="CommunityCommentDTO">
+        SELECT C.id, C.post_id, C.member_id, M.name AS author, C.content,
+               C.status, C.created_at, C.updated_at
+          FROM community_comment C, member M
+         WHERE C.member_id = M.id
+           AND C.post_id = #{postId}
+           AND C.status = 'ACTIVE'
+         ORDER BY C.created_at, C.id
     </select>
 
-    <insert id="insertComment" parameterType="org.ykk.jobbridge.dto.CommunityCommentDTO"
-            useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO community_comment (post_id, member_id, content, status)
-        VALUES (#{postId}, #{memberId}, #{content}, 'ACTIVE')
+    <!-- 댓글 등록 쿼리 -->
+    <insert id="insertCommentInfo" parameterType="CommunityCommentDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO community_comment
+            (
+                post_id, member_id, content, status
+            )
+        VALUES (
+            #{postId}, #{memberId}, #{content}, 'ACTIVE'
+        )
     </insert>
 
-    <update id="deleteComment">
-        UPDATE community_comment
-        SET status = 'DELETED', updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{id} AND member_id = #{memberId} AND status = 'ACTIVE'
+    <!-- 댓글 삭제 쿼리 : 본인 댓글만 삭제 -->
+    <update id="deleteCommentInfo" parameterType="CommunityCommentDTO">
+        UPDATE community_comment SET
+            status = 'DELETED',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            id = #{id}
+            AND member_id = #{memberId}
+            AND status = 'ACTIVE'
     </update>
 
-    <select id="findReportsByMember" resultType="org.ykk.jobbridge.dto.CommunityReportDTO">
+    <!-- 로그인한 회원의 신고 내역 쿼리 -->
+    <select id="getReportList" parameterType="CommunityReportDTO" resultType="CommunityReportDTO">
         SELECT id, post_id, reporter_member_id, reason, detail, status, created_at
-        FROM community_report
-        WHERE post_id = #{postId} AND reporter_member_id = #{memberId}
+          FROM community_report
+         WHERE post_id = #{postId}
+           AND reporter_member_id = #{reporterMemberId}
     </select>
 
-    <select id="countReport" resultType="int">
-        SELECT COUNT(*) FROM community_report
-        WHERE post_id = #{postId} AND reporter_member_id = #{memberId}
+    <!-- 이미 신고했는지 체크 쿼리 -->
+    <select id="getReportExists" parameterType="CommunityReportDTO" resultType="CommunityReportDTO">
+        SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS EXISTS_YN
+          FROM community_report
+         WHERE post_id = #{postId}
+           AND reporter_member_id = #{reporterMemberId}
     </select>
 
-    <insert id="insertReport" parameterType="org.ykk.jobbridge.dto.CommunityReportDTO"
-            useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO community_report (post_id, reporter_member_id, reason, detail, status)
-        VALUES (#{postId}, #{reporterMemberId}, #{reason}, #{detail}, 'PENDING')
+    <!-- 게시글 신고 등록 쿼리 -->
+    <insert id="insertReportInfo" parameterType="CommunityReportDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO community_report
+            (
+                post_id, reporter_member_id, reason, detail, status
+            )
+        VALUES (
+            #{postId}, #{reporterMemberId}, #{reason}, #{detail}, 'PENDING'
+        )
     </insert>
+
 </mapper>

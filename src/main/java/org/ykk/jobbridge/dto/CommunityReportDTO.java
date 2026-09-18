@@ -1,28 +1,23 @@
 package org.ykk.jobbridge.dto;
 
-import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * COMMUNITY_REPORT 테이블(게시글 신고)과 매핑되는 DTO
+ */
+@Getter
+@Setter
 public class CommunityReportDTO {
-    private Long id;
-    private Long postId;
-    private Long reporterMemberId;
-    private String reason;
-    private String detail;
-    private String status;
-    private LocalDateTime createdAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getPostId() { return postId; }
-    public void setPostId(Long postId) { this.postId = postId; }
-    public Long getReporterMemberId() { return reporterMemberId; }
-    public void setReporterMemberId(Long reporterMemberId) { this.reporterMemberId = reporterMemberId; }
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
-    public String getDetail() { return detail; }
-    public void setDetail(String detail) { this.detail = detail; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    private Long id; // 기본키
+    private Long postId; // 게시글 번호
+    private Long reporterMemberId; // 신고자 회원 고유번호
+    private String reason; // 신고 사유
+    private String detail; // 상세 내용
+    private String status; // 처리 상태(PENDING 등)
+    private String createdAt; // 신고일
+
+    private String existsYn; // 이미 신고했는지 여부(Y/N)
+
 }

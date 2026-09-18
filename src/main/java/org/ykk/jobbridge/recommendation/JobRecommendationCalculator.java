@@ -1,533 +1,328 @@
 package org.ykk.jobbridge.recommendation;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.ykk.jobbridge.dto.AiJobRecommendationDTO;
 import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
+import org.ykk.jobbridge.recommendation.IAiJobMatchService.JobMatchAssessment;
+import org.ykk.jobbridge.recommendation.KakaoMapDistanceService.DrivingRoute;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import static org.ykk.jobbridge.util.NumberUtils.clamp;
+import static org.ykk.jobbridge.util.NumberUtils.zeroIfNull;
+import static org.ykk.jobbridge.util.TextUtils.compact;
+import static org.ykk.jobbridge.util.TextUtils.firstNumber;
+import static org.ykk.jobbridge.util.TextUtils.isBlank;
+import static org.ykk.jobbridge.util.TextUtils.isUnrestricted;
+import static org.ykk.jobbridge.util.TextUtils.nullToEmpty;
+import static org.ykk.jobbridge.util.TextUtils.toCode;
+
+/**
+ * 구직자 프로필과 채용공고를 비교해 100점 만점의 추천 점수를 만든다.
+ * <pre>
+ *   직무·기술  30점  생성형 AI, 실패 시 키워드 규칙
+ *   지역·출퇴근 15점  카카오 길찾기, 실패 시 행정구역 비교 ({@link KoreaRegions})
+ *   고용형태   10점
+ *   경력      10점
+ *   급여      10점
+ *   근무방식   10점
+ *   접근성    15점
+ * </pre>
+ * 각 항목의 근거 문장은 {@link MatchNotes}에 모아 추천 문구로 만든다.
+ * 프로필에 해당 조건이 없으면 근거 없이 기본 점수만 준다.
+ */
+@Slf4j
 @Component
 public class JobRecommendationCalculator {
 
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+)");
-    private static final int JOB_POINTS = 25;
-    private static final int REGION_POINTS = 20;
-    private static final int EMPLOYMENT_POINTS = 10;
-    private static final int CAREER_POINTS = 10;
-    private static final int SALARY_POINTS = 15;
-    private static final int WORK_STYLE_POINTS = 10;
-    private static final int ACCESSIBILITY_POINTS = 10;
-    private static final Map<String, Set<String>> NEARBY_REGIONS = createNearbyRegions();
-    private static final Map<String, Coordinate> SEOUL_DISTRICT_COORDINATES = createSeoulDistrictCoordinates();
-    private final KakaoMapDistanceService mapDistanceService;
+    static final int JOB_FIT_POINTS = 30;
+    static final int REGION_POINTS = 15;
+    static final int EMPLOYMENT_TYPE_POINTS = 10;
+    static final int CAREER_POINTS = 10;
+    static final int SALARY_POINTS = 10;
+    static final int WORK_STYLE_POINTS = 10;
+    static final int ACCESSIBILITY_POINTS = 15;
 
-    public JobRecommendationCalculator(KakaoMapDistanceService mapDistanceService) {
+    /** AI 직무 점수가 이 값 이상이면 "잘 맞는 점"으로 기록한다. */
+    private static final int AI_MATCH_THRESHOLD = 18;
+
+    /** 화면에서 쓰는 한글 표기와 옛 코드를 표준 고용형태 코드로 맞춘다. */
+    private static final Map<String, String> EMPLOYMENT_TYPE_ALIASES = Map.of(
+            "INTERNSHIP", "INTERN",
+            "정규직", "FULL_TIME",
+            "계약직", "CONTRACT",
+            "인턴", "INTERN",
+            "아르바이트", "PART_TIME",
+            "파트타임", "PART_TIME");
+
+    /** 정규직과 계약직은 서로 비슷한 상시 고용형태로 본다. */
+    private static final Set<String> REGULAR_EMPLOYMENT_TYPES = Set.of("FULL_TIME", "CONTRACT");
+
+    private final KakaoMapDistanceService mapDistanceService;
+    private final IAiJobMatchService aiJobMatchService;
+
+    // 카카오 길찾기 서비스와 AI 직무 평가 서비스는 스프링이 생성자를 통해 주입함
+    public JobRecommendationCalculator(KakaoMapDistanceService mapDistanceService,
+                                       IAiJobMatchService aiJobMatchService) {
         this.mapDistanceService = mapDistanceService;
+        this.aiJobMatchService = aiJobMatchService;
     }
 
     public AiJobRecommendationDTO calculate(Long memberId,
                                              JobSeekerProfileDTO profile,
                                              JobPostingDTO job) {
-        List<String> matches = new ArrayList<>();
-        List<String> mismatches = new ArrayList<>();
 
-        int jobScore = limitScore(jobScore(profile, job, matches, mismatches), JOB_POINTS);
-        int regionScore = limitScore(regionScore(profile.getResidenceRegion(), profile.getDesiredRegion(),
-                job.getLocation(), matches, mismatches), REGION_POINTS);
-        int employmentScore = limitScore(employmentScore(profile, job, matches, mismatches), EMPLOYMENT_POINTS);
-        int careerScore = limitScore(careerScore(profile, job, matches, mismatches), CAREER_POINTS);
-        int salaryScore = limitScore(salaryScore(profile, job, matches, mismatches), SALARY_POINTS);
-        int workStyleScore = limitScore(workStyleScore(profile, job, matches, mismatches), WORK_STYLE_POINTS);
-        int accessibilityScore = limitScore(accessibilityScore(profile, job, matches, mismatches), ACCESSIBILITY_POINTS);
+        log.info(this.getClass().getName() + ".calculate Start! (jobId : " + job.getId() + ")");
+
+        MatchNotes notes = new MatchNotes();
+        JobMatchAssessment jobFit = jobFitScore(profile, job, notes);
 
         AiJobRecommendationDTO result = new AiJobRecommendationDTO();
         result.setMemberId(memberId);
         result.setJobId(job.getId());
-        result.setJobScore(jobScore);
-        result.setRegionScore(regionScore);
-        result.setEmploymentTypeScore(employmentScore);
-        result.setCareerScore(careerScore);
-        result.setSalaryScore(salaryScore);
-        result.setWorkStyleScore(workStyleScore);
-        result.setAccessibilityScore(accessibilityScore);
-        result.setTotalScore(Math.min(100, jobScore + regionScore + employmentScore + careerScore
-                + salaryScore + workStyleScore + accessibilityScore));
-        result.setRecommendationReason(matches.isEmpty() ? "일치하는 조건이 아직 없습니다." : String.join(", ", matches));
-        result.setMismatchReason(mismatches.isEmpty() ? "없음" : String.join(", ", mismatches));
         result.setJob(job);
+
+        result.setJobScore(jobFit.score());
+        result.setJobMatchSource(jobFit.source());
+        result.setJobMatchReason(jobFit.reason());
+        result.setRegionScore(regionScore(profile, job, notes));
+        result.setEmploymentTypeScore(employmentTypeScore(profile, job, notes));
+        result.setCareerScore(careerScore(profile, job, notes));
+        result.setSalaryScore(salaryScore(profile, job, notes));
+        result.setWorkStyleScore(workStyleScore(profile, job, notes));
+        result.setAccessibilityScore(accessibilityScore(profile, job, notes));
+
+        result.setTotalScore(result.getJobScore() + result.getRegionScore()
+                + result.getEmploymentTypeScore() + result.getCareerScore() + result.getSalaryScore()
+                + result.getWorkStyleScore() + result.getAccessibilityScore());
+        result.setRecommendationReason(notes.recommendationReason());
+        result.setMismatchReason(notes.mismatchReason());
+
+        log.info("jobId : " + job.getId() + " / totalScore : " + result.getTotalScore());
+
         return result;
     }
 
-    private int jobScore(JobSeekerProfileDTO profile, JobPostingDTO job,
-                         List<String> matches, List<String> mismatches) {
+    // ------------------------------------------------------------ 직무·기술 (30점)
+
+    /** 생성형 AI 평가가 우선이고, 실패하면 희망 직무 키워드 규칙으로 계산한다. */
+    private JobMatchAssessment jobFitScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        Optional<JobMatchAssessment> ai = aiJobMatchService.assess(profile, job);
+        if (ai.isPresent()) {
+            JobMatchAssessment assessment = ai.get();
+            int score = clamp(assessment.score(), 0, JOB_FIT_POINTS);
+            notes.note(score >= AI_MATCH_THRESHOLD,
+                    "직무 적합성: " + assessment.reason(),
+                    "AI 직무 분석: " + assessment.reason() + " (" + score + "/" + JOB_FIT_POINTS + "점)",
+                    score);
+            return new JobMatchAssessment(score, assessment.reason(), assessment.source());
+        }
+
+        int score = keywordJobFitScore(profile, job, notes);
+        return new JobMatchAssessment(score, "키워드 규칙으로 직무 적합도를 계산했습니다.", "RULE_FALLBACK");
+    }
+
+    private static int keywordJobFitScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String desiredJob = profile.getDesiredJob();
-        if (unrestricted(desiredJob)) {
-            matches.add("희망 직무 미입력: 기본 13/25점");
-            return 13;
+        if (isUnrestricted(desiredJob)) return 0;
+
+        String jobText = compact(String.join(" ",
+                nullToEmpty(job.getTitle()), nullToEmpty(job.getJobCategory()),
+                nullToEmpty(job.getRequirements()), nullToEmpty(job.getDescription())));
+        String desired = compact(desiredJob);
+        String category = compact(job.getJobCategory());
+        if (jobText.contains(desired) || (!category.isBlank() && desired.contains(category))) {
+            return notes.match("희망 직무와 매우 유사", JOB_FIT_POINTS, JOB_FIT_POINTS);
         }
 
-        String candidate = normalize(String.join(" ", safe(job.getTitle()), safe(job.getJobCategory()),
-                safe(job.getRequirements()), safe(job.getDescription())));
-        String desired = normalize(desiredJob);
-        String category = normalize(job.getJobCategory());
-        if (candidate.contains(desired) || (!category.isBlank() && desired.contains(category))) {
-            matches.add("희망 직무와 매우 유사: 25/25점");
-            return JOB_POINTS;
-        }
+        List<String> keywords = keywords(desiredJob);
+        long matched = keywords.stream().filter(jobText::contains).count();
+        if (matched == 0) return notes.mismatch("희망 직무와 관련 키워드가 적음", 2, JOB_FIT_POINTS);
 
-        List<String> tokens = meaningfulTokens(desiredJob);
-        int matched = 0;
-        for (String token : tokens) {
-            if (candidate.contains(token)) matched++;
-        }
-        if (matched > 0) {
-            int score = Math.min(23, 5 + (int) Math.round(18.0 * matched / tokens.size()));
-            matches.add("희망 직무 키워드 " + matched + "/" + tokens.size() + "개 일치: " + score + "/25점");
-            return score;
-        }
-        mismatches.add("희망 직무와 관련 키워드가 적음: 2/25점");
-        return 2;
+        int score = Math.min(28, 6 + (int) Math.round(22.0 * matched / keywords.size()));
+        return notes.note(true, "희망 직무 관련 키워드가 일부 일치",
+                "희망 직무 키워드 " + matched + "/" + keywords.size() + "개 일치: " + score + "/" + JOB_FIT_POINTS + "점",
+                score);
     }
 
-    private int regionScore(String residenceAddress, String desiredRegion, String jobRegion,
-                            List<String> matches, List<String> mismatches) {
-        String originAddress = unrestricted(residenceAddress) ? desiredRegion : residenceAddress;
-        if (unrestricted(originAddress)) {
-            matches.add("현재 거주지 미입력: 기본 10/20점");
-            return 10;
+    /** 희망 직무를 2글자 이상 단어로 쪼갠다. 예: "Java 백엔드 개발자" → [java, 백엔드, 개발자] */
+    private static List<String> keywords(String desiredJob) {
+        List<String> keywords = new ArrayList<>();
+        for (String token : desiredJob.split("[\\s,/|]+")) {
+            String word = compact(token);
+            if (word.length() >= 2) keywords.add(word);
         }
-        if (jobRegion == null || jobRegion.isBlank()) {
-            mismatches.add("공고의 근무지역 정보 없음: 5/20점");
-            return 5;
-        }
-
-        java.util.Optional<KakaoMapDistanceService.RouteInfo> route =
-                mapDistanceService.findDrivingRoute(originAddress, jobRegion);
-        if (route.isPresent()) {
-            return drivingRouteScore(route.get(), matches, mismatches);
-        }
-
-        int bestScore = 0;
-        String bestReason = "";
-        for (String desired : originAddress.split("[,/|]")) {
-            RegionResult result = compareRegion(desired.trim(), jobRegion.trim());
-            if (result.score > bestScore) {
-                bestScore = result.score;
-                bestReason = result.reason;
-            }
-        }
-        if (bestScore >= 14) matches.add(bestReason);
-        else mismatches.add(bestReason);
-        return bestScore;
+        if (keywords.isEmpty()) keywords.add(compact(desiredJob));
+        return keywords;
     }
 
-    private int drivingRouteScore(KakaoMapDistanceService.RouteInfo route,
-                                  List<String> matches, List<String> mismatches) {
-        int minutes = Math.max(1, (int) Math.round(route.getDurationSeconds() / 60.0));
-        double kilometers = route.getDistanceMeters() / 1000.0;
+    // ------------------------------------------------------------ 지역·출퇴근 (15점)
+
+    /** 카카오 길찾기 소요 시간이 우선이고, 실패하면 행정구역 이름으로 비교한다. */
+    private int regionScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        // 거주지가 있으면 거주지, 없으면 희망 지역을 출발지로 본다.
+        String origin = isUnrestricted(profile.getResidenceRegion())
+                ? profile.getDesiredRegion() : profile.getResidenceRegion();
+        if (isUnrestricted(origin)) return 0;
+
+        String destination = job.getLocation();
+        if (isBlank(destination)) return notes.mismatch("공고의 근무지역 정보 없음", 4, REGION_POINTS);
+
+        Optional<DrivingRoute> route = mapDistanceService.findDrivingRoute(origin, destination);
+        if (route.isPresent()) return drivingScore(route.get(), notes);
+
+        // 희망 지역이 "서울, 경기"처럼 여러 개면 가장 높은 점수를 쓴다.
+        KoreaRegions.Match best = Arrays.stream(origin.split("[,/|]"))
+                .map(desired -> KoreaRegions.compare(desired.trim(), destination.trim()))
+                .max(Comparator.comparingInt(KoreaRegions.Match::score))
+                .orElseThrow();
+        return notes.note(best.score() >= 11, best.label(), best.score(), REGION_POINTS);
+    }
+
+    private static int drivingScore(DrivingRoute route, MatchNotes notes) {
+        int minutes = route.minutes();
         int score;
-        if (minutes <= 20) score = 20;
-        else if (minutes <= 30) score = 18;
-        else if (minutes <= 45) score = 15;
-        else if (minutes <= 60) score = 12;
-        else if (minutes <= 90) score = 8;
-        else score = 3;
+        if (minutes <= 20) score = 15;
+        else if (minutes <= 30) score = 14;
+        else if (minutes <= 45) score = 11;
+        else if (minutes <= 60) score = 9;
+        else if (minutes <= 90) score = 6;
+        else score = 2;
 
-        String reason = String.format(Locale.ROOT,
-                "현재 거주지에서 자동차 약 %d분(%.1fkm): %d/20점", minutes, kilometers, score);
-        if (score >= 12) matches.add(reason);
-        else mismatches.add(reason);
-        return score;
+        String label = String.format(Locale.ROOT,
+                "현재 거주지에서 자동차 약 %d분(%.1fkm)", minutes, route.kilometers());
+        return notes.note(score >= 9, label, score, REGION_POINTS);
     }
 
-    private RegionResult compareRegion(String desired, String actual) {
-        String normalizedDesired = normalizeRegion(desired);
-        String normalizedActual = normalizeRegion(actual);
-        if (normalizedDesired.equals(normalizedActual)) {
-            return new RegionResult(20, "희망 지역과 정확히 일치: 20/20점");
-        }
-        if (normalizedActual.contains(normalizedDesired) || normalizedDesired.contains(normalizedActual)) {
-            return new RegionResult(20, "희망 지역 범위에 포함: 20/20점");
-        }
+    // ------------------------------------------------------------ 고용형태 (10점)
 
-        RegionResult distanceResult = compareSeoulDistrictDistance(desired, actual);
-        if (distanceResult != null) {
-            return distanceResult;
-        }
+    private static int employmentTypeScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        String preferred = employmentTypeCode(profile.getEmploymentType());
+        String offered = employmentTypeCode(job.getEmploymentType());
+        if (isUnrestricted(preferred)) return 6;
 
-        Set<String> desiredTokens = regionTokens(desired);
-        Set<String> actualTokens = regionTokens(actual);
-        Set<String> common = new HashSet<>(desiredTokens);
-        common.retainAll(actualTokens);
-        String desiredProvince = province(desired);
-        String actualProvince = province(actual);
-
-        if (!common.isEmpty() && (!common.equals(Set.of(desiredProvince)) || desiredProvince.isBlank())) {
-            return new RegionResult(18, "같은 시·군·구 지역: 18/20점");
-        }
-        if (!desiredProvince.isBlank() && desiredProvince.equals(actualProvince)) {
-            return new RegionResult(14, "같은 광역지역: 14/20점");
-        }
-        if (isNearby(desiredProvince, actualProvince)) {
-            return new RegionResult(8, "인접한 광역지역: 8/20점");
-        }
-        return new RegionResult(2, "희망 지역과 거리가 먼 지역: 2/20점");
-    }
-
-    private int employmentScore(JobSeekerProfileDTO profile, JobPostingDTO job,
-                                List<String> matches, List<String> mismatches) {
-        String preferred = employmentCode(profile.getEmploymentType());
-        String offered = employmentCode(job.getEmploymentType());
-        if (unrestricted(preferred)) {
-            matches.add("고용형태 미선택: 기본 6/10점");
-            return 6;
-        }
         if (preferred.equals(offered)) {
-            matches.add("희망 고용형태 일치: 10/10점");
-            return EMPLOYMENT_POINTS;
+            return notes.match("희망 고용형태 일치", EMPLOYMENT_TYPE_POINTS, EMPLOYMENT_TYPE_POINTS);
         }
-        if (isRegularEmployment(preferred) && isRegularEmployment(offered)) {
-            mismatches.add("비슷한 상시 고용형태: 5/10점");
-            return 5;
+        if (REGULAR_EMPLOYMENT_TYPES.contains(preferred) && REGULAR_EMPLOYMENT_TYPES.contains(offered)) {
+            return notes.mismatch("비슷한 상시 고용형태", 5, EMPLOYMENT_TYPE_POINTS);
         }
-        mismatches.add("희망 고용형태와 다름: 1/10점");
-        return 1;
+        return notes.mismatch("희망 고용형태와 다름", 1, EMPLOYMENT_TYPE_POINTS);
     }
 
-    private int careerScore(JobSeekerProfileDTO profile, JobPostingDTO job,
-                            List<String> matches, List<String> mismatches) {
-        String preferred = normalizeCode(profile.getCareerType());
-        String required = normalizeCode(job.getExperienceLevel());
-        if (unrestricted(preferred)) {
-            matches.add("경력 조건 미선택: 기본 6/10점");
-            return 6;
-        }
-        if (unrestricted(required)) {
-            matches.add("공고가 경력 무관: 10/10점");
-            return CAREER_POINTS;
-        }
+    private static String employmentTypeCode(String value) {
+        String code = toCode(value);
+        return EMPLOYMENT_TYPE_ALIASES.getOrDefault(code, code);
+    }
+
+    // ------------------------------------------------------------ 경력 (10점)
+
+    private static int careerScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        String preferred = toCode(profile.getCareerType());
+        String required = toCode(job.getExperienceLevel());
+        if (isUnrestricted(preferred)) return 6;
+        if (isUnrestricted(required)) return notes.match("공고가 경력 무관", CAREER_POINTS, CAREER_POINTS);
+
         if ("ENTRY".equals(preferred)) {
-            if (containsAny(required, "ENTRY", "NEWCOMER", "신입")) {
-                matches.add("신입 지원 조건 일치: 10/10점");
-                return CAREER_POINTS;
-            }
-            mismatches.add("경력직 공고: 2/10점");
-            return 2;
+            boolean acceptsEntry = Stream.of("ENTRY", "NEWCOMER", "신입").anyMatch(required::contains);
+            return acceptsEntry
+                    ? notes.match("신입 지원 조건 일치", CAREER_POINTS, CAREER_POINTS)
+                    : notes.mismatch("경력직 공고", 2, CAREER_POINTS);
         }
 
-        int ownedYears = profile.getCareerYears() == null ? 0 : profile.getCareerYears();
         Integer requiredYears = firstNumber(job.getExperienceLevel());
-        if (requiredYears == null) {
-            matches.add("경력직 조건과 유형 일치: 8/10점");
-            return 8;
-        }
-        int difference = requiredYears - ownedYears;
-        if (difference <= 0) {
-            matches.add("요구 경력 충족: 10/10점");
-            return CAREER_POINTS;
-        }
-        if (difference == 1) {
-            mismatches.add("요구 경력보다 1년 부족: 7/10점");
-            return 7;
-        }
-        if (difference <= 3) {
-            mismatches.add("요구 경력보다 " + difference + "년 부족: 4/10점");
-            return 4;
-        }
-        mismatches.add("요구 경력 차이가 큼: 1/10점");
-        return 1;
+        if (requiredYears == null) return notes.match("경력직 조건과 유형 일치", 8, CAREER_POINTS);
+
+        int shortage = requiredYears - zeroIfNull(profile.getCareerYears());
+        if (shortage <= 0) return notes.match("요구 경력 충족", CAREER_POINTS, CAREER_POINTS);
+        if (shortage == 1) return notes.mismatch("요구 경력보다 1년 부족", 7, CAREER_POINTS);
+        if (shortage <= 3) return notes.mismatch("요구 경력보다 " + shortage + "년 부족", 4, CAREER_POINTS);
+        return notes.mismatch("요구 경력 차이가 큼", 1, CAREER_POINTS);
     }
 
-    private int salaryScore(JobSeekerProfileDTO profile, JobPostingDTO job,
-                            List<String> matches, List<String> mismatches) {
+    // ------------------------------------------------------------ 급여 (10점)
+
+    /** 공고 최대 급여(없으면 최소 급여)가 희망 급여의 몇 %인지로 계산한다. */
+    private static int salaryScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         Integer desired = profile.getMinSalary();
-        if (desired == null || desired <= 0) {
-            matches.add("희망 급여 미입력: 기본 8/15점");
-            return 8;
-        }
+        if (desired == null || desired <= 0) return 5;
+
         Integer offered = job.getSalaryMax() != null ? job.getSalaryMax() : job.getSalaryMin();
-        if (offered == null || offered <= 0) {
-            mismatches.add("공고의 급여 정보 없음: 6/15점");
-            return 6;
-        }
+        if (offered == null || offered <= 0) return notes.mismatch("공고의 급여 정보 없음", 4, SALARY_POINTS);
+
         double ratio = offered / (double) desired;
-        if (ratio >= 1.0) {
-            matches.add("희망 급여 충족: 15/15점");
-            return SALARY_POINTS;
+        if (ratio >= 1.0) return notes.match("희망 급여 충족", SALARY_POINTS, SALARY_POINTS);
+
+        int score;
+        if (ratio >= 0.9) score = 8;
+        else if (ratio >= 0.8) score = 6;
+        else if (ratio >= 0.7) score = 4;
+        else score = 2;
+        return notes.mismatch("희망 급여 " + desired + "만원 대비 " + offered + "만원", score, SALARY_POINTS);
+    }
+
+    // ------------------------------------------------------------ 근무방식 (10점) · 접근성 (15점)
+
+    /** 구직자가 선택한 근무방식 중 공고가 지원하는 비율로 계산한다. */
+    private static int workStyleScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        boolean remote = Boolean.TRUE.equals(job.getRemoteAvailable());
+        boolean flexible = Boolean.TRUE.equals(job.getFlexibleWorkAvailable());
+        return checklistScore(notes, WORK_STYLE_POINTS, 5,
+                new Check(profile.getRemotePreferred(), remote, "재택근무"),
+                new Check(profile.getFlexiblePreferred(), flexible, "유연근무"),
+                new Check(profile.getHybridPreferred(), remote || flexible, "하이브리드 근무"),
+                new Check(profile.getOnsitePreferred(), !remote, "출근 근무"));
+    }
+
+    /** 구직자가 필수로 표시한 편의시설 중 공고가 지원하는 비율로 계산한다. */
+    private static int accessibilityScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        return checklistScore(notes, ACCESSIBILITY_POINTS, 8,
+                new Check(profile.getWheelchairRequired(), job.getWheelchairAccessible(), "휠체어 접근"),
+                new Check(profile.getAccessibleRestroomRequired(), job.getAccessibleRestroom(), "장애인 화장실"),
+                new Check(profile.getDisabledParkingRequired(), job.getDisabledParking(), "장애인 주차"),
+                new Check(profile.getAssistiveDeviceRequired(), job.getAssistiveDeviceSupport(), "보조공학기기"));
+    }
+
+    /** "구직자가 원하는 조건(wanted)을 공고가 지원하는가(supported)" 확인 항목 하나. */
+    private record Check(Boolean wanted, Boolean supported, String label) {
+
+        boolean isWanted() {
+            return Boolean.TRUE.equals(wanted);
         }
-        if (ratio >= 0.9) return salaryPartial(12, offered, desired, mismatches);
-        if (ratio >= 0.8) return salaryPartial(9, offered, desired, mismatches);
-        if (ratio >= 0.7) return salaryPartial(6, offered, desired, mismatches);
-        return salaryPartial(2, offered, desired, mismatches);
-    }
 
-    private int salaryPartial(int score, int offered, int desired, List<String> mismatches) {
-        mismatches.add("희망 급여 " + desired + "만원 대비 " + offered + "만원: " + score + "/15점");
-        return score;
-    }
-
-    private int workStyleScore(JobSeekerProfileDTO profile, JobPostingDTO job,
-                               List<String> matches, List<String> mismatches) {
-        List<Boolean> results = new ArrayList<>();
-        addCondition(profile.getRemotePreferred(), job.getRemoteAvailable(), "재택근무", results, matches, mismatches);
-        addCondition(profile.getFlexiblePreferred(), job.getFlexibleWorkAvailable(), "유연근무", results, matches, mismatches);
-        addCondition(profile.getHybridPreferred(), Boolean.TRUE.equals(job.getRemoteAvailable())
-                || Boolean.TRUE.equals(job.getFlexibleWorkAvailable()), "하이브리드 근무", results, matches, mismatches);
-        addCondition(profile.getOnsitePreferred(), !Boolean.TRUE.equals(job.getRemoteAvailable()), "출근 근무", results, matches, mismatches);
-        if (results.isEmpty()) {
-            matches.add("근무방식 미선택: 기본 5/10점");
-            return 5;
-        }
-        int score = proportionalScore(WORK_STYLE_POINTS, results);
-        return score;
-    }
-
-    private int accessibilityScore(JobSeekerProfileDTO profile, JobPostingDTO job,
-                                   List<String> matches, List<String> mismatches) {
-        List<Boolean> results = new ArrayList<>();
-        addCondition(profile.getWheelchairRequired(), job.getWheelchairAccessible(), "휠체어 접근", results, matches, mismatches);
-        addCondition(profile.getAccessibleRestroomRequired(), job.getAccessibleRestroom(), "장애인 화장실", results, matches, mismatches);
-        addCondition(profile.getDisabledParkingRequired(), job.getDisabledParking(), "장애인 주차", results, matches, mismatches);
-        addCondition(profile.getAssistiveDeviceRequired(), job.getAssistiveDeviceSupport(), "보조공학기기", results, matches, mismatches);
-        if (results.isEmpty()) {
-            matches.add("필수 접근성 조건 미선택: 기본 5/10점");
-            return 5;
-        }
-        return proportionalScore(ACCESSIBILITY_POINTS, results);
-    }
-
-    private void addCondition(Boolean selected, Boolean supported, String label,
-                              List<Boolean> results, List<String> matches, List<String> mismatches) {
-        if (!Boolean.TRUE.equals(selected)) return;
-        boolean matched = Boolean.TRUE.equals(supported);
-        results.add(matched);
-        if (matched) matches.add(label + " 조건 충족");
-        else mismatches.add(label + " 조건 미지원");
-    }
-
-    private int proportionalScore(int maximum, List<Boolean> results) {
-        int matched = 0;
-        for (Boolean result : results) if (Boolean.TRUE.equals(result)) matched++;
-        return (int) Math.round(maximum * matched / (double) results.size());
-    }
-
-    private int limitScore(int score, int maximum) {
-        return Math.max(0, Math.min(score, maximum));
-    }
-
-    private RegionResult compareSeoulDistrictDistance(String desired, String actual) {
-        if (!isSeoul(desired) || !isSeoul(actual)) return null;
-
-        Coordinate desiredCoordinate = findSeoulDistrictCoordinate(desired);
-        Coordinate actualCoordinate = findSeoulDistrictCoordinate(actual);
-        if (desiredCoordinate == null || actualCoordinate == null) return null;
-
-        double distanceKm = distanceKm(desiredCoordinate, actualCoordinate);
-        int score = limitScore((int) Math.round(20 - distanceKm * 0.3), REGION_POINTS);
-        score = Math.max(8, score);
-        String reason = String.format(Locale.ROOT,
-                "희망 지역과 약 %.1fkm 거리: %d/20점", distanceKm, score);
-        return new RegionResult(score, reason);
-    }
-
-    private boolean isSeoul(String region) {
-        String normalized = normalize(region);
-        return normalized.contains("서울") || SEOUL_DISTRICT_COORDINATES.keySet().stream()
-                .anyMatch(normalized::contains);
-    }
-
-    private Coordinate findSeoulDistrictCoordinate(String region) {
-        String normalized = normalize(region);
-        for (Map.Entry<String, Coordinate> entry : SEOUL_DISTRICT_COORDINATES.entrySet()) {
-            if (normalized.contains(normalize(entry.getKey()))) return entry.getValue();
-        }
-        return null;
-    }
-
-    private double distanceKm(Coordinate first, Coordinate second) {
-        double earthRadiusKm = 6371.0;
-        double latitudeDistance = Math.toRadians(second.latitude - first.latitude);
-        double longitudeDistance = Math.toRadians(second.longitude - first.longitude);
-        double firstLatitude = Math.toRadians(first.latitude);
-        double secondLatitude = Math.toRadians(second.latitude);
-        double haversine = Math.sin(latitudeDistance / 2) * Math.sin(latitudeDistance / 2)
-                + Math.cos(firstLatitude) * Math.cos(secondLatitude)
-                * Math.sin(longitudeDistance / 2) * Math.sin(longitudeDistance / 2);
-        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
-    }
-
-    private static Map<String, Coordinate> createSeoulDistrictCoordinates() {
-        Map<String, Coordinate> coordinates = new HashMap<>();
-        coordinates.put("종로구", new Coordinate(37.5735, 126.9790));
-        coordinates.put("중구", new Coordinate(37.5641, 126.9979));
-        coordinates.put("용산구", new Coordinate(37.5326, 126.9900));
-        coordinates.put("성동구", new Coordinate(37.5633, 127.0369));
-        coordinates.put("광진구", new Coordinate(37.5385, 127.0823));
-        coordinates.put("동대문구", new Coordinate(37.5744, 127.0396));
-        coordinates.put("중랑구", new Coordinate(37.6063, 127.0927));
-        coordinates.put("성북구", new Coordinate(37.5894, 127.0167));
-        coordinates.put("강북구", new Coordinate(37.6398, 127.0255));
-        coordinates.put("도봉구", new Coordinate(37.6688, 127.0471));
-        coordinates.put("노원구", new Coordinate(37.6542, 127.0568));
-        coordinates.put("은평구", new Coordinate(37.6027, 126.9291));
-        coordinates.put("서대문구", new Coordinate(37.5791, 126.9368));
-        coordinates.put("마포구", new Coordinate(37.5663, 126.9019));
-        coordinates.put("양천구", new Coordinate(37.5170, 126.8666));
-        coordinates.put("강서구", new Coordinate(37.5509, 126.8496));
-        coordinates.put("구로구", new Coordinate(37.4955, 126.8874));
-        coordinates.put("금천구", new Coordinate(37.4569, 126.8955));
-        coordinates.put("영등포구", new Coordinate(37.5264, 126.8962));
-        coordinates.put("동작구", new Coordinate(37.5124, 126.9393));
-        coordinates.put("관악구", new Coordinate(37.4784, 126.9516));
-        coordinates.put("서초구", new Coordinate(37.4837, 127.0324));
-        coordinates.put("강남구", new Coordinate(37.5172, 127.0473));
-        coordinates.put("송파구", new Coordinate(37.5145, 127.1059));
-        coordinates.put("강동구", new Coordinate(37.5301, 127.1238));
-        return coordinates;
-    }
-
-    private boolean isRegularEmployment(String code) {
-        return "FULL_TIME".equals(code) || "CONTRACT".equals(code);
-    }
-
-    private String employmentCode(String value) {
-        String code = normalizeCode(value);
-        if ("INTERNSHIP".equals(code)) return "INTERN";
-        if ("정규직".equals(value)) return "FULL_TIME";
-        if ("계약직".equals(value)) return "CONTRACT";
-        if ("인턴".equals(value)) return "INTERN";
-        if ("아르바이트".equals(value) || "파트타임".equals(value)) return "PART_TIME";
-        return code;
-    }
-
-    private List<String> meaningfulTokens(String value) {
-        List<String> result = new ArrayList<>();
-        for (String token : value.split("[\\s,/|]+")) {
-            String normalized = normalize(token);
-            if (normalized.length() >= 2) result.add(normalized);
-        }
-        if (result.isEmpty()) result.add(normalize(value));
-        return result;
-    }
-
-    private String normalizeRegion(String value) {
-        return normalize(value)
-                .replace("특별자치도", "").replace("특별자치시", "")
-                .replace("특별시", "").replace("광역시", "")
-                .replace("경기도", "경기").replace("강원도", "강원")
-                .replace("충청북도", "충북").replace("충청남도", "충남")
-                .replace("전라북도", "전북").replace("전라남도", "전남")
-                .replace("경상북도", "경북").replace("경상남도", "경남")
-                .replace("제주도", "제주");
-    }
-
-    private Set<String> regionTokens(String value) {
-        String cleaned = value.replace("특별자치도", " ").replace("특별자치시", " ")
-                .replace("특별시", " ").replace("광역시", " ").replace("도", " ")
-                .replace("시", " ").replace("군", " ").replace("구", " ")
-                .replace("읍", " ").replace("면", " ").replace("동", " ");
-        Set<String> tokens = new HashSet<>();
-        for (String token : cleaned.split("\\s+")) {
-            String normalized = normalizeRegion(token);
-            if (!normalized.isBlank()) tokens.add(normalized);
-        }
-        String province = province(value);
-        if (!province.isBlank()) tokens.add(province);
-        return tokens;
-    }
-
-    private String province(String value) {
-        String normalized = normalizeRegion(value);
-        for (String region : Arrays.asList("서울", "경기", "인천", "강원", "충북", "충남", "대전", "세종",
-                "전북", "전남", "광주", "경북", "대구", "경남", "울산", "부산", "제주")) {
-            if (normalized.contains(region)) return region;
-        }
-        return "";
-    }
-
-    private boolean isNearby(String first, String second) {
-        if (first.isBlank() || second.isBlank()) return false;
-        return NEARBY_REGIONS.getOrDefault(first, Set.of()).contains(second);
-    }
-
-    private static Map<String, Set<String>> createNearbyRegions() {
-        Map<String, Set<String>> map = new HashMap<>();
-        connect(map, "서울", "경기", "인천");
-        connect(map, "경기", "인천", "강원", "충북", "충남");
-        connect(map, "강원", "충북", "경북");
-        connect(map, "충북", "충남", "대전", "세종", "경북");
-        connect(map, "충남", "대전", "세종", "전북");
-        connect(map, "대전", "세종", "전북");
-        connect(map, "전북", "전남", "광주", "경북", "경남");
-        connect(map, "전남", "광주", "경남");
-        connect(map, "경북", "대구", "울산", "경남");
-        connect(map, "대구", "경남");
-        connect(map, "경남", "울산", "부산");
-        connect(map, "울산", "부산");
-        return map;
-    }
-
-    private static void connect(Map<String, Set<String>> map, String first, String... others) {
-        for (String other : others) {
-            map.computeIfAbsent(first, key -> new HashSet<>()).add(other);
-            map.computeIfAbsent(other, key -> new HashSet<>()).add(first);
+        boolean isSupported() {
+            return Boolean.TRUE.equals(supported);
         }
     }
 
-    private String normalizeCode(String value) {
-        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
-    }
-
-    private String normalize(String value) {
-        return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
-    }
-
-    private boolean unrestricted(String value) {
-        return value == null || value.isBlank() || "ANY".equalsIgnoreCase(value.trim()) || "무관".equals(value.trim());
-    }
-
-    private boolean containsAny(String value, String... candidates) {
-        for (String candidate : candidates) if (value.contains(candidate)) return true;
-        return false;
-    }
-
-    private Integer firstNumber(String value) {
-        if (value == null) return null;
-        Matcher matcher = NUMBER_PATTERN.matcher(value);
-        return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;
-    }
-
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
-
-    private static class RegionResult {
-        private final int score;
-        private final String reason;
-
-        private RegionResult(int score, String reason) {
-            this.score = score;
-            this.reason = reason;
+    /**
+     * 구직자가 원하는 항목만 확인해 충족 비율 × 만점(반올림)을 돌려준다.
+     * 원하는 항목이 하나도 없으면 defaultScore.
+     */
+    private static int checklistScore(MatchNotes notes, int max, int defaultScore, Check... checks) {
+        int wanted = 0;
+        int satisfied = 0;
+        for (Check check : checks) {
+            if (!check.isWanted()) continue;
+            wanted++;
+            if (check.isSupported()) {
+                satisfied++;
+                notes.match(check.label() + " 조건 충족");
+            } else {
+                notes.mismatch(check.label() + " 조건 미지원");
+            }
         }
-    }
-
-    private static class Coordinate {
-        private final double latitude;
-        private final double longitude;
-
-        private Coordinate(double latitude, double longitude) {
-            this.latitude = latitude;
-            this.longitude = longitude;
-        }
+        if (wanted == 0) return defaultScore;
+        return (int) Math.round(max * satisfied / (double) wanted);
     }
 }

@@ -1,72 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- JAVA와 연결할 Mapper 파일 설정 -->
+<mapper namespace="org.ykk.jobbridge.mapper.ICompanyMapper">
 
-<mapper namespace="org.ykk.jobbridge.mapper.CompanyMapper">
-
-    <select id="countByLoginId" resultType="int">
-        SELECT COUNT(*)
-        FROM member
-        WHERE login_id = #{loginId}
+    <!-- 사업자등록번호 중복 체크 쿼리 -->
+    <select id="getBusinessNumberExists" parameterType="CompanyProfileDTO" resultType="CompanyProfileDTO">
+        SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS EXISTS_YN
+          FROM company_profile
+         WHERE business_number = #{businessNumber}
     </select>
 
-    <select id="countByEmail" resultType="int">
-        SELECT COUNT(*)
-        FROM member
-        WHERE email = #{email}
-    </select>
-
-    <select id="countByBusinessNumber" resultType="int">
-        SELECT COUNT(*)
-        FROM company_profile
-        WHERE business_number = #{businessNumber}
-    </select>
-
-    <insert id="insertMember"
-            parameterType="org.ykk.jobbridge.dto.CompanySignupDTO"
-            useGeneratedKeys="true"
-            keyProperty="id"
-            keyColumn="id">
-        INSERT INTO member (
-            login_id, password, name, birth_date, gender, email, phone, role, status
-        ) VALUES (
-            #{loginId}, #{password}, #{name}, NULL, NULL, #{email}, #{phone}, 'COMPANY', 'ACTIVE'
-        )
-    </insert>
-
-    <insert id="insertCompanyProfile"
-            parameterType="org.ykk.jobbridge.dto.CompanySignupDTO">
-        INSERT INTO company_profile (
-            member_id, company_name, business_number, representative_name,
-            industry, company_address, company_detail_address, company_phone,
-            website_url, logo_url, company_description, employee_count,
-            established_date, verification_status
-        ) VALUES (
-            #{id}, #{companyName}, #{businessNumber}, #{representativeName},
+    <!-- 기업정보 등록 쿼리 -->
+    <insert id="insertCompanyProfile" parameterType="CompanyProfileDTO">
+        INSERT INTO company_profile
+            (
+                member_id, company_name, business_number, representative_name,
+                industry, company_address, company_detail_address, company_phone,
+                website_url, logo_url, company_description, employee_count,
+                established_date, verification_status
+            )
+        VALUES (
+            #{memberId}, #{companyName}, #{businessNumber}, #{representativeName},
             #{industry}, #{companyAddress}, #{companyDetailAddress}, #{companyPhone},
             #{websiteUrl}, #{logoUrl}, #{companyDescription}, #{employeeCount},
-            #{establishedDate}, 'PENDING'
+            NULLIF(#{establishedDate}, ''), 'PENDING'
         )
     </insert>
 
-    <select id="findMemberByLoginId"
-            resultType="org.ykk.jobbridge.dto.MemberLoginResult">
-        SELECT id, login_id AS loginId, password, name, role, status
-        FROM member
-        WHERE login_id = #{loginId}
-    </select>
-
-    <select id="findProfileByMemberId"
-            resultType="org.ykk.jobbridge.dto.CompanyProfileDTO">
-        SELECT
-            id, member_id, company_name, business_number, representative_name,
-            industry, company_address, company_detail_address, company_phone,
-            website_url, logo_url, company_description, employee_count,
-            established_date, verification_status, created_at, updated_at
-        FROM company_profile
-        WHERE member_id = #{memberId}
+    <!-- 기업정보 조회 쿼리 : 회원정보와 JOIN 통해 담당자 아이디, 이름 가져오기 -->
+    <select id="getCompanyInfo" parameterType="CompanyProfileDTO" resultType="CompanyProfileDTO">
+        SELECT C.id, C.member_id, C.company_name, C.business_number, C.representative_name,
+               C.industry, C.company_address, C.company_detail_address, C.company_phone,
+               C.website_url, C.logo_url, C.company_description, C.employee_count,
+               C.established_date, C.verification_status, C.created_at, C.updated_at,
+               M.login_id, M.name, M.role
+          FROM company_profile C, member M
+         WHERE C.member_id = M.id
+           AND C.member_id = #{memberId}
     </select>
 
 </mapper>

@@ -14,6 +14,11 @@ CREATE TABLE IF NOT EXISTS member (
 CREATE TABLE IF NOT EXISTS job_seeker_profile (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL UNIQUE,
+    name VARCHAR(50),
+    birth_date DATE,
+    gender VARCHAR(20),
+    email VARCHAR(100),
+    phone VARCHAR(20),
     profile_image_url VARCHAR(1000),
     residence_region VARCHAR(100),
     desired_job VARCHAR(100),
@@ -38,36 +43,6 @@ CREATE TABLE IF NOT EXISTS job_seeker_profile (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_profile_member FOREIGN KEY (member_id) REFERENCES member(id)
-);
-
-CREATE TABLE IF NOT EXISTS interest_job (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id BIGINT NOT NULL,
-    company_name VARCHAR(100) NOT NULL,
-    title VARCHAR(200) NOT NULL,
-    job_category VARCHAR(100) NOT NULL,
-    employment_type VARCHAR(30) NOT NULL,
-    location VARCHAR(150) NOT NULL,
-    salary_min INT,
-    salary_max INT,
-    experience_level VARCHAR(50),
-    education_level VARCHAR(50),
-    description CLOB,
-    requirements CLOB,
-    preferred_qualifications CLOB,
-    accessibility_info CLOB,
-    wheelchair_accessible BOOLEAN DEFAULT FALSE,
-    accessible_restroom BOOLEAN DEFAULT FALSE,
-    disabled_parking BOOLEAN DEFAULT FALSE,
-    remote_available BOOLEAN DEFAULT FALSE,
-    flexible_work_available BOOLEAN DEFAULT FALSE,
-    assistive_device_support BOOLEAN DEFAULT FALSE,
-    deadline DATE,
-    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_interest_job_member FOREIGN KEY (member_id) REFERENCES member(id),
-    CONSTRAINT uk_interest_job_member_post UNIQUE (member_id, company_name, title)
 );
 
 CREATE TABLE IF NOT EXISTS job_posting (
@@ -99,12 +74,24 @@ CREATE TABLE IF NOT EXISTS job_posting (
     CONSTRAINT fk_job_posting_member FOREIGN KEY (company_member_id) REFERENCES member(id)
 );
 
+CREATE TABLE IF NOT EXISTS interest_job (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id BIGINT NOT NULL,
+    job_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_interest_job_member FOREIGN KEY (member_id) REFERENCES member(id),
+    CONSTRAINT fk_interest_job_posting FOREIGN KEY (job_id) REFERENCES job_posting(id) ON DELETE CASCADE,
+    CONSTRAINT uk_interest_job_member_post UNIQUE (member_id, job_id)
+);
+
 CREATE TABLE IF NOT EXISTS ai_job_posting_recommendation (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
     job_id BIGINT NOT NULL,
     total_score INT NOT NULL,
     job_score INT NOT NULL,
+    job_match_source VARCHAR(30) NOT NULL DEFAULT 'RULE_FALLBACK',
+    job_match_reason VARCHAR(1000) NOT NULL DEFAULT '',
     region_score INT NOT NULL,
     employment_score INT NOT NULL,
     career_score INT NOT NULL,
@@ -123,9 +110,7 @@ CREATE TABLE IF NOT EXISTS ai_job_posting_recommendation (
 CREATE TABLE IF NOT EXISTS job_application (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
-    job_id VARCHAR(50) NOT NULL,
-    company_name VARCHAR(100) NOT NULL,
-    job_title VARCHAR(200) NOT NULL,
+    job_id BIGINT NOT NULL,
     applicant_name VARCHAR(50) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     email VARCHAR(100) NOT NULL,
@@ -134,6 +119,7 @@ CREATE TABLE IF NOT EXISTS job_application (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_job_application_member FOREIGN KEY (member_id) REFERENCES member(id),
+    CONSTRAINT fk_job_application_job FOREIGN KEY (job_id) REFERENCES job_posting(id),
     CONSTRAINT uk_job_application_member_job UNIQUE (member_id, job_id)
 );
 

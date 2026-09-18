@@ -1,72 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="org.ykk.jobbridge.mapper.InterestJobMapper">
-    <select id="findAll" resultType="org.ykk.jobbridge.dto.InterestJobDTO">
-        SELECT id,
-               member_id,
-               company_name,
-               title,
-               job_category,
-               employment_type,
-               location,
-               salary_min,
-               salary_max,
-               experience_level,
-               education_level,
-               description,
-               requirements,
-               preferred_qualifications,
-               accessibility_info,
-               wheelchair_accessible,
-               accessible_restroom,
-               disabled_parking,
-               remote_available,
-               flexible_work_available,
-               assistive_device_support,
-               deadline,
-               status,
-               created_at,
-               updated_at
-        FROM interest_job
-        WHERE member_id = #{memberId}
-        ORDER BY created_at DESC, id DESC
+<mapper namespace="org.ykk.jobbridge.mapper.IInterestJobMapper">
+
+    <!-- interest_job에는 관계만 저장하고, 공고 정보는 항상 job_posting에서 조회한다. -->
+    <select id="getInterestJobList" parameterType="InterestJobDTO" resultType="InterestJobDTO">
+        SELECT I.id,
+               I.member_id,
+               I.job_id,
+               J.company_name,
+               J.title,
+               J.job_category,
+               J.employment_type,
+               J.location,
+               J.salary_min,
+               J.salary_max,
+               J.experience_level,
+               J.education_level,
+               J.description,
+               J.requirements,
+               J.preferred_qualifications,
+               J.accessibility_info,
+               J.wheelchair_accessible,
+               J.accessible_restroom,
+               J.disabled_parking,
+               J.remote_available,
+               J.flexible_work_available,
+               J.assistive_device_support,
+               J.deadline,
+               J.status,
+               I.created_at,
+               J.updated_at
+          FROM interest_job I
+          JOIN job_posting J ON J.id = I.job_id
+         WHERE I.member_id = #{memberId}
+         ORDER BY I.created_at DESC, I.id DESC
     </select>
 
-    <select id="countByCompanyAndTitle" resultType="int">
-        SELECT COUNT(*)
-        FROM interest_job
-        WHERE member_id = #{memberId}
-          AND company_name = #{companyName}
-          AND title = #{title}
+    <select id="getInterestJobExists" parameterType="InterestJobDTO" resultType="InterestJobDTO">
+        SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS EXISTS_YN
+          FROM interest_job
+         WHERE member_id = #{memberId}
+           AND job_id = #{jobId}
     </select>
 
-    <insert id="insert"
-            parameterType="org.ykk.jobbridge.dto.InterestJobDTO"
-            useGeneratedKeys="true"
-            keyProperty="id">
-        INSERT INTO interest_job
-        (member_id, company_name, title, job_category, employment_type, location,
-         salary_min, salary_max, experience_level, education_level,
-         description, requirements, preferred_qualifications,
-         accessibility_info, wheelchair_accessible, accessible_restroom,
-         disabled_parking, remote_available, flexible_work_available,
-         assistive_device_support, deadline, status)
-        VALUES
-        (#{memberId}, #{companyName}, #{title}, #{jobCategory}, #{employmentType}, #{location},
-         #{salaryMin}, #{salaryMax}, #{experienceLevel}, #{educationLevel},
-         #{description}, #{requirements}, #{preferredQualifications},
-         #{accessibilityInfo}, #{wheelchairAccessible}, #{accessibleRestroom},
-         #{disabledParking}, #{remoteAvailable}, #{flexibleWorkAvailable},
-         #{assistiveDeviceSupport}, #{deadline}, #{status})
+    <insert id="insertInterestJobInfo" parameterType="InterestJobDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO interest_job (member_id, job_id)
+        VALUES (#{memberId}, #{jobId})
     </insert>
 
-    <delete id="deleteByCompanyAndTitle">
+    <delete id="deleteInterestJobInfo" parameterType="InterestJobDTO">
         DELETE FROM interest_job
-        WHERE member_id = #{memberId}
-          AND company_name = #{companyName}
-          AND title = #{title}
+         WHERE member_id = #{memberId}
+           AND job_id = #{jobId}
     </delete>
+
 </mapper>

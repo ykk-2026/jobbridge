@@ -38,3 +38,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# logback 로그 파일
+logs/

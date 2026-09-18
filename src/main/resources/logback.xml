@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!--로그 파일 저장장소 (프로젝트 폴더 밑 logs 폴더)-->
+    <property name="log_dir" value="./logs"/>
+
+    <!--파일에 로그를 남깁니다.-->
+    <appender name="File" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log_dir}/jobbridge.log</file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>
+                %d{yyyy-MM-dd HH:mm:ss} [%-5level] %logger{36} - %msg%n
+            </Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+
+        <!--30일동안 보관 후, 삭제-->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log_dir}/jobbridge.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!--내가 만든 프로젝트 패키지의 로그는 콘솔과 파일 모두 남김-->
+    <Logger name="org.ykk.jobbridge" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="File"/>
+    </Logger>
+</configuration>
