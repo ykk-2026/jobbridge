@@ -8,6 +8,8 @@ import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.IProfileMapper;
 import org.ykk.jobbridge.service.IProfileService;
 import org.ykk.jobbridge.util.CmmUtil;
+import org.ykk.jobbridge.util.EmploymentTypeCodes;
+import org.ykk.jobbridge.util.WorkTypeCodes;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -35,6 +37,7 @@ public class ProfileService implements IProfileService {
         // 화면에서 한글로 넘어온 값(남성, 정규직 등)을 DB 코드값(MALE, FULL_TIME 등)으로 변경
         pDTO.setGender(toGenderCode(pDTO.getGender()));
         pDTO.setEmploymentType(toEmploymentTypeCode(pDTO.getEmploymentType()));
+        pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
         pDTO.setCareerType(toCareerTypeCode(pDTO.getCareerType()));
         pDTO.setContactMethod(toContactMethodCode(pDTO.getContactMethod()));
 
@@ -82,17 +85,7 @@ public class ProfileService implements IProfileService {
      * 고용형태 코드 변환 (정규직 -> FULL_TIME)
      */
     private String toEmploymentTypeCode(String value) {
-        String str = CmmUtil.nvl(value).trim();
-
-        if (str.isEmpty()) return null;
-        if (str.equals("정규직")) return "FULL_TIME";
-        if (str.equals("아르바이트")) return "PART_TIME";
-        if (str.equals("계약직")) return "CONTRACT";
-        if (str.equals("인턴")) return "INTERNSHIP";
-        if (str.equals("프리랜서")) return "FREELANCER";
-        if (str.equals("무관")) return "ANY";
-
-        return str.toUpperCase();
+        return EmploymentTypeCodes.normalize(value);
     }
 
     /**

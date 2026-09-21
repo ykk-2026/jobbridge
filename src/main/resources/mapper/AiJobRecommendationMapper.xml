@@ -7,10 +7,10 @@
     <!-- 추천 계산에 사용할 구직자 프로필 조회 쿼리 -->
     <select id="getProfileInfo" parameterType="AiJobRecommendationDTO" resultType="JobSeekerProfileDTO">
         SELECT member_id, residence_region, desired_job, desired_region, employment_type,
-               career_type, career_years, min_salary, introduction,
-               remote_preferred, flexible_preferred, hybrid_preferred, onsite_preferred,
+               career_type, career_years, min_salary, work_type, introduction,
                wheelchair_required, accessible_restroom_required,
-               disabled_parking_required, assistive_device_required
+               disabled_parking_required, assistive_device_required,
+               rest_area_required, elevator_required
           FROM job_seeker_profile
          WHERE member_id = #{memberId}
     </select>
@@ -18,11 +18,12 @@
     <!-- 추천 대상 채용공고 리스트 쿼리 : OPEN 상태이고 마감되지 않은 공고 -->
     <select id="getJobList" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.salary_max,
+               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
-               J.remote_available, J.flexible_work_available, J.assistive_device_support,
+               J.rest_area_available, J.elevator_available,
+               J.assistive_device_support,
                J.deadline, J.status, J.created_at, J.updated_at
           FROM job_posting J, company_profile C
          WHERE J.company_member_id = C.member_id

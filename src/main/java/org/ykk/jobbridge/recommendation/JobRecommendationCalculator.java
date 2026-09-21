@@ -36,7 +36,7 @@ import static org.ykk.jobbridge.util.TextUtils.toCode;
  *   경력      10점
  *   급여      10점
  *   근무방식   10점
- *   접근성    15점
+ *   접근성    10점
  * </pre>
  * 각 항목의 근거 문장은 {@link MatchNotes}에 모아 추천 문구로 만든다.
  * 프로필에 해당 조건이 없으면 근거 없이 기본 점수만 준다.
@@ -51,22 +51,56 @@ public class JobRecommendationCalculator {
     static final int CAREER_POINTS = 10;
     static final int SALARY_POINTS = 10;
     static final int WORK_STYLE_POINTS = 10;
-    static final int ACCESSIBILITY_POINTS = 15;
+    static final int ACCESSIBILITY_POINTS = 10;
 
     /** AI 직무 점수가 이 값 이상이면 "잘 맞는 점"으로 기록한다. */
     private static final int AI_MATCH_THRESHOLD = 18;
 
     /** 화면에서 쓰는 한글 표기와 옛 코드를 표준 고용형태 코드로 맞춘다. */
-    private static final Map<String, String> EMPLOYMENT_TYPE_ALIASES = Map.of(
-            "INTERNSHIP", "INTERN",
-            "정규직", "FULL_TIME",
-            "계약직", "CONTRACT",
-            "인턴", "INTERN",
-            "아르바이트", "PART_TIME",
-            "파트타임", "PART_TIME");
+    private static final Map<String, String> EMPLOYMENT_TYPE_ALIASES = Map.ofEntries(
+            Map.entry("INTERNSHIP", "INTERN"),
+            Map.entry("FULL_TIME_CONVERSION", "CONVERSION_TYPE"),
+            Map.entry("FREELANCER", "FREELANCE"),
+            Map.entry("무관", "ANY"),
+            Map.entry("정규직", "FULL_TIME"),
+            Map.entry("계약직", "CONTRACT"),
+            Map.entry("무기계약직", "PERMANENT_CONTRACT"),
+            Map.entry("정규직 전환형", "CONVERSION_TYPE"),
+            Map.entry("시간제·파트타임", "PART_TIME"),
+            Map.entry("시간제", "PART_TIME"),
+            Map.entry("알바", "PART_TIME"),
+            Map.entry("아르바이트", "PART_TIME"),
+            Map.entry("파트타임", "PART_TIME"),
+            Map.entry("인턴", "INTERN"),
+            Map.entry("인턴십", "INTERN"),
+            Map.entry("파견직", "DISPATCH"),
+            Map.entry("프리랜서", "FREELANCE"));
 
-    /** 정규직과 계약직은 서로 비슷한 상시 고용형태로 본다. */
-    private static final Set<String> REGULAR_EMPLOYMENT_TYPES = Set.of("FULL_TIME", "CONTRACT");
+    /** 순서와 무관하게 두 고용형태의 유사도 점수를 찾는 규칙표다. */
+    private static final Map<Set<String>, Integer> EMPLOYMENT_TYPE_SCORES = Map.ofEntries(
+            Map.entry(Set.of("FULL_TIME", "CONVERSION_TYPE"), 8),
+            Map.entry(Set.of("FULL_TIME", "PERMANENT_CONTRACT"), 8),
+            Map.entry(Set.of("CONTRACT", "PERMANENT_CONTRACT"), 8),
+            Map.entry(Set.of("FULL_TIME", "CONTRACT"), 6),
+            Map.entry(Set.of("CONTRACT", "CONVERSION_TYPE"), 6),
+            Map.entry(Set.of("PERMANENT_CONTRACT", "CONVERSION_TYPE"), 6),
+            Map.entry(Set.of("CONVERSION_TYPE", "INTERN"), 6),
+            Map.entry(Set.of("PART_TIME", "INTERN"), 6),
+            Map.entry(Set.of("FULL_TIME", "PART_TIME"), 3),
+            Map.entry(Set.of("FULL_TIME", "INTERN"), 3),
+            Map.entry(Set.of("FULL_TIME", "DISPATCH"), 3),
+            Map.entry(Set.of("CONTRACT", "PART_TIME"), 3),
+            Map.entry(Set.of("CONTRACT", "INTERN"), 3),
+            Map.entry(Set.of("CONTRACT", "DISPATCH"), 3),
+            Map.entry(Set.of("PERMANENT_CONTRACT", "PART_TIME"), 3),
+            Map.entry(Set.of("PERMANENT_CONTRACT", "INTERN"), 3),
+            Map.entry(Set.of("PERMANENT_CONTRACT", "DISPATCH"), 3),
+            Map.entry(Set.of("CONVERSION_TYPE", "PART_TIME"), 3),
+            Map.entry(Set.of("CONVERSION_TYPE", "DISPATCH"), 3),
+            Map.entry(Set.of("PART_TIME", "DISPATCH"), 3),
+            Map.entry(Set.of("PART_TIME", "FREELANCE"), 3),
+            Map.entry(Set.of("INTERN", "DISPATCH"), 3),
+            Map.entry(Set.of("DISPATCH", "FREELANCE"), 3));
 
     private final KakaoMapDistanceService mapDistanceService;
     private final IAiJobMatchService aiJobMatchService;
@@ -191,13 +225,7 @@ public class JobRecommendationCalculator {
 
     private static int drivingScore(DrivingRoute route, MatchNotes notes) {
         int minutes = route.minutes();
-        int score;
-        if (minutes <= 20) score = 15;
-        else if (minutes <= 30) score = 14;
-        else if (minutes <= 45) score = 11;
-        else if (minutes <= 60) score = 9;
-        else if (minutes <= 90) score = 6;
-        else score = 2;
+        int score = clamp(17 - (minutes + 9) / 10, 1, REGION_POINTS);
 
         String label = String.format(Locale.ROOT,
                 "현재 거주지에서 자동차 약 %d분(%.1fkm)", minutes, route.kilometers());
@@ -209,15 +237,21 @@ public class JobRecommendationCalculator {
     private static int employmentTypeScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = employmentTypeCode(profile.getEmploymentType());
         String offered = employmentTypeCode(job.getEmploymentType());
-        if (isUnrestricted(preferred)) return 6;
+        if (isUnrestricted(preferred)) {
+            return notes.match("희망 고용형태 무관", 7, EMPLOYMENT_TYPE_POINTS);
+        }
+        if (isUnrestricted(offered)) {
+            return notes.match("공고 고용형태 무관", 7, EMPLOYMENT_TYPE_POINTS);
+        }
 
         if (preferred.equals(offered)) {
             return notes.match("희망 고용형태 일치", EMPLOYMENT_TYPE_POINTS, EMPLOYMENT_TYPE_POINTS);
         }
-        if (REGULAR_EMPLOYMENT_TYPES.contains(preferred) && REGULAR_EMPLOYMENT_TYPES.contains(offered)) {
-            return notes.mismatch("비슷한 상시 고용형태", 5, EMPLOYMENT_TYPE_POINTS);
-        }
-        return notes.mismatch("희망 고용형태와 다름", 1, EMPLOYMENT_TYPE_POINTS);
+
+        int score = EMPLOYMENT_TYPE_SCORES.getOrDefault(Set.of(preferred, offered), 1);
+        String label = Map.of(8, "희망 고용형태와 매우 유사", 6, "희망 고용형태와 어느 정도 유사",
+                3, "희망 고용형태와 차이가 큼", 1, "희망 고용형태와 거의 관련 없음").get(score);
+        return notes.note(score >= 6, label, score, EMPLOYMENT_TYPE_POINTS);
     }
 
     private static String employmentTypeCode(String value) {
@@ -230,7 +264,6 @@ public class JobRecommendationCalculator {
     private static int careerScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = toCode(profile.getCareerType());
         String required = toCode(job.getExperienceLevel());
-        if (isUnrestricted(preferred)) return 6;
         if (isUnrestricted(required)) return notes.match("공고가 경력 무관", CAREER_POINTS, CAREER_POINTS);
 
         if ("ENTRY".equals(preferred)) {
@@ -241,10 +274,10 @@ public class JobRecommendationCalculator {
         }
 
         Integer requiredYears = firstNumber(job.getExperienceLevel());
-        if (requiredYears == null) return notes.match("경력직 조건과 유형 일치", 8, CAREER_POINTS);
+        if (requiredYears == null) return notes.match("경력 구분 일치, 요구 연수 미지정", 8, CAREER_POINTS);
 
         int shortage = requiredYears - zeroIfNull(profile.getCareerYears());
-        if (shortage <= 0) return notes.match("요구 경력 충족", CAREER_POINTS, CAREER_POINTS);
+        if (shortage <= 0) return notes.match("경력 구분 일치, 요구 연수 충족", CAREER_POINTS, CAREER_POINTS);
         if (shortage == 1) return notes.mismatch("요구 경력보다 1년 부족", 7, CAREER_POINTS);
         if (shortage <= 3) return notes.mismatch("요구 경력보다 " + shortage + "년 부족", 4, CAREER_POINTS);
         return notes.mismatch("요구 경력 차이가 큼", 1, CAREER_POINTS);
@@ -252,45 +285,60 @@ public class JobRecommendationCalculator {
 
     // ------------------------------------------------------------ 급여 (10점)
 
-    /** 공고 최대 급여(없으면 최소 급여)가 희망 급여의 몇 %인지로 계산한다. */
+    /** 공고 연봉이 희망 급여의 몇 %인지로 계산한다. */
     private static int salaryScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         Integer desired = profile.getMinSalary();
-        if (desired == null || desired <= 0) return 5;
+        if (desired == null || desired <= 0) return 6;
 
-        Integer offered = job.getSalaryMax() != null ? job.getSalaryMax() : job.getSalaryMin();
-        if (offered == null || offered <= 0) return notes.mismatch("공고의 급여 정보 없음", 4, SALARY_POINTS);
+        Integer offered = job.getSalaryMin();
+        if (offered == null || offered <= 0) return notes.mismatch("공고의 급여 정보 없음 또는 협의", 5, SALARY_POINTS);
 
         double ratio = offered / (double) desired;
         if (ratio >= 1.0) return notes.match("희망 급여 충족", SALARY_POINTS, SALARY_POINTS);
 
         int score;
-        if (ratio >= 0.9) score = 8;
+        if (ratio >= 0.95) score = 9;
+        else if (ratio >= 0.9) score = 8;
         else if (ratio >= 0.8) score = 6;
         else if (ratio >= 0.7) score = 4;
         else score = 2;
         return notes.mismatch("희망 급여 " + desired + "만원 대비 " + offered + "만원", score, SALARY_POINTS);
     }
 
-    // ------------------------------------------------------------ 근무방식 (10점) · 접근성 (15점)
+    // ------------------------------------------------------------ 근무방식 (10점) · 접근성 (10점)
 
-    /** 구직자가 선택한 근무방식 중 공고가 지원하는 비율로 계산한다. */
+    /** 새 근무방식 코드로 희망 조건 충족 여부를 계산한다. */
     private static int workStyleScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
-        boolean remote = Boolean.TRUE.equals(job.getRemoteAvailable());
-        boolean flexible = Boolean.TRUE.equals(job.getFlexibleWorkAvailable());
-        return checklistScore(notes, WORK_STYLE_POINTS, 5,
-                new Check(profile.getRemotePreferred(), remote, "재택근무"),
-                new Check(profile.getFlexiblePreferred(), flexible, "유연근무"),
-                new Check(profile.getHybridPreferred(), remote || flexible, "하이브리드 근무"),
-                new Check(profile.getOnsitePreferred(), !remote, "출근 근무"));
+        String preferred = toCode(profile.getWorkType());
+        String offered = toCode(job.getWorkType());
+        if (isUnrestricted(preferred) || isUnrestricted(offered)) return 5;
+
+        boolean matched = preferred.equals(offered)
+                || "HYBRID".equals(offered) && Set.of("OFFICE", "REMOTE").contains(preferred);
+        return matched ? notes.match("희망 근무방식 충족", WORK_STYLE_POINTS, WORK_STYLE_POINTS)
+                : notes.mismatch("희망 근무방식과 다름", 0, WORK_STYLE_POINTS);
     }
 
     /** 구직자가 필수로 표시한 편의시설 중 공고가 지원하는 비율로 계산한다. */
     private static int accessibilityScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
-        return checklistScore(notes, ACCESSIBILITY_POINTS, 8,
+        List<Check> wanted = Stream.of(
                 new Check(profile.getWheelchairRequired(), job.getWheelchairAccessible(), "휠체어 접근"),
                 new Check(profile.getAccessibleRestroomRequired(), job.getAccessibleRestroom(), "장애인 화장실"),
                 new Check(profile.getDisabledParkingRequired(), job.getDisabledParking(), "장애인 주차"),
-                new Check(profile.getAssistiveDeviceRequired(), job.getAssistiveDeviceSupport(), "보조공학기기"));
+                new Check(profile.getAssistiveDeviceRequired(), job.getAssistiveDeviceSupport(), "보조공학기기"),
+                new Check(profile.getRestAreaRequired(), job.getRestAreaAvailable(), "장애인 휴게공간"),
+                new Check(profile.getElevatorRequired(), job.getElevatorAvailable(), "엘리베이터 이용"))
+                .filter(Check::isWanted).toList();
+        if (wanted.isEmpty()) return 6;
+
+        long satisfied = wanted.stream().filter(Check::isSupported).count();
+        wanted.forEach(check -> {
+            if (check.isSupported()) notes.match(check.label() + " 조건 충족");
+            else notes.mismatch(check.label() + " 조건 미지원");
+        });
+        int total = wanted.size();
+        return satisfied == 0 ? 0 : satisfied == total ? ACCESSIBILITY_POINTS : satisfied * 5 >= total * 4 ? 8
+                : satisfied * 5 >= total * 3 ? 6 : satisfied * 5 >= total * 2 ? 4 : 2;
     }
 
     /** "구직자가 원하는 조건(wanted)을 공고가 지원하는가(supported)" 확인 항목 하나. */
@@ -305,24 +353,4 @@ public class JobRecommendationCalculator {
         }
     }
 
-    /**
-     * 구직자가 원하는 항목만 확인해 충족 비율 × 만점(반올림)을 돌려준다.
-     * 원하는 항목이 하나도 없으면 defaultScore.
-     */
-    private static int checklistScore(MatchNotes notes, int max, int defaultScore, Check... checks) {
-        int wanted = 0;
-        int satisfied = 0;
-        for (Check check : checks) {
-            if (!check.isWanted()) continue;
-            wanted++;
-            if (check.isSupported()) {
-                satisfied++;
-                notes.match(check.label() + " 조건 충족");
-            } else {
-                notes.mismatch(check.label() + " 조건 미지원");
-            }
-        }
-        if (wanted == 0) return defaultScore;
-        return (int) Math.round(max * satisfied / (double) wanted);
-    }
 }

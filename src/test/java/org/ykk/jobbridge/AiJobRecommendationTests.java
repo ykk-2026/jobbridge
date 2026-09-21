@@ -45,12 +45,12 @@ class AiJobRecommendationTests {
         profile.setEmploymentType("INTERNSHIP");
         profile.setCareerType("ENTRY");
         profile.setMinSalary(3000);
-        profile.setRemotePreferred(true);
+        profile.setWorkType("REMOTE");
         profile.setWheelchairRequired(true);
         profile.setAccessibleRestroomRequired(false);
 
         JobPostingDTO job = job("Java 백엔드 개발자", "INTERN", "서울 강남구", "신입", 3200);
-        job.setRemoteAvailable(true);
+        job.setWorkType("REMOTE");
         job.setWheelchairAccessible(true);
         job.setAccessibleRestroom(false);
 
@@ -120,10 +120,10 @@ class AiJobRecommendationTests {
         profile.setCareerType("EXPERIENCED");
         profile.setCareerYears(3);
         profile.setMinSalary(4000);
-        profile.setRemotePreferred(true);
+        profile.setWorkType("REMOTE");
 
         JobPostingDTO matching = job("Java 백엔드 개발자", "FULL_TIME", "서울 강남구", "경력 3년", 4500);
-        matching.setRemoteAvailable(true);
+        matching.setWorkType("REMOTE");
         JobPostingDTO different = job("매장 서비스 직원", "PART_TIME", "부산 해운대구", "경력 7년", 2500);
 
         AiJobRecommendationDTO matchingResult = calculator.calculate(1L, profile, matching);
@@ -166,7 +166,7 @@ class AiJobRecommendationTests {
         profile.setCareerType("EXPERIENCED");
         profile.setCareerYears(1);
         profile.setMinSalary(5000);
-        profile.setRemotePreferred(true);
+        profile.setWorkType("REMOTE");
 
         JobPostingDTO job = job("매장 서비스 직원", "PART_TIME", "부산 해운대구", "경력 5년", 2800);
         AiJobRecommendationDTO result = calculator.calculate(1L, profile, job);
@@ -181,10 +181,10 @@ class AiJobRecommendationTests {
         jdbcTemplate.update("""
                 INSERT INTO job_seeker_profile (
                     member_id, desired_job, desired_region, employment_type, career_type,
-                    career_years, min_salary, remote_preferred, flexible_preferred,
+                    career_years, min_salary, work_type,
                     wheelchair_required, accessible_restroom_required,
                     disabled_parking_required, assistive_device_required
-                ) VALUES (1, '개발자', '서울', 'ANY', 'ANY', 0, 0, FALSE, FALSE,
+                ) VALUES (1, '개발자', '서울', 'ANY', 'ANY', 0, 0, 'ANY',
                           FALSE, FALSE, FALSE, FALSE)
                 """);
         jdbcTemplate.update("""
@@ -239,7 +239,7 @@ class AiJobRecommendationTests {
     }
 
     private JobPostingDTO job(String title, String employmentType, String location,
-                              String experienceLevel, Integer salaryMax) {
+                              String experienceLevel, Integer salaryMin) {
         JobPostingDTO job = new JobPostingDTO();
         job.setId(1L);
         job.setTitle(title);
@@ -247,7 +247,7 @@ class AiJobRecommendationTests {
         job.setEmploymentType(employmentType);
         job.setLocation(location);
         job.setExperienceLevel(experienceLevel);
-        job.setSalaryMax(salaryMax);
+        job.setSalaryMin(salaryMin);
         return job;
     }
 }

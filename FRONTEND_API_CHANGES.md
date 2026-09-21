@@ -152,7 +152,7 @@ export const updateJobPosting = (jobId: number, form: JobPostingForm) =>
 export const closeJobPosting = (jobId: number) => postForm('/api/jobs/updateJobClose', { jobId });
 export const deleteJobPosting = (jobId: number) => postForm('/api/jobs/deleteJobInfo', { jobId });
 ```
-`salaryMin/salaryMax`가 `null`이면 `form()`이 자동으로 빼므로 백엔드에서 NULL 저장됩니다.
+`salaryMin`이 `null`이면 `form()`이 자동으로 빼므로 백엔드에서 NULL 저장됩니다.
 `createJobPosting`이 반환하던 `JobPosting` 객체를 쓰던 화면이 있으면 `getMyJobPostings()`를 다시 호출해 주세요.
 
 ## 4. jobApplicationApi.ts

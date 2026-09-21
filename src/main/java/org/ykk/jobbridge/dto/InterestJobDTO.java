@@ -22,7 +22,7 @@ public class InterestJobDTO {
     private String employmentType;
     private String location;
     private Integer salaryMin;
-    private Integer salaryMax;
+    private String workType;
     private String experienceLevel;
     private String educationLevel;
     private String description;
@@ -32,8 +32,8 @@ public class InterestJobDTO {
     private Boolean wheelchairAccessible;
     private Boolean accessibleRestroom;
     private Boolean disabledParking;
-    private Boolean remoteAvailable;
-    private Boolean flexibleWorkAvailable;
+    private Boolean restAreaAvailable;
+    private Boolean elevatorAvailable;
     private Boolean assistiveDeviceSupport;
     private String deadline;
     private String status;

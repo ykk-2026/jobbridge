@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.mapper.IJobPostingMapper;
 import org.ykk.jobbridge.service.IJobPostingService;
+import org.ykk.jobbridge.util.EmploymentTypeCodes;
+import org.ykk.jobbridge.util.WorkTypeCodes;
 
 import java.util.List;
 
@@ -47,6 +49,8 @@ public class JobPostingService implements IJobPostingService {
 
         log.info(this.getClass().getName() + ".insertJobInfo Start!");
 
+        pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
+        pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
         jobPostingMapper.insertJobInfo(pDTO);
     }
 
@@ -56,6 +60,8 @@ public class JobPostingService implements IJobPostingService {
 
         log.info(this.getClass().getName() + ".updateJobInfo Start!");
 
+        pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
+        pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
         return jobPostingMapper.updateJobInfo(pDTO);
     }
 

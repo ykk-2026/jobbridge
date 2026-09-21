@@ -29,15 +29,14 @@ public class JobSeekerProfileDTO {
     private String careerType; // 경력 구분(신입, 경력)
     private Integer careerYears; // 경력 연수
     private Integer minSalary; // 희망 최소 연봉
+    private String workType; // 희망 근무방식(OFFICE, REMOTE, HYBRID, ANY)
 
-    private Boolean remotePreferred; // 재택근무 선호
-    private Boolean flexiblePreferred; // 유연근무 선호
     private Boolean wheelchairRequired; // 휠체어 접근 필요
     private Boolean accessibleRestroomRequired; // 장애인 화장실 필요
     private Boolean disabledParkingRequired; // 장애인 주차 필요
     private Boolean assistiveDeviceRequired; // 보조공학기기 필요
-    private Boolean hybridPreferred; // 하이브리드 근무 선호
-    private Boolean onsitePreferred; // 출근 근무 선호
+    private Boolean restAreaRequired; // 장애인 휴게공간 필요
+    private Boolean elevatorRequired; // 엘리베이터 이용 필요
 
     private String contactTimeStart; // 연락 가능 시작 시간
     private String contactTimeEnd; // 연락 가능 종료 시간
