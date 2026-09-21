@@ -34,14 +34,14 @@ public class ProfileService implements IProfileService {
 
         int res = 0;
 
-        // 화면에서 한글로 넘어온 값(남성, 정규직 등)을 DB 코드값(MALE, FULL_TIME 등)으로 변경
+
         pDTO.setGender(toGenderCode(pDTO.getGender()));
         pDTO.setEmploymentType(toEmploymentTypeCode(pDTO.getEmploymentType()));
         pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
         pDTO.setCareerType(toCareerTypeCode(pDTO.getCareerType()));
         pDTO.setContactMethod(toContactMethodCode(pDTO.getContactMethod()));
 
-        // 프로필이 이미 존재하는지 확인
+
         JobSeekerProfileDTO existsDTO = profileMapper.getProfileExists(pDTO);
 
         int success;
@@ -55,7 +55,7 @@ public class ProfileService implements IProfileService {
             success = profileMapper.insertProfileInfo(pDTO);
         }
 
-        // 회원 기본 정보(이름, 생년월일, 성별, 이메일, 전화번호)도 함께 수정
+
         profileMapper.updateMemberInfo(pDTO);
 
         if (success > 0) {
@@ -67,9 +67,9 @@ public class ProfileService implements IProfileService {
         return res;
     }
 
-    /**
-     * 성별 코드 변환 (남성 -> MALE)
-     */
+
+
+
     private String toGenderCode(String value) {
         String str = CmmUtil.nvl(value).trim();
 
@@ -81,16 +81,16 @@ public class ProfileService implements IProfileService {
         return str.toUpperCase();
     }
 
-    /**
-     * 고용형태 코드 변환 (정규직 -> FULL_TIME)
-     */
+
+
+
     private String toEmploymentTypeCode(String value) {
         return EmploymentTypeCodes.normalize(value);
     }
 
-    /**
-     * 경력 구분 코드 변환 (신입 -> ENTRY)
-     */
+
+
+
     private String toCareerTypeCode(String value) {
         String str = CmmUtil.nvl(value).trim();
 
@@ -102,9 +102,9 @@ public class ProfileService implements IProfileService {
         return str.toUpperCase();
     }
 
-    /**
-     * 연락 방법 코드 변환 (전화 -> PHONE)
-     */
+
+
+
     private String toContactMethodCode(String value) {
         String str = CmmUtil.nvl(value).trim();
 

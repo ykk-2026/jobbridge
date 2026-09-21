@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/** DB와 API에서 사용하는 고용형태 코드를 한 곳에서 정규화한다. */
+
 public final class EmploymentTypeCodes {
 
     public static final Set<String> VALUES = Set.of(

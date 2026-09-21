@@ -7,10 +7,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.ykk.jobbridge.dto.MsgDTO;
 
-/*
- * 스프링부트 앱이 정상적으로 실행 중인지 확인하는 용도
- * http://localhost:8080/api/status
- * */
+
+
+
+
 @Slf4j
 @RequestMapping(value = "/api")
 @Controller

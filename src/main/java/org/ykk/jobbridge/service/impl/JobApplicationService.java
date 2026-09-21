@@ -20,7 +20,7 @@ public class JobApplicationService implements IJobApplicationService {
 
     private final IJobApplicationMapper jobApplicationMapper;
 
-    // 지원할 채용공고가 진행 중인지 확인하기 위해 채용공고 Mapper도 함께 사용함
+
     private final IJobPostingMapper jobPostingMapper;
 
     @Override
@@ -45,11 +45,11 @@ public class JobApplicationService implements IJobApplicationService {
 
         log.info(this.getClass().getName() + ".insertApplicationInfo Start!");
 
-        // 지원 성공 : 1, 이미 지원함 : 2, 마감되었거나 없는 공고 : 3, 오류 : 0
+
         int res = 0;
         pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
 
-        // 1. 지원할 채용공고가 진행 중(OPEN)인지 확인
+
         JobPostingDTO jDTO = new JobPostingDTO();
         jDTO.setId(pDTO.getJobId());
 
@@ -60,7 +60,7 @@ public class JobApplicationService implements IJobApplicationService {
             res = 3;
 
         } else {
-            // 2. 이미 지원한 공고인지 확인
+
             JobApplicationDTO existsDTO = jobApplicationMapper.getApplicationExists(pDTO);
 
             if ("Y".equals(existsDTO.getExistsYn())) {
@@ -68,7 +68,7 @@ public class JobApplicationService implements IJobApplicationService {
                 res = 2;
 
             } else {
-                // 3. 지원서에는 job_posting.id 외래키만 저장
+
                 int success = jobApplicationMapper.insertApplicationInfo(pDTO);
 
                 if (success > 0) {

@@ -32,10 +32,10 @@ public class InterestJobService implements IInterestJobService {
 
         log.info(this.getClass().getName() + ".insertInterestJobInfo Start!");
 
-        // 저장 성공 : 1, 이미 저장됨 : 2, 오류 : 0
+
         int res = 0;
 
-        // 이미 저장된 관심 공고인지 확인
+
         InterestJobDTO existsDTO = interestJobMapper.getInterestJobExists(pDTO);
 
         if (CmmUtil.nvl(existsDTO.getExistsYn()).equals("Y")) {

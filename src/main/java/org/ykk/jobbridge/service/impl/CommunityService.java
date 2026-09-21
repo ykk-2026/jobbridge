@@ -32,7 +32,7 @@ public class CommunityService implements ICommunityService {
             rList = new ArrayList<>();
         }
 
-        // 게시글마다 댓글 목록과 로그인 사용자의 신고 내역 추가
+
         for (CommunityPostDTO rDTO : rList) {
             addCommentsAndReports(rDTO, pDTO.getMemberId());
         }
@@ -48,7 +48,7 @@ public class CommunityService implements ICommunityService {
 
         log.info(this.getClass().getName() + ".getPostInfo Start!");
 
-        // 상세보기할 때마다, 조회수 증가하기
+
         if (type) {
             log.info("Update ViewCount");
             communityMapper.updatePostViews(pDTO);
@@ -87,10 +87,10 @@ public class CommunityService implements ICommunityService {
 
         log.info(this.getClass().getName() + ".insertCommentInfo Start!");
 
-        // 등록 성공 : 1, 없는 게시글 : 3, 오류 : 0
+
         int res = 0;
 
-        // 댓글을 달 게시글이 존재하는지 확인
+
         CommunityPostDTO postDTO = new CommunityPostDTO();
         postDTO.setId(pDTO.getPostId());
 
@@ -126,10 +126,10 @@ public class CommunityService implements ICommunityService {
 
         log.info(this.getClass().getName() + ".insertReportInfo Start!");
 
-        // 신고 성공 : 1, 이미 신고함 : 2, 오류 : 0
+
         int res = 0;
 
-        // 이미 신고한 게시글인지 확인
+
         CommunityReportDTO existsDTO = communityMapper.getReportExists(pDTO);
 
         if (CmmUtil.nvl(existsDTO.getExistsYn()).equals("Y")) {
@@ -149,22 +149,22 @@ public class CommunityService implements ICommunityService {
         return res;
     }
 
-    /**
-     * 게시글에 댓글 목록과 로그인 사용자의 신고 내역을 추가함
-     */
+
+
+
     private void addCommentsAndReports(CommunityPostDTO rDTO, Long memberId) throws Exception {
 
         if (rDTO == null) {
             return;
         }
 
-        // 댓글 목록 조회
+
         CommunityCommentDTO cDTO = new CommunityCommentDTO();
         cDTO.setPostId(rDTO.getId());
 
         rDTO.setComments(communityMapper.getCommentList(cDTO));
 
-        // 로그인한 사용자라면, 이 게시글을 신고했는지 조회
+
         if (memberId != null) {
             CommunityReportDTO rpDTO = new CommunityReportDTO();
             rpDTO.setPostId(rDTO.getId());

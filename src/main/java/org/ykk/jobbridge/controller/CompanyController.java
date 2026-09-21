@@ -34,10 +34,10 @@ import org.ykk.jobbridge.util.EncryptUtil;
 
 import java.util.Optional;
 
-/*
- * /api/companies 로 시작되는 URL은 무조건 CompanyController에서 처리
- * 기업회원 가입, 기업회원 로그인, 기업정보 조회 기능 수행
- * */
+
+
+
+
 @Slf4j
 @RequestMapping(value = "/api/companies")
 @RequiredArgsConstructor
@@ -46,52 +46,52 @@ public class CompanyController {
 
     private final ICompanyService companyService;
 
-    // 기업회원 로그인은 MEMBER 테이블로 처리하기 때문에 회원 서비스도 함께 사용함
+
     private final IMemberService memberService;
 
-    /**
-     * 기업회원 가입
-     * <p>
-     * 담당자 정보는 MEMBER 테이블, 기업정보는 COMPANY_PROFILE 테이블에 저장함
-     */
+
+
+
+
+
     @ResponseBody
     @PostMapping(value = "insertCompanyInfo")
     public MsgDTO insertCompanyInfo(HttpServletRequest request) {
 
         log.info(this.getClass().getName() + ".insertCompanyInfo Start!");
 
-        int res = 0; // 가입 결과
-        String msg = ""; // 메시지 내용
-        MsgDTO dto = null; // 결과 메시지 구조
+        int res = 0;
+        String msg = "";
+        MsgDTO dto = null;
 
         try {
-            // 담당자 회원정보
-            String loginId = CmmUtil.nvl(request.getParameter("loginId")).trim().toLowerCase(); // 아이디
-            String password = CmmUtil.nvl(request.getParameter("password")); // 비밀번호
-            String passwordConfirm = CmmUtil.nvl(request.getParameter("passwordConfirm")); // 비밀번호 확인
-            String name = CmmUtil.nvl(request.getParameter("name")).trim(); // 담당자 이름
-            String email = CmmUtil.nvl(request.getParameter("email")).trim(); // 이메일
-            String phone = CmmUtil.nvl(request.getParameter("phone")).trim(); // 전화번호
 
-            // 기업정보
-            String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim(); // 회사명
-            String businessNumber = CmmUtil.nvl(request.getParameter("businessNumber")).trim(); // 사업자등록번호
-            String representativeName = CmmUtil.nvl(request.getParameter("representativeName")).trim(); // 대표자명
-            String industry = CmmUtil.nvl(request.getParameter("industry")); // 업종
-            String companyAddress = CmmUtil.nvl(request.getParameter("companyAddress")).trim(); // 회사 주소
-            String companyDetailAddress = CmmUtil.nvl(request.getParameter("companyDetailAddress")); // 상세 주소
-            String companyPhone = CmmUtil.nvl(request.getParameter("companyPhone")); // 회사 전화번호
-            String websiteUrl = CmmUtil.nvl(request.getParameter("websiteUrl")); // 홈페이지
-            String logoUrl = CmmUtil.nvl(request.getParameter("logoUrl")); // 로고
-            String companyDescription = CmmUtil.nvl(request.getParameter("companyDescription")); // 회사 소개
-            String employeeCount = CmmUtil.nvl(request.getParameter("employeeCount")); // 직원 수
-            String establishedDate = CmmUtil.nvl(request.getParameter("establishedDate")); // 설립일
+            String loginId = CmmUtil.nvl(request.getParameter("loginId")).trim().toLowerCase();
+            String password = CmmUtil.nvl(request.getParameter("password"));
+            String passwordConfirm = CmmUtil.nvl(request.getParameter("passwordConfirm"));
+            String name = CmmUtil.nvl(request.getParameter("name")).trim();
+            String email = CmmUtil.nvl(request.getParameter("email")).trim();
+            String phone = CmmUtil.nvl(request.getParameter("phone")).trim();
 
-            /*
-             * ####################################################################################
-             * 반드시, 값을 받았으면, 꼭 로그를 찍어서 값이 제대로 들어오는지 파악해야함 반드시 작성할 것
-             * ####################################################################################
-             */
+
+            String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim();
+            String businessNumber = CmmUtil.nvl(request.getParameter("businessNumber")).trim();
+            String representativeName = CmmUtil.nvl(request.getParameter("representativeName")).trim();
+            String industry = CmmUtil.nvl(request.getParameter("industry"));
+            String companyAddress = CmmUtil.nvl(request.getParameter("companyAddress")).trim();
+            String companyDetailAddress = CmmUtil.nvl(request.getParameter("companyDetailAddress"));
+            String companyPhone = CmmUtil.nvl(request.getParameter("companyPhone"));
+            String websiteUrl = CmmUtil.nvl(request.getParameter("websiteUrl"));
+            String logoUrl = CmmUtil.nvl(request.getParameter("logoUrl"));
+            String companyDescription = CmmUtil.nvl(request.getParameter("companyDescription"));
+            String employeeCount = CmmUtil.nvl(request.getParameter("employeeCount"));
+            String establishedDate = CmmUtil.nvl(request.getParameter("establishedDate"));
+
+
+
+
+
+
             log.info("loginId : " + loginId);
             log.info("name : " + name);
             log.info("email : " + email);
@@ -112,16 +112,16 @@ public class CompanyController {
                 msg = "비밀번호가 일치하지 않습니다.";
 
             } else {
-                // 담당자 회원정보 DTO
+
                 MemberDTO pDTO = new MemberDTO();
                 pDTO.setLoginId(loginId);
-                pDTO.setPassword(EncryptUtil.encHashSHA256(password)); // 비밀번호 해시 암호화
+                pDTO.setPassword(EncryptUtil.encHashSHA256(password));
                 pDTO.setName(name);
                 pDTO.setEmail(email);
                 pDTO.setPhone(phone);
                 pDTO.setRole("COMPANY");
 
-                // 기업정보 DTO
+
                 CompanyProfileDTO cDTO = new CompanyProfileDTO();
                 cDTO.setCompanyName(companyName);
                 cDTO.setBusinessNumber(businessNumber);
@@ -135,7 +135,7 @@ public class CompanyController {
                 cDTO.setCompanyDescription(companyDescription);
                 cDTO.setEstablishedDate(establishedDate);
 
-                // 직원 수는 숫자로 변환하며, 입력하지 않았으면 null
+
                 if (employeeCount.length() > 0) {
                     cDTO.setEmployeeCount(Integer.parseInt(employeeCount));
                 }
@@ -172,24 +172,24 @@ public class CompanyController {
         return dto;
     }
 
-    /**
-     * 기업회원 로그인 처리
-     * <p>
-     * 회원 로그인과 동일하지만, 회원 구분이 COMPANY인 경우만 로그인 처리하고 세션에 회사명도 저장함
-     */
+
+
+
+
+
     @ResponseBody
     @PostMapping(value = "login")
     public MsgDTO login(HttpServletRequest request, HttpSession session) {
 
         log.info(this.getClass().getName() + ".login Start!");
 
-        int res = 0; // 로그인 성공 : 1, 실패 : 0, 시스템 에러 : 2
+        int res = 0;
         String msg = "";
         MsgDTO dto = null;
 
         try {
-            String loginId = CmmUtil.nvl(request.getParameter("loginId")).trim().toLowerCase(); // 아이디
-            String password = CmmUtil.nvl(request.getParameter("password")); // 비밀번호
+            String loginId = CmmUtil.nvl(request.getParameter("loginId")).trim().toLowerCase();
+            String password = CmmUtil.nvl(request.getParameter("password"));
 
             log.info("loginId : " + loginId);
 
@@ -206,7 +206,7 @@ public class CompanyController {
                 msg = "기업회원 계정이 아닙니다.";
 
             } else {
-                // 기업정보 조회하여 회사명을 세션에 저장
+
                 CompanyProfileDTO cDTO = new CompanyProfileDTO();
                 cDTO.setMemberId(rDTO.getId());
 
@@ -240,11 +240,11 @@ public class CompanyController {
         return dto;
     }
 
-    /**
-     * 로그인된 기업정보 조회
-     * <p>
-     * 기업회원으로 로그인하지 않았다면, 빈 값이 전달됨
-     */
+
+
+
+
+
     @ResponseBody
     @GetMapping(value = "getCompanyInfo")
     public CompanyProfileDTO getCompanyInfo(HttpSession session) throws Exception {
@@ -272,9 +272,9 @@ public class CompanyController {
         return rDTO;
     }
 
-    /**
-     * 로그아웃 처리 (세션 삭제)
-     */
+
+
+
     @ResponseBody
     @PostMapping(value = "logout")
     public MsgDTO logout(HttpSession session) {

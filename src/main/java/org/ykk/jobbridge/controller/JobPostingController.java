@@ -18,10 +18,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/*
- * /api/jobs 로 시작되는 URL은 무조건 JobPostingController에서 처리
- * 채용공고 조회는 누구나 가능하고, 등록/수정/마감/삭제는 기업회원(COMPANY)만 가능함
- * */
+
+
+
+
 @Slf4j
 @RequestMapping(value = "/api/jobs")
 @RequiredArgsConstructor
@@ -30,16 +30,16 @@ public class JobPostingController {
 
     private final IJobPostingService jobPostingService;
 
-    /**
-     * 진행 중인 채용공고 리스트
-     */
+
+
+
     @ResponseBody
     @GetMapping(value = "getJobList")
     public List<JobPostingDTO> getJobList() throws Exception {
 
         log.info(this.getClass().getName() + ".getJobList Start!");
 
-        // Java 8부터 제공되는 Optional 활용하여 NPE(Null Pointer Exception) 처리
+
         List<JobPostingDTO> rList = Optional.ofNullable(jobPostingService.getJobList())
                 .orElseGet(ArrayList::new);
 
@@ -48,22 +48,22 @@ public class JobPostingController {
         return rList;
     }
 
-    /**
-     * 채용공고 상세보기
-     */
+
+
+
     @ResponseBody
     @GetMapping(value = "getJobInfo")
     public JobPostingDTO getJobInfo(HttpServletRequest request) throws Exception {
 
         log.info(this.getClass().getName() + ".getJobInfo Start!");
 
-        String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0"); // 공고 번호(PK)
+        String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
 
-        /*
-         * ####################################################################################
-         * 반드시, 값을 받았으면, 꼭 로그를 찍어서 값이 제대로 들어오는지 파악해야함 반드시 작성할 것
-         * ####################################################################################
-         */
+
+
+
+
+
         log.info("jobId : " + jobId);
 
         JobPostingDTO pDTO = new JobPostingDTO();
@@ -77,9 +77,9 @@ public class JobPostingController {
         return rDTO;
     }
 
-    /**
-     * 로그인한 기업회원이 등록한 채용공고 리스트
-     */
+
+
+
     @ResponseBody
     @GetMapping(value = "getMyJobList")
     public List<JobPostingDTO> getMyJobList(HttpSession session) throws Exception {
@@ -94,7 +94,7 @@ public class JobPostingController {
 
         List<JobPostingDTO> rList = new ArrayList<>();
 
-        // 기업회원만 본인 공고 조회 가능
+
         if (userRole.equals("COMPANY")) {
             JobPostingDTO pDTO = new JobPostingDTO();
             pDTO.setCompanyMemberId(Long.parseLong(memberId));
@@ -108,11 +108,11 @@ public class JobPostingController {
         return rList;
     }
 
-    /**
-     * 채용공고 등록
-     * <p>
-     * 화면에서 Ajax를 통해 값을 전달하며, 결과는 JSON 구조로 전달함
-     */
+
+
+
+
+
     @ResponseBody
     @PostMapping(value = "insertJobInfo")
     public MsgDTO insertJobInfo(HttpServletRequest request, HttpSession session) {
@@ -120,8 +120,8 @@ public class JobPostingController {
         log.info(this.getClass().getName() + ".insertJobInfo Start!");
 
         int res = 0;
-        String msg = ""; // 메시지 내용
-        MsgDTO dto = null; // 결과 메시지 구조
+        String msg = "";
+        MsgDTO dto = null;
 
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
@@ -134,7 +134,7 @@ public class JobPostingController {
                 msg = "기업회원만 채용공고를 등록할 수 있습니다.";
 
             } else {
-                // 화면에서 전달된 값 받기
+
                 JobPostingDTO pDTO = getJobPostingParam(request);
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
@@ -169,11 +169,11 @@ public class JobPostingController {
         return dto;
     }
 
-    /**
-     * 채용공고 수정
-     * <p>
-     * 등록과 유사하며, 수정을 위해 반드시 PK값인 jobId를 받아야 함
-     */
+
+
+
+
+
     @ResponseBody
     @PostMapping(value = "updateJobInfo")
     public MsgDTO updateJobInfo(HttpServletRequest request, HttpSession session) {
@@ -187,7 +187,7 @@ public class JobPostingController {
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
-            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0"); // 공고 번호(PK)
+            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
 
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobId);
@@ -200,7 +200,7 @@ public class JobPostingController {
                 pDTO.setId(Long.parseLong(jobId));
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
-                // 수정된 건수가 0이면 본인 회사의 공고가 아님
+
                 if (jobPostingService.updateJobInfo(pDTO) > 0) {
                     res = 1;
                     msg = "수정되었습니다.";
@@ -227,9 +227,9 @@ public class JobPostingController {
         return dto;
     }
 
-    /**
-     * 채용공고 마감
-     */
+
+
+
     @ResponseBody
     @PostMapping(value = "updateJobClose")
     public MsgDTO updateJobClose(HttpServletRequest request, HttpSession session) {
@@ -243,7 +243,7 @@ public class JobPostingController {
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
-            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0"); // 공고 번호(PK)
+            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
 
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobId);
@@ -282,9 +282,9 @@ public class JobPostingController {
         return dto;
     }
 
-    /**
-     * 채용공고 삭제
-     */
+
+
+
     @ResponseBody
     @PostMapping(value = "deleteJobInfo")
     public MsgDTO deleteJobInfo(HttpServletRequest request, HttpSession session) {
@@ -298,7 +298,7 @@ public class JobPostingController {
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
-            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0"); // 공고 번호(PK)
+            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
 
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobId);
@@ -337,38 +337,38 @@ public class JobPostingController {
         return dto;
     }
 
-    /**
-     * 화면에서 전달된 채용공고 값들을 받아 DTO에 저장
-     * 등록과 수정에서 동일하게 사용함
-     */
+
+
+
+
     private JobPostingDTO getJobPostingParam(HttpServletRequest request) {
 
-        String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim(); // 회사명
-        String title = CmmUtil.nvl(request.getParameter("title")).trim(); // 공고 제목
-        String jobCategory = CmmUtil.nvl(request.getParameter("jobCategory")).trim(); // 직무
-        String employmentType = CmmUtil.nvl(request.getParameter("employmentType")).trim(); // 고용형태
-        String location = CmmUtil.nvl(request.getParameter("location")).trim(); // 근무지
-        String salaryMin = CmmUtil.nvl(request.getParameter("salaryMin")); // 최소 급여
-        String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY"); // 근무방식
-        String experienceLevel = CmmUtil.nvl(request.getParameter("experienceLevel")); // 경력 조건
-        String educationLevel = CmmUtil.nvl(request.getParameter("educationLevel")); // 학력 조건
-        String description = CmmUtil.nvl(request.getParameter("description")); // 업무 내용
-        String requirements = CmmUtil.nvl(request.getParameter("requirements")); // 자격 요건
-        String preferredQualifications = CmmUtil.nvl(request.getParameter("preferredQualifications")); // 우대 사항
-        String accessibilityInfo = CmmUtil.nvl(request.getParameter("accessibilityInfo")); // 접근성 정보
-        String wheelchairAccessible = CmmUtil.nvl(request.getParameter("wheelchairAccessible"), "false"); // 휠체어
-        String accessibleRestroom = CmmUtil.nvl(request.getParameter("accessibleRestroom"), "false"); // 장애인 화장실
-        String disabledParking = CmmUtil.nvl(request.getParameter("disabledParking"), "false"); // 장애인 주차
+        String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim();
+        String title = CmmUtil.nvl(request.getParameter("title")).trim();
+        String jobCategory = CmmUtil.nvl(request.getParameter("jobCategory")).trim();
+        String employmentType = CmmUtil.nvl(request.getParameter("employmentType")).trim();
+        String location = CmmUtil.nvl(request.getParameter("location")).trim();
+        String salaryMin = CmmUtil.nvl(request.getParameter("salaryMin"));
+        String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY");
+        String experienceLevel = CmmUtil.nvl(request.getParameter("experienceLevel"));
+        String educationLevel = CmmUtil.nvl(request.getParameter("educationLevel"));
+        String description = CmmUtil.nvl(request.getParameter("description"));
+        String requirements = CmmUtil.nvl(request.getParameter("requirements"));
+        String preferredQualifications = CmmUtil.nvl(request.getParameter("preferredQualifications"));
+        String accessibilityInfo = CmmUtil.nvl(request.getParameter("accessibilityInfo"));
+        String wheelchairAccessible = CmmUtil.nvl(request.getParameter("wheelchairAccessible"), "false");
+        String accessibleRestroom = CmmUtil.nvl(request.getParameter("accessibleRestroom"), "false");
+        String disabledParking = CmmUtil.nvl(request.getParameter("disabledParking"), "false");
         String restAreaAvailable = CmmUtil.nvl(request.getParameter("restAreaAvailable"), "false");
         String elevatorAvailable = CmmUtil.nvl(request.getParameter("elevatorAvailable"), "false");
-        String assistiveDeviceSupport = CmmUtil.nvl(request.getParameter("assistiveDeviceSupport"), "false"); // 보조기기
-        String deadline = CmmUtil.nvl(request.getParameter("deadline")); // 마감일
+        String assistiveDeviceSupport = CmmUtil.nvl(request.getParameter("assistiveDeviceSupport"), "false");
+        String deadline = CmmUtil.nvl(request.getParameter("deadline"));
 
-        /*
-         * ####################################################################################
-         * 반드시, 값을 받았으면, 꼭 로그를 찍어서 값이 제대로 들어오는지 파악해야함 반드시 작성할 것
-         * ####################################################################################
-         */
+
+
+
+
+
         log.info("companyName : " + companyName);
         log.info("title : " + title);
         log.info("jobCategory : " + jobCategory);
@@ -377,9 +377,9 @@ public class JobPostingController {
         log.info("salaryMin : " + salaryMin);
         log.info("deadline : " + deadline);
 
-        /*
-         * 값 전달은 반드시 DTO 객체를 이용해서 처리함 전달 받은 값을 DTO 객체에 넣는다.
-         */
+
+
+
         JobPostingDTO pDTO = new JobPostingDTO();
         pDTO.setCompanyName(companyName);
         pDTO.setTitle(title);
@@ -395,12 +395,12 @@ public class JobPostingController {
         pDTO.setAccessibilityInfo(accessibilityInfo);
         pDTO.setDeadline(deadline);
 
-        // 급여는 숫자로 변환하며, 입력하지 않았으면 null
+
         if (salaryMin.length() > 0) {
             pDTO.setSalaryMin(Integer.parseInt(salaryMin));
         }
 
-        // 체크박스 값은 "true" / "false" 문자열로 전달되기 때문에 Boolean으로 변환
+
         pDTO.setWheelchairAccessible(Boolean.parseBoolean(wheelchairAccessible));
         pDTO.setAccessibleRestroom(Boolean.parseBoolean(accessibleRestroom));
         pDTO.setDisabledParking(Boolean.parseBoolean(disabledParking));

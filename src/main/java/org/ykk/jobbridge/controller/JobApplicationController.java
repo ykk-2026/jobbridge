@@ -18,10 +18,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/*
- * /api/job-applications 로 시작되는 URL은 무조건 JobApplicationController에서 처리
- * 입사 지원은 구직자(JOB_SEEKER)만, 지원자 목록 조회는 기업회원(COMPANY)만 가능함
- * */
+
+
+
+
 @Slf4j
 @RequestMapping(value = "/api/job-applications")
 @RequiredArgsConstructor
@@ -30,9 +30,9 @@ public class JobApplicationController {
 
     private final IJobApplicationService jobApplicationService;
 
-    /**
-     * 로그인한 구직자가 지원한 리스트
-     */
+
+
+
     @ResponseBody
     @GetMapping(value = "getApplicationList")
     public List<JobApplicationDTO> getApplicationList(HttpSession session) throws Exception {
@@ -60,9 +60,9 @@ public class JobApplicationController {
         return rList;
     }
 
-    /**
-     * 로그인한 기업회원의 공고에 지원한 지원자 리스트
-     */
+
+
+
     @ResponseBody
     @GetMapping(value = "getCompanyApplicationList")
     public List<JobApplicationDTO> getCompanyApplicationList(HttpSession session) throws Exception {
@@ -90,9 +90,9 @@ public class JobApplicationController {
         return rList;
     }
 
-    /**
-     * 입사 지원
-     */
+
+
+
     @ResponseBody
     @PostMapping(value = "insertApplicationInfo")
     public MsgDTO insertApplicationInfo(HttpServletRequest request, HttpSession session) {
@@ -107,17 +107,17 @@ public class JobApplicationController {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
 
-            // 화면에서 "job-1" 형태로 넘어올 수 있어 앞의 "job-" 문자는 제거함
-            String jobIdText = CmmUtil.nvl(request.getParameter("jobId")).trim().replaceFirst("^job-", ""); // 공고 번호
+
+            String jobIdText = CmmUtil.nvl(request.getParameter("jobId")).trim().replaceFirst("^job-", "");
             String coverLetter = CmmUtil.nvl(request.getParameter("coverLetter"));
 
-            String employmentType = CmmUtil.nvl(request.getParameter("employmentType")); // 고용형태
+            String employmentType = CmmUtil.nvl(request.getParameter("employmentType"));
 
-            /*
-             * ####################################################################################
-             * 반드시, 값을 받았으면, 꼭 로그를 찍어서 값이 제대로 들어오는지 파악해야함 반드시 작성할 것
-             * ####################################################################################
-             */
+
+
+
+
+
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobIdText);
             log.info("coverLetter :"+ coverLetter);
