@@ -21,7 +21,7 @@ public class AiJobRecommendationDTO {
     private Integer careerScore; // 경력(10점)
     private Integer salaryScore; // 급여(10점)
     private Integer workStyleScore; // 근무방식(10점)
-    private Integer accessibilityScore; // 접근성(15점)
+    private Integer accessibilityScore; // 접근성(10점)
     private String recommendationReason; // 추천 이유
     private String mismatchReason; // 부족한 조건
 

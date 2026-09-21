@@ -148,8 +148,7 @@ class ApiSmokeTests {
                         .param("employmentType", "FULL_TIME")
                         .param("location", "서울특별시 강남구")
                         .param("salaryMin", "3000")
-                        .param("salaryMax", "")
-                        .param("remoteAvailable", "true")
+                        .param("workType", "REMOTE")
                         .param("wheelchairAccessible", "false")
                         .param("deadline", "2099-12-31"))
                 .andExpect(jsonPath("$.result").value(1));
@@ -158,7 +157,7 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("백엔드 개발자 채용"))
                 .andExpect(jsonPath("$[0].salaryMin").value(3000))
-                .andExpect(jsonPath("$[0].remoteAvailable").value(true))
+                .andExpect(jsonPath("$[0].workType").value("REMOTE"))
                 .andExpect(jsonPath("$[0].deadline").value("2099-12-31"))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*?\"id\":(\\d+).*", "$1");
@@ -308,7 +307,7 @@ class ApiSmokeTests {
                         .param("careerType", "신입")
                         .param("careerYears", "")
                         .param("minSalary", "2500")
-                        .param("remotePreferred", "true")
+                        .param("workType", "REMOTE")
                         .param("contactTimeStart", "09:00")
                         .param("contactTimeEnd", "18:00")
                         .param("contactMethod", "이메일"))
@@ -321,7 +320,7 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$.careerType").value("ENTRY"))
                 .andExpect(jsonPath("$.contactMethod").value("EMAIL"))
                 .andExpect(jsonPath("$.minSalary").value(2500))
-                .andExpect(jsonPath("$.remotePreferred").value(true));
+                .andExpect(jsonPath("$.workType").value("REMOTE"));
 
         // 프로필 저장 후 세션의 이름도 갱신됨
         mockMvc.perform(get("/api/members/getLoginInfo").session(seekerSession))

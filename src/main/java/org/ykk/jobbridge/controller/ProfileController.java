@@ -94,14 +94,13 @@ public class ProfileController {
             String careerType = CmmUtil.nvl(request.getParameter("careerType")); // 경력 구분
             String careerYears = CmmUtil.nvl(request.getParameter("careerYears")); // 경력 연수
             String minSalary = CmmUtil.nvl(request.getParameter("minSalary")); // 희망 최소 연봉
-            String remotePreferred = CmmUtil.nvl(request.getParameter("remotePreferred"), "false");
-            String flexiblePreferred = CmmUtil.nvl(request.getParameter("flexiblePreferred"), "false");
+            String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY"); // 희망 근무방식
             String wheelchairRequired = CmmUtil.nvl(request.getParameter("wheelchairRequired"), "false");
             String accessibleRestroomRequired = CmmUtil.nvl(request.getParameter("accessibleRestroomRequired"), "false");
             String disabledParkingRequired = CmmUtil.nvl(request.getParameter("disabledParkingRequired"), "false");
             String assistiveDeviceRequired = CmmUtil.nvl(request.getParameter("assistiveDeviceRequired"), "false");
-            String hybridPreferred = CmmUtil.nvl(request.getParameter("hybridPreferred"), "false");
-            String onsitePreferred = CmmUtil.nvl(request.getParameter("onsitePreferred"), "false");
+            String restAreaRequired = CmmUtil.nvl(request.getParameter("restAreaRequired"), "false");
+            String elevatorRequired = CmmUtil.nvl(request.getParameter("elevatorRequired"), "false");
             String contactTimeStart = CmmUtil.nvl(request.getParameter("contactTimeStart")); // 연락 가능 시작
             String contactTimeEnd = CmmUtil.nvl(request.getParameter("contactTimeEnd")); // 연락 가능 종료
             String contactMethod = CmmUtil.nvl(request.getParameter("contactMethod")); // 연락 방법
@@ -145,6 +144,7 @@ public class ProfileController {
                 pDTO.setDesiredJob(desiredJob);
                 pDTO.setDesiredRegion(desiredRegion);
                 pDTO.setEmploymentType(employmentType);
+                pDTO.setWorkType(workType);
                 pDTO.setCareerType(careerType);
                 pDTO.setContactTimeStart(contactTimeStart);
                 pDTO.setContactTimeEnd(contactTimeEnd);
@@ -160,14 +160,12 @@ public class ProfileController {
                 }
 
                 // 체크박스 값은 "true" / "false" 문자열로 전달되기 때문에 Boolean으로 변환
-                pDTO.setRemotePreferred(Boolean.parseBoolean(remotePreferred));
-                pDTO.setFlexiblePreferred(Boolean.parseBoolean(flexiblePreferred));
                 pDTO.setWheelchairRequired(Boolean.parseBoolean(wheelchairRequired));
                 pDTO.setAccessibleRestroomRequired(Boolean.parseBoolean(accessibleRestroomRequired));
                 pDTO.setDisabledParkingRequired(Boolean.parseBoolean(disabledParkingRequired));
                 pDTO.setAssistiveDeviceRequired(Boolean.parseBoolean(assistiveDeviceRequired));
-                pDTO.setHybridPreferred(Boolean.parseBoolean(hybridPreferred));
-                pDTO.setOnsitePreferred(Boolean.parseBoolean(onsitePreferred));
+                pDTO.setRestAreaRequired(Boolean.parseBoolean(restAreaRequired));
+                pDTO.setElevatorRequired(Boolean.parseBoolean(elevatorRequired));
                 pDTO.setProfilePublic(Boolean.parseBoolean(profilePublic));
 
                 res = profileService.saveProfileInfo(pDTO);

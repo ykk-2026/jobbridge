@@ -18,7 +18,7 @@ public class JobPostingDTO {
     private String employmentType; // 고용형태
     private String location; // 근무지
     private Integer salaryMin; // 최소 급여
-    private Integer salaryMax; // 최대 급여
+    private String workType; // 근무방식(OFFICE, REMOTE, HYBRID, ANY)
     private String experienceLevel; // 경력 조건
     private String educationLevel; // 학력 조건
     private String description; // 업무 내용
@@ -28,8 +28,8 @@ public class JobPostingDTO {
     private Boolean wheelchairAccessible; // 휠체어 접근 가능
     private Boolean accessibleRestroom; // 장애인 화장실
     private Boolean disabledParking; // 장애인 주차
-    private Boolean remoteAvailable; // 재택근무 가능
-    private Boolean flexibleWorkAvailable; // 유연근무 가능
+    private Boolean restAreaAvailable; // 장애인 휴게공간
+    private Boolean elevatorAvailable; // 엘리베이터 이용 가능
     private Boolean assistiveDeviceSupport; // 보조공학기기 지원
     private String deadline; // 마감일
     private String status; // 상태(OPEN, CLOSED, DELETED)

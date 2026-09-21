@@ -349,7 +349,7 @@ public class JobPostingController {
         String employmentType = CmmUtil.nvl(request.getParameter("employmentType")).trim(); // 고용형태
         String location = CmmUtil.nvl(request.getParameter("location")).trim(); // 근무지
         String salaryMin = CmmUtil.nvl(request.getParameter("salaryMin")); // 최소 급여
-        String salaryMax = CmmUtil.nvl(request.getParameter("salaryMax")); // 최대 급여
+        String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY"); // 근무방식
         String experienceLevel = CmmUtil.nvl(request.getParameter("experienceLevel")); // 경력 조건
         String educationLevel = CmmUtil.nvl(request.getParameter("educationLevel")); // 학력 조건
         String description = CmmUtil.nvl(request.getParameter("description")); // 업무 내용
@@ -359,8 +359,8 @@ public class JobPostingController {
         String wheelchairAccessible = CmmUtil.nvl(request.getParameter("wheelchairAccessible"), "false"); // 휠체어
         String accessibleRestroom = CmmUtil.nvl(request.getParameter("accessibleRestroom"), "false"); // 장애인 화장실
         String disabledParking = CmmUtil.nvl(request.getParameter("disabledParking"), "false"); // 장애인 주차
-        String remoteAvailable = CmmUtil.nvl(request.getParameter("remoteAvailable"), "false"); // 재택근무
-        String flexibleWorkAvailable = CmmUtil.nvl(request.getParameter("flexibleWorkAvailable"), "false"); // 유연근무
+        String restAreaAvailable = CmmUtil.nvl(request.getParameter("restAreaAvailable"), "false");
+        String elevatorAvailable = CmmUtil.nvl(request.getParameter("elevatorAvailable"), "false");
         String assistiveDeviceSupport = CmmUtil.nvl(request.getParameter("assistiveDeviceSupport"), "false"); // 보조기기
         String deadline = CmmUtil.nvl(request.getParameter("deadline")); // 마감일
 
@@ -375,9 +375,7 @@ public class JobPostingController {
         log.info("employmentType : " + employmentType);
         log.info("location : " + location);
         log.info("salaryMin : " + salaryMin);
-        log.info("salaryMax : " + salaryMax);
         log.info("deadline : " + deadline);
-        log.info("remoteAvailable : " + remoteAvailable);
 
         /*
          * 값 전달은 반드시 DTO 객체를 이용해서 처리함 전달 받은 값을 DTO 객체에 넣는다.
@@ -388,6 +386,7 @@ public class JobPostingController {
         pDTO.setJobCategory(jobCategory);
         pDTO.setEmploymentType(employmentType);
         pDTO.setLocation(location);
+        pDTO.setWorkType(workType);
         pDTO.setExperienceLevel(experienceLevel);
         pDTO.setEducationLevel(educationLevel);
         pDTO.setDescription(description);
@@ -400,16 +399,13 @@ public class JobPostingController {
         if (salaryMin.length() > 0) {
             pDTO.setSalaryMin(Integer.parseInt(salaryMin));
         }
-        if (salaryMax.length() > 0) {
-            pDTO.setSalaryMax(Integer.parseInt(salaryMax));
-        }
 
         // 체크박스 값은 "true" / "false" 문자열로 전달되기 때문에 Boolean으로 변환
         pDTO.setWheelchairAccessible(Boolean.parseBoolean(wheelchairAccessible));
         pDTO.setAccessibleRestroom(Boolean.parseBoolean(accessibleRestroom));
         pDTO.setDisabledParking(Boolean.parseBoolean(disabledParking));
-        pDTO.setRemoteAvailable(Boolean.parseBoolean(remoteAvailable));
-        pDTO.setFlexibleWorkAvailable(Boolean.parseBoolean(flexibleWorkAvailable));
+        pDTO.setRestAreaAvailable(Boolean.parseBoolean(restAreaAvailable));
+        pDTO.setElevatorAvailable(Boolean.parseBoolean(elevatorAvailable));
         pDTO.setAssistiveDeviceSupport(Boolean.parseBoolean(assistiveDeviceSupport));
 
         return pDTO;

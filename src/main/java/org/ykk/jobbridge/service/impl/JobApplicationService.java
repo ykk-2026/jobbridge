@@ -9,6 +9,7 @@ import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.mapper.IJobApplicationMapper;
 import org.ykk.jobbridge.mapper.IJobPostingMapper;
 import org.ykk.jobbridge.service.IJobApplicationService;
+import org.ykk.jobbridge.util.EmploymentTypeCodes;
 
 import java.util.List;
 
@@ -46,6 +47,7 @@ public class JobApplicationService implements IJobApplicationService {
 
         // 지원 성공 : 1, 이미 지원함 : 2, 마감되었거나 없는 공고 : 3, 오류 : 0
         int res = 0;
+        pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
 
         // 1. 지원할 채용공고가 진행 중(OPEN)인지 확인
         JobPostingDTO jDTO = new JobPostingDTO();

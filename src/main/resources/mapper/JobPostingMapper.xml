@@ -7,11 +7,12 @@
     <!-- 채용공고 리스트 쿼리 : 진행 중(OPEN)이고 마감일이 지나지 않은 공고 -->
     <select id="getJobList" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.salary_max,
+               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
-               J.remote_available, J.flexible_work_available, J.assistive_device_support,
+               J.rest_area_available, J.elevator_available,
+               J.assistive_device_support,
                J.deadline, J.status, J.created_at, J.updated_at
           FROM job_posting J, company_profile C
          WHERE J.company_member_id = C.member_id
@@ -24,11 +25,12 @@
     <!-- 채용공고 상세보기 쿼리 -->
     <select id="getJobInfo" parameterType="JobPostingDTO" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.salary_max,
+               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
-               J.remote_available, J.flexible_work_available, J.assistive_device_support,
+               J.rest_area_available, J.elevator_available,
+               J.assistive_device_support,
                J.deadline, J.status, J.created_at, J.updated_at
           FROM job_posting J, company_profile C
          WHERE J.company_member_id = C.member_id
@@ -39,11 +41,12 @@
     <!-- 기업회원이 등록한 채용공고 리스트 쿼리 -->
     <select id="getMyJobList" parameterType="JobPostingDTO" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.salary_max,
+               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
-               J.remote_available, J.flexible_work_available, J.assistive_device_support,
+               J.rest_area_available, J.elevator_available,
+               J.assistive_device_support,
                J.deadline, J.status, J.created_at, J.updated_at
           FROM job_posting J, company_profile C
          WHERE J.company_member_id = C.member_id
@@ -57,18 +60,20 @@
         INSERT INTO job_posting
             (
                 company_member_id, company_name, title, job_category, employment_type, location,
-                salary_min, salary_max, experience_level, education_level,
+                salary_min, work_type, experience_level, education_level,
                 description, requirements, preferred_qualifications, accessibility_info,
                 wheelchair_accessible, accessible_restroom, disabled_parking,
-                remote_available, flexible_work_available, assistive_device_support,
+                rest_area_available, elevator_available,
+                assistive_device_support,
                 deadline, status
             )
         VALUES (
             #{companyMemberId}, #{companyName}, #{title}, #{jobCategory}, #{employmentType}, #{location},
-            #{salaryMin}, #{salaryMax}, #{experienceLevel}, #{educationLevel},
+            #{salaryMin}, #{workType}, #{experienceLevel}, #{educationLevel},
             #{description}, #{requirements}, #{preferredQualifications}, #{accessibilityInfo},
             #{wheelchairAccessible}, #{accessibleRestroom}, #{disabledParking},
-            #{remoteAvailable}, #{flexibleWorkAvailable}, #{assistiveDeviceSupport},
+            #{restAreaAvailable}, #{elevatorAvailable},
+            #{assistiveDeviceSupport},
             NULLIF(#{deadline}, ''), 'OPEN'
         )
     </insert>
@@ -82,7 +87,7 @@
             employment_type = #{employmentType},
             location = #{location},
             salary_min = #{salaryMin},
-            salary_max = #{salaryMax},
+            work_type = #{workType},
             experience_level = #{experienceLevel},
             education_level = #{educationLevel},
             description = #{description},
@@ -92,8 +97,8 @@
             wheelchair_accessible = #{wheelchairAccessible},
             accessible_restroom = #{accessibleRestroom},
             disabled_parking = #{disabledParking},
-            remote_available = #{remoteAvailable},
-            flexible_work_available = #{flexibleWorkAvailable},
+            rest_area_available = #{restAreaAvailable},
+            elevator_available = #{elevatorAvailable},
             assistive_device_support = #{assistiveDeviceSupport},
             deadline = NULLIF(#{deadline}, ''),
             updated_at = CURRENT_TIMESTAMP
