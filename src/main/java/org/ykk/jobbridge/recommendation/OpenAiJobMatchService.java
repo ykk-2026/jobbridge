@@ -131,7 +131,7 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
                 "preferredQualifications", shorten(job.getPreferredQualifications()));
         String input = objectMapper.valueToTree(Map.of("candidate", candidate, "job", posting)).toString();
 
-        log.debug(input);
+
 
         return Map.of(
                 "model", model,

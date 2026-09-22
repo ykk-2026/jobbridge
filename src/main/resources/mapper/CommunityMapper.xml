@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<!-- JAVA와 연결할 Mapper 파일 설정 -->
+
 <mapper namespace="org.ykk.jobbridge.mapper.ICommunityMapper">
 
-    <!-- 게시글 리스트 쿼리 : 회원정보와 JOIN 통해 작성자명 가져오기, 서브쿼리로 댓글 수 계산 -->
+
     <select id="getPostList" resultType="CommunityPostDTO">
         SELECT P.id, P.member_id, P.category, P.title, M.name AS author, P.content,
                (SELECT COUNT(1) FROM community_comment C
@@ -17,7 +17,6 @@
          ORDER BY P.created_at DESC, P.id DESC
     </select>
 
-    <!-- 게시글 상세보기 쿼리 -->
     <select id="getPostInfo" parameterType="CommunityPostDTO" resultType="CommunityPostDTO">
         SELECT P.id, P.member_id, P.category, P.title, M.name AS author, P.content,
                (SELECT COUNT(1) FROM community_comment C
@@ -29,7 +28,7 @@
            AND P.id = #{id}
     </select>
 
-    <!-- 게시글 등록 쿼리 -->
+
     <insert id="insertPostInfo" parameterType="CommunityPostDTO" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO community_post
             (
@@ -40,7 +39,7 @@
         )
     </insert>
 
-    <!-- 조회수 증가 쿼리 -->
+
     <update id="updatePostViews" parameterType="CommunityPostDTO">
         UPDATE community_post SET
             view_count = view_count + 1
@@ -49,7 +48,7 @@
             AND status = 'ACTIVE'
     </update>
 
-    <!-- 게시글 삭제 쿼리 : 본인 글만 삭제, 실제 삭제 대신 상태값만 DELETED로 변경 -->
+
     <update id="deletePostInfo" parameterType="CommunityPostDTO">
         UPDATE community_post SET
             status = 'DELETED',
@@ -60,7 +59,6 @@
             AND status = 'ACTIVE'
     </update>
 
-    <!-- 댓글 리스트 쿼리 -->
     <select id="getCommentList" parameterType="CommunityCommentDTO" resultType="CommunityCommentDTO">
         SELECT C.id, C.post_id, C.member_id, M.name AS author, C.content,
                C.status, C.created_at, C.updated_at
@@ -71,7 +69,6 @@
          ORDER BY C.created_at, C.id
     </select>
 
-    <!-- 댓글 등록 쿼리 -->
     <insert id="insertCommentInfo" parameterType="CommunityCommentDTO" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO community_comment
             (
@@ -82,7 +79,6 @@
         )
     </insert>
 
-    <!-- 댓글 삭제 쿼리 : 본인 댓글만 삭제 -->
     <update id="deleteCommentInfo" parameterType="CommunityCommentDTO">
         UPDATE community_comment SET
             status = 'DELETED',
@@ -93,7 +89,6 @@
             AND status = 'ACTIVE'
     </update>
 
-    <!-- 로그인한 회원의 신고 내역 쿼리 -->
     <select id="getReportList" parameterType="CommunityReportDTO" resultType="CommunityReportDTO">
         SELECT id, post_id, reporter_member_id, reason, detail, status, created_at
           FROM community_report
@@ -101,7 +96,6 @@
            AND reporter_member_id = #{reporterMemberId}
     </select>
 
-    <!-- 이미 신고했는지 체크 쿼리 -->
     <select id="getReportExists" parameterType="CommunityReportDTO" resultType="CommunityReportDTO">
         SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS EXISTS_YN
           FROM community_report
@@ -109,7 +103,6 @@
            AND reporter_member_id = #{reporterMemberId}
     </select>
 
-    <!-- 게시글 신고 등록 쿼리 -->
     <insert id="insertReportInfo" parameterType="CommunityReportDTO" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO community_report
             (

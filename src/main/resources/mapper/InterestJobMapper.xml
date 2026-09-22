@@ -3,7 +3,6 @@
 
 <mapper namespace="org.ykk.jobbridge.mapper.IInterestJobMapper">
 
-    <!-- interest_job에는 관계만 저장하고, 공고 정보는 항상 job_posting에서 조회한다. -->
     <select id="getInterestJobList" parameterType="InterestJobDTO" resultType="InterestJobDTO">
         SELECT I.id,
                I.member_id,

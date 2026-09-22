@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<!-- JAVA와 연결할 Mapper 파일 설정 -->
 <mapper namespace="org.ykk.jobbridge.mapper.IJobPostingMapper">
 
-    <!-- 채용공고 리스트 쿼리 : 진행 중(OPEN)이고 마감일이 지나지 않은 공고 -->
     <select id="getJobList" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
                J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
@@ -22,7 +20,6 @@
          LIMIT 100
     </select>
 
-    <!-- 채용공고 상세보기 쿼리 -->
     <select id="getJobInfo" parameterType="JobPostingDTO" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
                J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
@@ -38,7 +35,6 @@
            AND J.status != 'DELETED'
     </select>
 
-    <!-- 기업회원이 등록한 채용공고 리스트 쿼리 -->
     <select id="getMyJobList" parameterType="JobPostingDTO" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
                J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
@@ -55,7 +51,6 @@
          ORDER BY J.created_at DESC, J.id DESC
     </select>
 
-    <!-- 채용공고 등록 쿼리 : id 컬럼은 AUTO_INCREMENT -->
     <insert id="insertJobInfo" parameterType="JobPostingDTO" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO job_posting
             (
@@ -78,7 +73,6 @@
         )
     </insert>
 
-    <!-- 채용공고 수정 쿼리 : 본인 회사의 공고만 수정 가능 -->
     <update id="updateJobInfo" parameterType="JobPostingDTO">
         UPDATE job_posting SET
             company_name = #{companyName},
@@ -108,7 +102,6 @@
             AND status != 'DELETED'
     </update>
 
-    <!-- 채용공고 마감 쿼리 -->
     <update id="updateJobClose" parameterType="JobPostingDTO">
         UPDATE job_posting SET
             status = 'CLOSED',
@@ -119,7 +112,6 @@
             AND status = 'OPEN'
     </update>
 
-    <!-- 채용공고 삭제 쿼리 : 실제 삭제하지 않고 상태값만 DELETED로 변경 -->
     <update id="deleteJobInfo" parameterType="JobPostingDTO">
         UPDATE job_posting SET
             status = 'DELETED',
@@ -130,7 +122,6 @@
             AND status != 'DELETED'
     </update>
 
-    <!-- 전체 채용공고 수 쿼리 -->
     <select id="getJobCount" resultType="int">
         SELECT COUNT(1)
           FROM job_posting
