@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("h2")
 class AiJobRecommendationTests {
 
-    // 서비스 함수가 throws Exception 이므로 테스트 함수도 throws Exception 선언
+
 
     @Autowired
     private JobRecommendationCalculator calculator;

@@ -27,20 +27,20 @@ import static org.ykk.jobbridge.util.TextUtils.isUnrestricted;
 import static org.ykk.jobbridge.util.TextUtils.nullToEmpty;
 import static org.ykk.jobbridge.util.TextUtils.toCode;
 
-/**
- * 구직자 프로필과 채용공고를 비교해 100점 만점의 추천 점수를 만든다.
- * <pre>
- *   직무·기술  30점  생성형 AI, 실패 시 키워드 규칙
- *   지역·출퇴근 15점  카카오 길찾기, 실패 시 행정구역 비교 ({@link KoreaRegions})
- *   고용형태   10점
- *   경력      10점
- *   급여      10점
- *   근무방식   10점
- *   접근성    10점
- * </pre>
- * 각 항목의 근거 문장은 {@link MatchNotes}에 모아 추천 문구로 만든다.
- * 프로필에 해당 조건이 없으면 근거 없이 기본 점수만 준다.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @Slf4j
 @Component
 public class JobRecommendationCalculator {
@@ -53,10 +53,10 @@ public class JobRecommendationCalculator {
     static final int WORK_STYLE_POINTS = 10;
     static final int ACCESSIBILITY_POINTS = 10;
 
-    /** AI 직무 점수가 이 값 이상이면 "잘 맞는 점"으로 기록한다. */
+
     private static final int AI_MATCH_THRESHOLD = 18;
 
-    /** 화면에서 쓰는 한글 표기와 옛 코드를 표준 고용형태 코드로 맞춘다. */
+
     private static final Map<String, String> EMPLOYMENT_TYPE_ALIASES = Map.ofEntries(
             Map.entry("INTERNSHIP", "INTERN"),
             Map.entry("FULL_TIME_CONVERSION", "CONVERSION_TYPE"),
@@ -76,7 +76,7 @@ public class JobRecommendationCalculator {
             Map.entry("파견직", "DISPATCH"),
             Map.entry("프리랜서", "FREELANCE"));
 
-    /** 순서와 무관하게 두 고용형태의 유사도 점수를 찾는 규칙표다. */
+
     private static final Map<Set<String>, Integer> EMPLOYMENT_TYPE_SCORES = Map.ofEntries(
             Map.entry(Set.of("FULL_TIME", "CONVERSION_TYPE"), 8),
             Map.entry(Set.of("FULL_TIME", "PERMANENT_CONTRACT"), 8),
@@ -105,7 +105,7 @@ public class JobRecommendationCalculator {
     private final KakaoMapDistanceService mapDistanceService;
     private final IAiJobMatchService aiJobMatchService;
 
-    // 카카오 길찾기 서비스와 AI 직무 평가 서비스는 스프링이 생성자를 통해 주입함
+
     public JobRecommendationCalculator(KakaoMapDistanceService mapDistanceService,
                                        IAiJobMatchService aiJobMatchService) {
         this.mapDistanceService = mapDistanceService;
@@ -147,9 +147,9 @@ public class JobRecommendationCalculator {
         return result;
     }
 
-    // ------------------------------------------------------------ 직무·기술 (30점)
 
-    /** 생성형 AI 평가가 우선이고, 실패하면 희망 직무 키워드 규칙으로 계산한다. */
+
+
     private JobMatchAssessment jobFitScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         Optional<JobMatchAssessment> ai = aiJobMatchService.assess(profile, job);
         if (ai.isPresent()) {
@@ -189,7 +189,7 @@ public class JobRecommendationCalculator {
                 score);
     }
 
-    /** 희망 직무를 2글자 이상 단어로 쪼갠다. 예: "Java 백엔드 개발자" → [java, 백엔드, 개발자] */
+
     private static List<String> keywords(String desiredJob) {
         List<String> keywords = new ArrayList<>();
         for (String token : desiredJob.split("[\\s,/|]+")) {
@@ -200,11 +200,11 @@ public class JobRecommendationCalculator {
         return keywords;
     }
 
-    // ------------------------------------------------------------ 지역·출퇴근 (15점)
 
-    /** 카카오 길찾기 소요 시간이 우선이고, 실패하면 행정구역 이름으로 비교한다. */
+
+
     private int regionScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
-        // 거주지가 있으면 거주지, 없으면 희망 지역을 출발지로 본다.
+
         String origin = isUnrestricted(profile.getResidenceRegion())
                 ? profile.getDesiredRegion() : profile.getResidenceRegion();
         if (isUnrestricted(origin)) return 0;
@@ -215,7 +215,7 @@ public class JobRecommendationCalculator {
         Optional<DrivingRoute> route = mapDistanceService.findDrivingRoute(origin, destination);
         if (route.isPresent()) return drivingScore(route.get(), notes);
 
-        // 희망 지역이 "서울, 경기"처럼 여러 개면 가장 높은 점수를 쓴다.
+
         KoreaRegions.Match best = Arrays.stream(origin.split("[,/|]"))
                 .map(desired -> KoreaRegions.compare(desired.trim(), destination.trim()))
                 .max(Comparator.comparingInt(KoreaRegions.Match::score))
@@ -232,7 +232,7 @@ public class JobRecommendationCalculator {
         return notes.note(score >= 9, label, score, REGION_POINTS);
     }
 
-    // ------------------------------------------------------------ 고용형태 (10점)
+
 
     private static int employmentTypeScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = employmentTypeCode(profile.getEmploymentType());
@@ -259,7 +259,7 @@ public class JobRecommendationCalculator {
         return EMPLOYMENT_TYPE_ALIASES.getOrDefault(code, code);
     }
 
-    // ------------------------------------------------------------ 경력 (10점)
+
 
     private static int careerScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = toCode(profile.getCareerType());
@@ -283,9 +283,9 @@ public class JobRecommendationCalculator {
         return notes.mismatch("요구 경력 차이가 큼", 1, CAREER_POINTS);
     }
 
-    // ------------------------------------------------------------ 급여 (10점)
 
-    /** 공고 연봉이 희망 급여의 몇 %인지로 계산한다. */
+
+
     private static int salaryScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         Integer desired = profile.getMinSalary();
         if (desired == null || desired <= 0) return 6;
@@ -305,9 +305,9 @@ public class JobRecommendationCalculator {
         return notes.mismatch("희망 급여 " + desired + "만원 대비 " + offered + "만원", score, SALARY_POINTS);
     }
 
-    // ------------------------------------------------------------ 근무방식 (10점) · 접근성 (10점)
 
-    /** 새 근무방식 코드로 희망 조건 충족 여부를 계산한다. */
+
+
     private static int workStyleScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = toCode(profile.getWorkType());
         String offered = toCode(job.getWorkType());
@@ -319,7 +319,7 @@ public class JobRecommendationCalculator {
                 : notes.mismatch("희망 근무방식과 다름", 0, WORK_STYLE_POINTS);
     }
 
-    /** 구직자가 필수로 표시한 편의시설 중 공고가 지원하는 비율로 계산한다. */
+
     private static int accessibilityScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         List<Check> wanted = Stream.of(
                 new Check(profile.getWheelchairRequired(), job.getWheelchairAccessible(), "휠체어 접근"),
@@ -341,7 +341,7 @@ public class JobRecommendationCalculator {
                 : satisfied * 5 >= total * 3 ? 6 : satisfied * 5 >= total * 2 ? 4 : 2;
     }
 
-    /** "구직자가 원하는 조건(wanted)을 공고가 지원하는가(supported)" 확인 항목 하나. */
+
     private record Check(Boolean wanted, Boolean supported, String label) {
 
         boolean isWanted() {

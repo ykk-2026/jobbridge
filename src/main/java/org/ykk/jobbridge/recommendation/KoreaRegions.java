@@ -10,22 +10,22 @@ import java.util.Set;
 import static org.ykk.jobbridge.util.NumberUtils.clamp;
 import static org.ykk.jobbridge.util.TextUtils.compact;
 
-/**
- * 행정구역 이름만으로 두 지역이 얼마나 가까운지 판단한다. (카카오 길찾기를 쓸 수 없을 때의 대안)
- * 광역지역 인접 정보와 서울 자치구 좌표를 상수로 가진다.
- */
+
+
+
+
 final class KoreaRegions {
 
-    /** 지역 비교 결과. label에는 점수 표기가 없다. */
+
     record Match(int score, String label) {
     }
 
-    /** 위도·경도 한 쌍. 서울 자치구 사이의 직선 거리를 구할 때 쓴다. */
+
     private record Coordinate(double latitude, double longitude) {
 
         private static final double EARTH_RADIUS_KM = 6371.0;
 
-        /** 하버사인 공식으로 구한 두 좌표 사이의 직선 거리(km). */
+
         double distanceKmTo(Coordinate other) {
             double dLat = Math.toRadians(other.latitude - latitude);
             double dLng = Math.toRadians(other.longitude - longitude);
@@ -48,7 +48,7 @@ final class KoreaRegions {
     private KoreaRegions() {
     }
 
-    /** 희망 지역과 공고 지역을 비교해 0~15점과 근거를 돌려준다. */
+
     static Match compare(String desired, String actual) {
         String normalizedDesired = normalize(desired);
         String normalizedActual = normalize(actual);
@@ -76,7 +76,7 @@ final class KoreaRegions {
         return new Match(2, "희망 지역과 거리가 먼 지역");
     }
 
-    /** 둘 다 서울 자치구이면 좌표 거리로 점수를 낸다 (6~15점). 아니면 null. */
+
     private static Match compareSeoulDistricts(String desired, String actual) {
         Coordinate from = seoulDistrictCoordinate(desired);
         Coordinate to = seoulDistrictCoordinate(actual);
@@ -96,7 +96,7 @@ final class KoreaRegions {
                 .orElse(null);
     }
 
-    /** "서울특별시" → "서울", "경기도" → "경기"처럼 행정구역 접미어를 정리한다. */
+
     private static String normalize(String value) {
         return compact(value)
                 .replace("특별자치도", "").replace("특별자치시", "")
@@ -108,13 +108,13 @@ final class KoreaRegions {
                 .replace("제주도", "제주");
     }
 
-    /** 지역 문자열이 속한 광역지역 이름. 찾지 못하면 빈 문자열. */
+
     private static String province(String value) {
         String normalized = normalize(value);
         return PROVINCES.stream().filter(normalized::contains).findFirst().orElse("");
     }
 
-    /** 시·군·구·동 단위 이름 조각들 (광역지역 이름 포함). */
+
     private static Set<String> tokens(String value) {
         String cleaned = value.replace("특별자치도", " ").replace("특별자치시", " ")
                 .replace("특별시", " ").replace("광역시", " ").replace("도", " ")

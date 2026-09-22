@@ -17,22 +17,22 @@ import static org.ykk.jobbridge.util.TextUtils.compact;
 import static org.ykk.jobbridge.util.TextUtils.isBlank;
 import static org.ykk.jobbridge.util.TextUtils.trimToEmpty;
 
-/**
- * 카카오 API로 두 주소 사이의 자동차 경로(거리·시간)를 조회한다.
- * API 키가 없거나 호출에 실패하면 빈 Optional을 돌려주고, 호출한 쪽에서 행정구역 비교로 대신 계산한다.
- */
+
+
+
+
 @Slf4j
 @Service
 public class KakaoMapDistanceService {
 
-    /** 자동차 경로 요약. */
+
     public record DrivingRoute(int distanceMeters, int durationSeconds) {
 
         public double kilometers() {
             return distanceMeters / 1000.0;
         }
 
-        /** 최소 1분. */
+
         public int minutes() {
             return Math.max(1, (int) Math.round(durationSeconds / 60.0));
         }
@@ -46,7 +46,7 @@ public class KakaoMapDistanceService {
     private final boolean enabled;
     private final String apiKey;
     private final JsonHttpClient http;
-    /** 주소 → "경도,위도" (카카오 길찾기가 쓰는 순서) */
+
     private final Map<String, String> coordinateCache = new ConcurrentHashMap<>();
     private final Map<String, DrivingRoute> routeCache = new ConcurrentHashMap<>();
 
@@ -67,7 +67,7 @@ public class KakaoMapDistanceService {
 
         log.info(this.getClass().getName() + ".findDrivingRoute Start!");
 
-        // API 키가 없으면 카카오 호출하지 않고, 호출한 쪽에서 행정구역 이름으로 계산함
+
         if (!isEnabled() || isBlank(originAddress) || isBlank(destinationAddress)) {
             return Optional.empty();
         }
@@ -92,13 +92,13 @@ public class KakaoMapDistanceService {
             routeCache.put(cacheKey, route);
             return Optional.of(route);
         } catch (Exception e) {
-            // 카카오 호출이 실패해도 추천은 계속되어야 하기 때문에 로그만 남기고 빈 값을 돌려줌
+
             log.info("카카오 API 호출 실패 : " + e);
             return Optional.empty();
         }
     }
 
-    /** 주소 → "경도,위도". 카카오 주소 검색 결과의 첫 번째 항목을 사용한다. */
+
     private Optional<String> geocode(String address) throws Exception {
         String cacheKey = compact(address);
         String cached = coordinateCache.get(cacheKey);

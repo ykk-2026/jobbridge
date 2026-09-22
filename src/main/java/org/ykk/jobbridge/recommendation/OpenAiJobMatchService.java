@@ -19,11 +19,11 @@ import static org.ykk.jobbridge.util.NumberUtils.clamp;
 import static org.ykk.jobbridge.util.TextUtils.isBlank;
 import static org.ykk.jobbridge.util.TextUtils.trimToEmpty;
 
-/**
- * OpenAI Chat Completions API로 직무·기술의 의미적 적합도(0~30점)를 평가한다.
- * 이름·이메일·전화번호 같은 개인정보는 보내지 않는다.
- * API 키가 없거나 호출에 실패하면 빈 Optional을 돌려주고, 호출한 쪽에서 키워드 규칙으로 대신 계산한다.
- */
+
+
+
+
+
 @Slf4j
 @Service
 public class OpenAiJobMatchService implements IAiJobMatchService {
@@ -55,7 +55,7 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
             다음과 같은 형식을 완벽하게 준수해 답변하세요.
             """;
 
-    /** 응답을 항상 이 JSON 구조로 받도록 강제한다. */
+
     private static final Map<String, Object> RESPONSE_FORMAT = Map.of(
             "type", "json_schema",
             "json_schema", Map.of(
@@ -97,14 +97,14 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
 
         log.info(this.getClass().getName() + ".assess Start!");
 
-        // API 키가 없으면 AI 호출하지 않고, 호출한 쪽에서 키워드 규칙으로 계산함
+
         if (!enabled || apiKey.isBlank() || profile == null || job == null) {
             log.info("OpenAI 사용 안 함 (enabled : " + enabled + ", apiKey 존재 : " + !apiKey.isBlank() + ")");
             return Optional.empty();
         }
 
         try {
-            // OpenAI Chat Completions API 호출 (JSON 결과 받기)
+
             JsonNode response = http.post(endpoint, request(profile, job), "Bearer " + apiKey, TIMEOUT);
 
             log.info(this.getClass().getName() + ".assess End!");
@@ -119,13 +119,13 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
                     : assessment);
 
         } catch (Exception e) {
-            // AI 호출이 실패해도 추천은 계속되어야 하기 때문에 로그만 남기고 빈 값을 돌려줌
+
             log.info("OpenAI 호출 실패 : " + e);
             return Optional.empty();
         }
     }
 
-    /** 요청 본문. 이름·연락처는 넣지 않고 직무 판단에 필요한 항목만 보낸다. */
+
     private Map<String, Object> request(JobSeekerProfileDTO profile, JobPostingDTO job) {
         Map<String, Object> candidate = Map.of(
                 "desiredJob", trimToEmpty(profile.getDesiredJob()),
@@ -150,7 +150,7 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
                 "response_format", RESPONSE_FORMAT);
     }
 
-    /** choices[0].message.content의 JSON을 읽는다. */
+
     private Optional<JobMatchAssessment> parse(JsonNode response) throws Exception {
         String content = response.path("choices").path(0).path("message").path("content").asText("");
         if (content.isBlank()) return Optional.empty();
@@ -167,7 +167,7 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
         return text.length() <= MAX_TEXT_LENGTH ? text : text.substring(0, MAX_TEXT_LENGTH);
     }
 
-    /** '프론트엔드 개발자'와 '프론트엔드 개발'처럼 일반적인 직무 접미사만 다른 경우도 동일 직무로 본다. */
+
     private static boolean sameJob(String desiredJob, String jobCategory) {
         String desired = jobKey(desiredJob);
         String category = jobKey(jobCategory);

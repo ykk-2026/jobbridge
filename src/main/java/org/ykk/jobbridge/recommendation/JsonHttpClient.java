@@ -10,7 +10,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
-/** 외부 JSON API(카카오, OpenAI)를 호출하는 공통 HTTP 클라이언트. 2xx가 아니면 예외를 던진다. */
+
 final class JsonHttpClient {
 
     private final HttpClient httpClient = HttpClient.newBuilder()
