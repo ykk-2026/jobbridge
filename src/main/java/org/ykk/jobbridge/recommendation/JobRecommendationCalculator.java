@@ -51,7 +51,7 @@ public class JobRecommendationCalculator {
     static final int CAREER_POINTS = 10;
     static final int SALARY_POINTS = 10;
     static final int WORK_STYLE_POINTS = 10;
-    static final int ACCESSIBILITY_POINTS = 10;
+    static final int ACCESSIBILITY_POINTS = 15;
 
 
     private static final int AI_MATCH_THRESHOLD = 18;

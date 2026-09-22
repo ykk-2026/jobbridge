@@ -240,5 +240,5 @@ const recommendationUrls = (_memberId: number) => ['/api/recommendations/getReco
 
 - 비밀번호 저장 방식이 BCrypt → **SHA-256 해시(EncryptUtil)** 로 바뀌었습니다. **기존 DB의 회원은 로그인이 되지 않으므로** 다시 가입하거나 `member.password`를 갱신해야 합니다.
   (예: 비밀번호 `1234` → `5a8702bdcc88f00df8538b14b492dd7fe2501d40a3b1e4aa94f5470c48ddbb71`)
-- 실행 시 자바 코드로 만들던 테이블/컬럼(`job_application`, `job_seeker_profile.name ...`)은 Flyway `V3__job_application_and_profile_columns.sql`이 처음 기동 때 만듭니다.
+- 필요한 테이블과 컬럼은 현재 `jobbridge` DB에 반영되어 있습니다.
 - `application-mariadb.properties`는 `application.properties`로 합쳐졌습니다. DB 주소/계정은 `application.properties`에서 직접 수정합니다. 카카오/OpenAI 키만 환경변수(`KAKAO_REST_API_KEY`, `OPENAI_API_KEY`)로 넣습니다.

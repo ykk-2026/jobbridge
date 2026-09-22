@@ -112,7 +112,6 @@ API 키는 `application.properties`나 Git 저장소에 직접 작성하지 않�
 - `util/TextUtils`, `util/NumberUtils`: 문자열 정리·숫자 범위 제한 등 공통 함수
 - `AiJobRecommendationServiceImpl`: 공고별 계산, 점수순 정렬, DB 저장
 - `AiJobRecommendationMapper.xml`: 분석 점수·출처·근거 INSERT/UPDATE
-- `db/migration/V2__create_ai_job_posting_recommendation.sql`: 추천 테이블 Flyway 마이그레이션
 - `OpenAiJobMatchServiceTests`: 구조화 응답과 개인정보 미전송 검증
 
 ## 발표 예시

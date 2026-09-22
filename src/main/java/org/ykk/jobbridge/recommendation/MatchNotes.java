@@ -59,7 +59,7 @@ final class MatchNotes {
 
     String recommendationReason() {
         List<String> gaps = mismatches.stream().map(Note::summary).distinct().limit(3).toList();
-        if (!gaps.isEmpty()) return String.join("\n", gaps);
+        if (!gaps.isEmpty()) return "아쉬운 부분은 다음과 같습니다.\n" + String.join("\n", gaps);
 
         String base = "현재 프로필 기준으로 뚜렷하게 부족한 조건은 없습니다.";
         List<String> strengths = matches.stream().map(Note::summary).distinct().limit(2).toList();
