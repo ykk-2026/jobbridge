@@ -15,10 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-
-
-
-
 @Slf4j
 @RequestMapping(value = "/api/recommendations")
 @RequiredArgsConstructor
@@ -26,11 +22,6 @@ import java.util.Optional;
 public class AiJobRecommendationController {
 
     private final IAiJobRecommendationService recommendationService;
-
-
-
-
-
 
     @ResponseBody
     @GetMapping(value = "getRecommendationList")

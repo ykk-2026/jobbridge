@@ -20,10 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-
-
-
-
 @Slf4j
 @RequestMapping(value = "/api/community")
 @RequiredArgsConstructor
@@ -31,9 +27,6 @@ import java.util.Optional;
 public class CommunityController {
 
     private final ICommunityService communityService;
-
-
-
 
     @ResponseBody
     @GetMapping(value = "getPostList")
@@ -47,7 +40,6 @@ public class CommunityController {
 
         CommunityPostDTO pDTO = new CommunityPostDTO();
 
-
         if (memberId.length() > 0) {
             pDTO.setMemberId(Long.parseLong(memberId));
         }
@@ -60,9 +52,6 @@ public class CommunityController {
         return rList;
     }
 
-
-
-
     @ResponseBody
     @GetMapping(value = "getPostInfo")
     public CommunityPostDTO getPostInfo(HttpServletRequest request, HttpSession session) throws Exception {
@@ -71,11 +60,6 @@ public class CommunityController {
 
         String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"));
         String postId = CmmUtil.nvl(request.getParameter("postId"), "0");
-
-
-
-
-
 
         log.info("session memberId : " + memberId);
         log.info("postId : " + postId);
@@ -87,7 +71,6 @@ public class CommunityController {
             pDTO.setMemberId(Long.parseLong(memberId));
         }
 
-
         CommunityPostDTO rDTO = Optional.ofNullable(communityService.getPostInfo(pDTO, true))
                 .orElseGet(CommunityPostDTO::new);
 
@@ -95,9 +78,6 @@ public class CommunityController {
 
         return rDTO;
     }
-
-
-
 
     @ResponseBody
     @PostMapping(value = "insertPostInfo")
@@ -119,7 +99,6 @@ public class CommunityController {
             log.info("category : " + category);
             log.info("title : " + title);
             log.info("content : " + content);
-
 
             if (!category.equals("FREE") && !category.equals("QUESTION")
                     && !category.equals("TIP") && !category.equals("INFO")) {
@@ -161,9 +140,6 @@ public class CommunityController {
 
         return dto;
     }
-
-
-
 
     @ResponseBody
     @PostMapping(value = "deletePostInfo")
@@ -215,9 +191,6 @@ public class CommunityController {
 
         return dto;
     }
-
-
-
 
     @ResponseBody
     @PostMapping(value = "insertCommentInfo")
@@ -282,9 +255,6 @@ public class CommunityController {
         return dto;
     }
 
-
-
-
     @ResponseBody
     @PostMapping(value = "deleteCommentInfo")
     public MsgDTO deleteCommentInfo(HttpServletRequest request, HttpSession session) {
@@ -335,9 +305,6 @@ public class CommunityController {
 
         return dto;
     }
-
-
-
 
     @ResponseBody
     @PostMapping(value = "insertReportInfo")

@@ -10,21 +10,14 @@ import java.util.Set;
 import static org.ykk.jobbridge.util.NumberUtils.clamp;
 import static org.ykk.jobbridge.util.TextUtils.compact;
 
-
-
-
-
 final class KoreaRegions {
-
 
     record Match(int score, String label) {
     }
 
-
     private record Coordinate(double latitude, double longitude) {
 
         private static final double EARTH_RADIUS_KM = 6371.0;
-
 
         double distanceKmTo(Coordinate other) {
             double dLat = Math.toRadians(other.latitude - latitude);
@@ -47,7 +40,6 @@ final class KoreaRegions {
 
     private KoreaRegions() {
     }
-
 
     static Match compare(String desired, String actual) {
         String normalizedDesired = normalize(desired);
@@ -76,7 +68,6 @@ final class KoreaRegions {
         return new Match(2, "희망 지역과 거리가 먼 지역");
     }
 
-
     private static Match compareSeoulDistricts(String desired, String actual) {
         Coordinate from = seoulDistrictCoordinate(desired);
         Coordinate to = seoulDistrictCoordinate(actual);
@@ -96,7 +87,6 @@ final class KoreaRegions {
                 .orElse(null);
     }
 
-
     private static String normalize(String value) {
         return compact(value)
                 .replace("특별자치도", "").replace("특별자치시", "")
@@ -108,12 +98,10 @@ final class KoreaRegions {
                 .replace("제주도", "제주");
     }
 
-
     private static String province(String value) {
         String normalized = normalize(value);
         return PROVINCES.stream().filter(normalized::contains).findFirst().orElse("");
     }
-
 
     private static Set<String> tokens(String value) {
         String cleaned = value.replace("특별자치도", " ").replace("특별자치시", " ")

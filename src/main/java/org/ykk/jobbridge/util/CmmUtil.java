@@ -2,15 +2,7 @@ package org.ykk.jobbridge.util;
 
 import java.util.Objects;
 
-
-
-
-
 public class CmmUtil {
-
-
-
-
 
     public static String nvl(String str, String chg_str) {
         return (str == null || str.isEmpty()) ? chg_str : str;

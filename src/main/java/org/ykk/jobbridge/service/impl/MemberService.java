@@ -14,15 +14,12 @@ import org.ykk.jobbridge.util.CmmUtil;
 @Service
 public class MemberService implements IMemberService {
 
-
-
     private final IMemberMapper memberMapper;
 
     @Override
     public MemberDTO getLoginIdExists(MemberDTO pDTO) throws Exception {
 
         log.info(this.getClass().getName() + ".getLoginIdExists Start!");
-
 
         MemberDTO rDTO = memberMapper.getLoginIdExists(pDTO);
 
@@ -49,12 +46,9 @@ public class MemberService implements IMemberService {
 
         log.info(this.getClass().getName() + ".insertMemberInfo Start!");
 
-
         int res = 0;
 
-
         MemberDTO idDTO = memberMapper.getLoginIdExists(pDTO);
-
 
         MemberDTO emailDTO = memberMapper.getEmailExists(pDTO);
 
@@ -65,7 +59,6 @@ public class MemberService implements IMemberService {
         } else {
 
             int success = memberMapper.insertMemberInfo(pDTO);
-
 
             if (success > 0 && CmmUtil.nvl(pDTO.getRole()).equals("JOB_SEEKER")) {
                 memberMapper.insertJobSeekerProfile(pDTO);
@@ -85,7 +78,6 @@ public class MemberService implements IMemberService {
     public MemberDTO getLogin(MemberDTO pDTO) throws Exception {
 
         log.info(this.getClass().getName() + ".getLogin Start!");
-
 
         MemberDTO rDTO = memberMapper.getLogin(pDTO);
 

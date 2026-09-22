@@ -26,8 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("h2")
 class AiJobRecommendationTests {
 
-
-
     @Autowired
     private JobRecommendationCalculator calculator;
 

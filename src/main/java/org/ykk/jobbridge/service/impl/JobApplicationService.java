@@ -20,7 +20,6 @@ public class JobApplicationService implements IJobApplicationService {
 
     private final IJobApplicationMapper jobApplicationMapper;
 
-
     private final IJobPostingMapper jobPostingMapper;
 
     @Override
@@ -45,10 +44,8 @@ public class JobApplicationService implements IJobApplicationService {
 
         log.info(this.getClass().getName() + ".insertApplicationInfo Start!");
 
-
         int res = 0;
         pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
-
 
         JobPostingDTO jDTO = new JobPostingDTO();
         jDTO.setId(pDTO.getJobId());

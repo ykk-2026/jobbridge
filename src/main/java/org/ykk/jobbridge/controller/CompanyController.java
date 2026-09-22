@@ -10,22 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.ykk.jobbridge.dto.CompanyProfileDTO;
-import org.ykk.jobbridge.dto.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        MemberDTO;
+import org.ykk.jobbridge.dto.MemberDTO;
 import org.ykk.jobbridge.dto.MsgDTO;
 import org.ykk.jobbridge.service.ICompanyService;
 import org.ykk.jobbridge.service.IMemberService;
@@ -33,10 +18,6 @@ import org.ykk.jobbridge.util.CmmUtil;
 import org.ykk.jobbridge.util.EncryptUtil;
 
 import java.util.Optional;
-
-
-
-
 
 @Slf4j
 @RequestMapping(value = "/api/companies")
@@ -46,13 +27,7 @@ public class CompanyController {
 
     private final ICompanyService companyService;
 
-
     private final IMemberService memberService;
-
-
-
-
-
 
     @ResponseBody
     @PostMapping(value = "insertCompanyInfo")
@@ -73,7 +48,6 @@ public class CompanyController {
             String email = CmmUtil.nvl(request.getParameter("email")).trim();
             String phone = CmmUtil.nvl(request.getParameter("phone")).trim();
 
-
             String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim();
             String businessNumber = CmmUtil.nvl(request.getParameter("businessNumber")).trim();
             String representativeName = CmmUtil.nvl(request.getParameter("representativeName")).trim();
@@ -86,11 +60,6 @@ public class CompanyController {
             String companyDescription = CmmUtil.nvl(request.getParameter("companyDescription"));
             String employeeCount = CmmUtil.nvl(request.getParameter("employeeCount"));
             String establishedDate = CmmUtil.nvl(request.getParameter("establishedDate"));
-
-
-
-
-
 
             log.info("loginId : " + loginId);
             log.info("name : " + name);
@@ -121,7 +90,6 @@ public class CompanyController {
                 pDTO.setPhone(phone);
                 pDTO.setRole("COMPANY");
 
-
                 CompanyProfileDTO cDTO = new CompanyProfileDTO();
                 cDTO.setCompanyName(companyName);
                 cDTO.setBusinessNumber(businessNumber);
@@ -134,7 +102,6 @@ public class CompanyController {
                 cDTO.setLogoUrl(logoUrl);
                 cDTO.setCompanyDescription(companyDescription);
                 cDTO.setEstablishedDate(establishedDate);
-
 
                 if (employeeCount.length() > 0) {
                     cDTO.setEmployeeCount(Integer.parseInt(employeeCount));
@@ -171,11 +138,6 @@ public class CompanyController {
 
         return dto;
     }
-
-
-
-
-
 
     @ResponseBody
     @PostMapping(value = "login")
@@ -240,11 +202,6 @@ public class CompanyController {
         return dto;
     }
 
-
-
-
-
-
     @ResponseBody
     @GetMapping(value = "getCompanyInfo")
     public CompanyProfileDTO getCompanyInfo(HttpSession session) throws Exception {
@@ -271,9 +228,6 @@ public class CompanyController {
 
         return rDTO;
     }
-
-
-
 
     @ResponseBody
     @PostMapping(value = "logout")

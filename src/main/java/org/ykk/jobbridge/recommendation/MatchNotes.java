@@ -3,16 +3,6 @@ package org.ykk.jobbridge.recommendation;
 import java.util.ArrayList;
 import java.util.List;
 
-
-
-
-
-
-
-
-
-
-
 final class MatchNotes {
 
     private record Note(String summary, String detail) {
@@ -20,7 +10,6 @@ final class MatchNotes {
 
     private final List<Note> matches = new ArrayList<>();
     private final List<Note> mismatches = new ArrayList<>();
-
 
     void match(String label) {
         matches.add(new Note(label, label));
@@ -30,7 +19,6 @@ final class MatchNotes {
         mismatches.add(new Note(label, label));
     }
 
-
     int match(String label, int score, int max) {
         return note(true, label, withScore(label, score, max), score);
     }
@@ -39,23 +27,19 @@ final class MatchNotes {
         return note(false, label, withScore(label, score, max), score);
     }
 
-
     int note(boolean matched, String label, int score, int max) {
         return note(matched, label, withScore(label, score, max), score);
     }
-
 
     int note(boolean matched, String summary, String detail, int score) {
         (matched ? matches : mismatches).add(new Note(summary, detail));
         return score;
     }
 
-
     String mismatchReason() {
         if (mismatches.isEmpty()) return "없음";
         return String.join(", ", mismatches.stream().map(Note::detail).toList());
     }
-
 
     String recommendationReason() {
         List<String> gaps = mismatches.stream().map(Note::summary).distinct().limit(3).toList();

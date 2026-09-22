@@ -16,10 +16,6 @@ import org.ykk.jobbridge.util.CmmUtil;
 
 import java.util.Optional;
 
-
-
-
-
 @Slf4j
 @RequestMapping(value = "/api/profiles")
 @RequiredArgsConstructor
@@ -28,9 +24,6 @@ public class ProfileController {
 
     private final IProfileService profileService;
 
-
-
-
     @ResponseBody
     @GetMapping(value = "getProfileInfo")
     public JobSeekerProfileDTO getProfileInfo(HttpServletRequest request) throws Exception {
@@ -38,11 +31,6 @@ public class ProfileController {
         log.info(this.getClass().getName() + ".getProfileInfo Start!");
 
         String memberId = CmmUtil.nvl(request.getParameter("memberId"), "0");
-
-
-
-
-
 
         log.info("memberId : " + memberId);
 
@@ -56,11 +44,6 @@ public class ProfileController {
 
         return rDTO;
     }
-
-
-
-
-
 
     @ResponseBody
     @PostMapping(value = "saveProfileInfo")
@@ -78,13 +61,11 @@ public class ProfileController {
 
             String memberId = CmmUtil.nvl(request.getParameter("memberId"), "0");
 
-
             String name = CmmUtil.nvl(request.getParameter("name")).trim();
             String birthDate = CmmUtil.nvl(request.getParameter("birthDate"));
             String gender = CmmUtil.nvl(request.getParameter("gender"));
             String email = CmmUtil.nvl(request.getParameter("email"));
             String phone = CmmUtil.nvl(request.getParameter("phone"));
-
 
             String profileImageUrl = CmmUtil.nvl(request.getParameter("profileImageUrl"));
             String residenceRegion = CmmUtil.nvl(request.getParameter("residenceRegion"));
@@ -106,11 +87,6 @@ public class ProfileController {
             String contactMethod = CmmUtil.nvl(request.getParameter("contactMethod"));
             String introduction = CmmUtil.nvl(request.getParameter("introduction"));
             String profilePublic = CmmUtil.nvl(request.getParameter("profilePublic"), "false");
-
-
-
-
-
 
             log.info("session memberId : " + sessionMemberId);
             log.info("memberId : " + memberId);
@@ -151,14 +127,12 @@ public class ProfileController {
                 pDTO.setContactMethod(contactMethod);
                 pDTO.setIntroduction(introduction);
 
-
                 if (careerYears.length() > 0) {
                     pDTO.setCareerYears(Integer.parseInt(careerYears));
                 }
                 if (minSalary.length() > 0) {
                     pDTO.setMinSalary(Integer.parseInt(minSalary));
                 }
-
 
                 pDTO.setWheelchairRequired(Boolean.parseBoolean(wheelchairRequired));
                 pDTO.setAccessibleRestroomRequired(Boolean.parseBoolean(accessibleRestroomRequired));
@@ -174,7 +148,6 @@ public class ProfileController {
 
                 if (res == 1) {
                     msg = "저장되었습니다.";
-
 
                     if (sessionMemberId.equals(memberId) && name.length() > 0) {
                         session.setAttribute("SESSION_USER_NAME", name);

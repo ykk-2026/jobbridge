@@ -32,7 +32,6 @@ public class CommunityService implements ICommunityService {
             rList = new ArrayList<>();
         }
 
-
         for (CommunityPostDTO rDTO : rList) {
             addCommentsAndReports(rDTO, pDTO.getMemberId());
         }
@@ -47,7 +46,6 @@ public class CommunityService implements ICommunityService {
     public CommunityPostDTO getPostInfo(CommunityPostDTO pDTO, boolean type) throws Exception {
 
         log.info(this.getClass().getName() + ".getPostInfo Start!");
-
 
         if (type) {
             log.info("Update ViewCount");
@@ -87,9 +85,7 @@ public class CommunityService implements ICommunityService {
 
         log.info(this.getClass().getName() + ".insertCommentInfo Start!");
 
-
         int res = 0;
-
 
         CommunityPostDTO postDTO = new CommunityPostDTO();
         postDTO.setId(pDTO.getPostId());
@@ -126,9 +122,7 @@ public class CommunityService implements ICommunityService {
 
         log.info(this.getClass().getName() + ".insertReportInfo Start!");
 
-
         int res = 0;
-
 
         CommunityReportDTO existsDTO = communityMapper.getReportExists(pDTO);
 
@@ -149,21 +143,16 @@ public class CommunityService implements ICommunityService {
         return res;
     }
 
-
-
-
     private void addCommentsAndReports(CommunityPostDTO rDTO, Long memberId) throws Exception {
 
         if (rDTO == null) {
             return;
         }
 
-
         CommunityCommentDTO cDTO = new CommunityCommentDTO();
         cDTO.setPostId(rDTO.getId());
 
         rDTO.setComments(communityMapper.getCommentList(cDTO));
-
 
         if (memberId != null) {
             CommunityReportDTO rpDTO = new CommunityReportDTO();

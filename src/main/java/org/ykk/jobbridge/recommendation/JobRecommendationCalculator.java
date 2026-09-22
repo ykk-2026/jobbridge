@@ -27,20 +27,6 @@ import static org.ykk.jobbridge.util.TextUtils.isUnrestricted;
 import static org.ykk.jobbridge.util.TextUtils.nullToEmpty;
 import static org.ykk.jobbridge.util.TextUtils.toCode;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @Slf4j
 @Component
 public class JobRecommendationCalculator {
@@ -53,9 +39,7 @@ public class JobRecommendationCalculator {
     static final int WORK_STYLE_POINTS = 10;
     static final int ACCESSIBILITY_POINTS = 15;
 
-
     private static final int AI_MATCH_THRESHOLD = 18;
-
 
     private static final Map<String, String> EMPLOYMENT_TYPE_ALIASES = Map.ofEntries(
             Map.entry("INTERNSHIP", "INTERN"),
@@ -75,7 +59,6 @@ public class JobRecommendationCalculator {
             Map.entry("인턴십", "INTERN"),
             Map.entry("파견직", "DISPATCH"),
             Map.entry("프리랜서", "FREELANCE"));
-
 
     private static final Map<Set<String>, Integer> EMPLOYMENT_TYPE_SCORES = Map.ofEntries(
             Map.entry(Set.of("FULL_TIME", "CONVERSION_TYPE"), 8),
@@ -104,7 +87,6 @@ public class JobRecommendationCalculator {
 
     private final KakaoMapDistanceService mapDistanceService;
     private final IAiJobMatchService aiJobMatchService;
-
 
     public JobRecommendationCalculator(KakaoMapDistanceService mapDistanceService,
                                        IAiJobMatchService aiJobMatchService) {
@@ -147,9 +129,6 @@ public class JobRecommendationCalculator {
         return result;
     }
 
-
-
-
     private JobMatchAssessment jobFitScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         Optional<JobMatchAssessment> ai = aiJobMatchService.assess(profile, job);
         if (ai.isPresent()) {
@@ -189,7 +168,6 @@ public class JobRecommendationCalculator {
                 score);
     }
 
-
     private static List<String> keywords(String desiredJob) {
         List<String> keywords = new ArrayList<>();
         for (String token : desiredJob.split("[\\s,/|]+")) {
@@ -199,9 +177,6 @@ public class JobRecommendationCalculator {
         if (keywords.isEmpty()) keywords.add(compact(desiredJob));
         return keywords;
     }
-
-
-
 
     private int regionScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
 
@@ -214,7 +189,6 @@ public class JobRecommendationCalculator {
 
         Optional<DrivingRoute> route = mapDistanceService.findDrivingRoute(origin, destination);
         if (route.isPresent()) return drivingScore(route.get(), notes);
-
 
         KoreaRegions.Match best = Arrays.stream(origin.split("[,/|]"))
                 .map(desired -> KoreaRegions.compare(desired.trim(), destination.trim()))
@@ -231,8 +205,6 @@ public class JobRecommendationCalculator {
                 "현재 거주지에서 자동차 약 %d분(%.1fkm)", minutes, route.kilometers());
         return notes.note(score >= 9, label, score, REGION_POINTS);
     }
-
-
 
     private static int employmentTypeScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = employmentTypeCode(profile.getEmploymentType());
@@ -259,8 +231,6 @@ public class JobRecommendationCalculator {
         return EMPLOYMENT_TYPE_ALIASES.getOrDefault(code, code);
     }
 
-
-
     private static int careerScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = toCode(profile.getCareerType());
         String required = toCode(job.getExperienceLevel());
@@ -283,9 +253,6 @@ public class JobRecommendationCalculator {
         return notes.mismatch("요구 경력 차이가 큼", 1, CAREER_POINTS);
     }
 
-
-
-
     private static int salaryScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         Integer desired = profile.getMinSalary();
         if (desired == null || desired <= 0) return 6;
@@ -305,9 +272,6 @@ public class JobRecommendationCalculator {
         return notes.mismatch("희망 급여 " + desired + "만원 대비 " + offered + "만원", score, SALARY_POINTS);
     }
 
-
-
-
     private static int workStyleScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         String preferred = toCode(profile.getWorkType());
         String offered = toCode(job.getWorkType());
@@ -318,7 +282,6 @@ public class JobRecommendationCalculator {
         return matched ? notes.match("희망 근무방식 충족", WORK_STYLE_POINTS, WORK_STYLE_POINTS)
                 : notes.mismatch("희망 근무방식과 다름", 0, WORK_STYLE_POINTS);
     }
-
 
     private static int accessibilityScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
         List<Check> wanted = Stream.of(
@@ -340,7 +303,6 @@ public class JobRecommendationCalculator {
         return satisfied == 0 ? 0 : satisfied == total ? ACCESSIBILITY_POINTS : satisfied * 5 >= total * 4 ? 8
                 : satisfied * 5 >= total * 3 ? 6 : satisfied * 5 >= total * 2 ? 4 : 2;
     }
-
 
     private record Check(Boolean wanted, Boolean supported, String label) {
 

@@ -32,9 +32,7 @@ public class InterestJobService implements IInterestJobService {
 
         log.info(this.getClass().getName() + ".insertInterestJobInfo Start!");
 
-
         int res = 0;
-
 
         InterestJobDTO existsDTO = interestJobMapper.getInterestJobExists(pDTO);
 

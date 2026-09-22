@@ -18,7 +18,6 @@ public class CompanyService implements ICompanyService {
 
     private final ICompanyMapper companyMapper;
 
-
     private final IMemberMapper memberMapper;
 
     @Transactional
@@ -27,9 +26,7 @@ public class CompanyService implements ICompanyService {
 
         log.info(this.getClass().getName() + ".insertCompanyInfo Start!");
 
-
         int res = 0;
-
 
         MemberDTO idDTO = memberMapper.getLoginIdExists(pDTO);
         MemberDTO emailDTO = memberMapper.getEmailExists(pDTO);

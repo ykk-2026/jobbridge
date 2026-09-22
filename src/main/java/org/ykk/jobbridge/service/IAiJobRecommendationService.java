@@ -6,12 +6,6 @@ import java.util.List;
 
 public interface IAiJobRecommendationService {
 
-
-
-
-
-
-
     List<AiJobRecommendationDTO> getRecommendationList(AiJobRecommendationDTO pDTO) throws Exception;
 
 }

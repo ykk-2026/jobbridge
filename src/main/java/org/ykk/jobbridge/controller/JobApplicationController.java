@@ -18,10 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-
-
-
-
 @Slf4j
 @RequestMapping(value = "/api/job-applications")
 @RequiredArgsConstructor
@@ -29,9 +25,6 @@ import java.util.Optional;
 public class JobApplicationController {
 
     private final IJobApplicationService jobApplicationService;
-
-
-
 
     @ResponseBody
     @GetMapping(value = "getApplicationList")
@@ -60,9 +53,6 @@ public class JobApplicationController {
         return rList;
     }
 
-
-
-
     @ResponseBody
     @GetMapping(value = "getCompanyApplicationList")
     public List<JobApplicationDTO> getCompanyApplicationList(HttpSession session) throws Exception {
@@ -90,9 +80,6 @@ public class JobApplicationController {
         return rList;
     }
 
-
-
-
     @ResponseBody
     @PostMapping(value = "insertApplicationInfo")
     public MsgDTO insertApplicationInfo(HttpServletRequest request, HttpSession session) {
@@ -107,16 +94,10 @@ public class JobApplicationController {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
 
-
             String jobIdText = CmmUtil.nvl(request.getParameter("jobId")).trim().replaceFirst("^job-", "");
             String coverLetter = CmmUtil.nvl(request.getParameter("coverLetter"));
 
             String employmentType = CmmUtil.nvl(request.getParameter("employmentType"));
-
-
-
-
-
 
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobIdText);

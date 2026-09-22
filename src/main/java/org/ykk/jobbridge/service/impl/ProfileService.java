@@ -34,13 +34,11 @@ public class ProfileService implements IProfileService {
 
         int res = 0;
 
-
         pDTO.setGender(toGenderCode(pDTO.getGender()));
         pDTO.setEmploymentType(toEmploymentTypeCode(pDTO.getEmploymentType()));
         pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
         pDTO.setCareerType(toCareerTypeCode(pDTO.getCareerType()));
         pDTO.setContactMethod(toContactMethodCode(pDTO.getContactMethod()));
-
 
         JobSeekerProfileDTO existsDTO = profileMapper.getProfileExists(pDTO);
 
@@ -55,7 +53,6 @@ public class ProfileService implements IProfileService {
             success = profileMapper.insertProfileInfo(pDTO);
         }
 
-
         profileMapper.updateMemberInfo(pDTO);
 
         if (success > 0) {
@@ -66,9 +63,6 @@ public class ProfileService implements IProfileService {
 
         return res;
     }
-
-
-
 
     private String toGenderCode(String value) {
         String str = CmmUtil.nvl(value).trim();
@@ -81,15 +75,9 @@ public class ProfileService implements IProfileService {
         return str.toUpperCase();
     }
 
-
-
-
     private String toEmploymentTypeCode(String value) {
         return EmploymentTypeCodes.normalize(value);
     }
-
-
-
 
     private String toCareerTypeCode(String value) {
         String str = CmmUtil.nvl(value).trim();
@@ -101,9 +89,6 @@ public class ProfileService implements IProfileService {
 
         return str.toUpperCase();
     }
-
-
-
 
     private String toContactMethodCode(String value) {
         String str = CmmUtil.nvl(value).trim();

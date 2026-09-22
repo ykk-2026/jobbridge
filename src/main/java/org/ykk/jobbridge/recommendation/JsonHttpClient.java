@@ -10,7 +10,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
-
 final class JsonHttpClient {
 
     private final HttpClient httpClient = HttpClient.newBuilder()

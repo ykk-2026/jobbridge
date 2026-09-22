@@ -3,9 +3,6 @@ package org.ykk.jobbridge.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-
-
-
 @Getter
 @Setter
 public class CompanyProfileDTO {
@@ -27,7 +24,6 @@ public class CompanyProfileDTO {
     private String verificationStatus;
     private String createdAt;
     private String updatedAt;
-
 
     private String loginId;
     private String name;

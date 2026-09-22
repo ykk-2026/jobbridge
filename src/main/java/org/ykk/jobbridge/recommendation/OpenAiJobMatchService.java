@@ -19,11 +19,6 @@ import static org.ykk.jobbridge.util.NumberUtils.clamp;
 import static org.ykk.jobbridge.util.TextUtils.isBlank;
 import static org.ykk.jobbridge.util.TextUtils.trimToEmpty;
 
-
-
-
-
-
 @Slf4j
 @Service
 public class OpenAiJobMatchService implements IAiJobMatchService {
@@ -54,7 +49,6 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
             reason은 한국어 한 문장으로 작성하고 개인정보나 차별적 특성을 사용하지 마세요.
             다음과 같은 형식을 완벽하게 준수해 답변하세요.
             """;
-
 
     private static final Map<String, Object> RESPONSE_FORMAT = Map.of(
             "type", "json_schema",
@@ -97,7 +91,6 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
 
         log.info(this.getClass().getName() + ".assess Start!");
 
-
         if (!enabled || apiKey.isBlank() || profile == null || job == null) {
             log.info("OpenAI 사용 안 함 (enabled : " + enabled + ", apiKey 존재 : " + !apiKey.isBlank() + ")");
             return Optional.empty();
@@ -125,7 +118,6 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
         }
     }
 
-
     private Map<String, Object> request(JobSeekerProfileDTO profile, JobPostingDTO job) {
         Map<String, Object> candidate = Map.of(
                 "desiredJob", trimToEmpty(profile.getDesiredJob()),
@@ -150,7 +142,6 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
                 "response_format", RESPONSE_FORMAT);
     }
 
-
     private Optional<JobMatchAssessment> parse(JsonNode response) throws Exception {
         String content = response.path("choices").path(0).path("message").path("content").asText("");
         if (content.isBlank()) return Optional.empty();
@@ -166,7 +157,6 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
         String text = trimToEmpty(value);
         return text.length() <= MAX_TEXT_LENGTH ? text : text.substring(0, MAX_TEXT_LENGTH);
     }
-
 
     private static boolean sameJob(String desiredJob, String jobCategory) {
         String desired = jobKey(desiredJob);

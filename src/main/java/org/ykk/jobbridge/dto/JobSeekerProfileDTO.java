@@ -3,14 +3,9 @@ package org.ykk.jobbridge.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-
-
-
-
 @Getter
 @Setter
 public class JobSeekerProfileDTO {
-
 
     private Long memberId;
     private String name;
@@ -18,7 +13,6 @@ public class JobSeekerProfileDTO {
     private String gender;
     private String email;
     private String phone;
-
 
     private Long profileId;
     private String profileImageUrl;

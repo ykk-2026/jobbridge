@@ -17,21 +17,15 @@ import static org.ykk.jobbridge.util.TextUtils.compact;
 import static org.ykk.jobbridge.util.TextUtils.isBlank;
 import static org.ykk.jobbridge.util.TextUtils.trimToEmpty;
 
-
-
-
-
 @Slf4j
 @Service
 public class KakaoMapDistanceService {
-
 
     public record DrivingRoute(int distanceMeters, int durationSeconds) {
 
         public double kilometers() {
             return distanceMeters / 1000.0;
         }
-
 
         public int minutes() {
             return Math.max(1, (int) Math.round(durationSeconds / 60.0));
@@ -67,7 +61,6 @@ public class KakaoMapDistanceService {
 
         log.info(this.getClass().getName() + ".findDrivingRoute Start!");
 
-
         if (!isEnabled() || isBlank(originAddress) || isBlank(destinationAddress)) {
             return Optional.empty();
         }
@@ -97,7 +90,6 @@ public class KakaoMapDistanceService {
             return Optional.empty();
         }
     }
-
 
     private Optional<String> geocode(String address) throws Exception {
         String cacheKey = compact(address);

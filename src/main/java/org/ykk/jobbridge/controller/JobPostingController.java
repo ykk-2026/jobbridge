@@ -18,10 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-
-
-
-
 @Slf4j
 @RequestMapping(value = "/api/jobs")
 @RequiredArgsConstructor
@@ -30,15 +26,11 @@ public class JobPostingController {
 
     private final IJobPostingService jobPostingService;
 
-
-
-
     @ResponseBody
     @GetMapping(value = "getJobList")
     public List<JobPostingDTO> getJobList() throws Exception {
 
         log.info(this.getClass().getName() + ".getJobList Start!");
-
 
         List<JobPostingDTO> rList = Optional.ofNullable(jobPostingService.getJobList())
                 .orElseGet(ArrayList::new);
@@ -48,9 +40,6 @@ public class JobPostingController {
         return rList;
     }
 
-
-
-
     @ResponseBody
     @GetMapping(value = "getJobInfo")
     public JobPostingDTO getJobInfo(HttpServletRequest request) throws Exception {
@@ -58,11 +47,6 @@ public class JobPostingController {
         log.info(this.getClass().getName() + ".getJobInfo Start!");
 
         String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
-
-
-
-
-
 
         log.info("jobId : " + jobId);
 
@@ -76,9 +60,6 @@ public class JobPostingController {
 
         return rDTO;
     }
-
-
-
 
     @ResponseBody
     @GetMapping(value = "getMyJobList")
@@ -94,7 +75,6 @@ public class JobPostingController {
 
         List<JobPostingDTO> rList = new ArrayList<>();
 
-
         if (userRole.equals("COMPANY")) {
             JobPostingDTO pDTO = new JobPostingDTO();
             pDTO.setCompanyMemberId(Long.parseLong(memberId));
@@ -107,11 +87,6 @@ public class JobPostingController {
 
         return rList;
     }
-
-
-
-
-
 
     @ResponseBody
     @PostMapping(value = "insertJobInfo")
@@ -169,11 +144,6 @@ public class JobPostingController {
         return dto;
     }
 
-
-
-
-
-
     @ResponseBody
     @PostMapping(value = "updateJobInfo")
     public MsgDTO updateJobInfo(HttpServletRequest request, HttpSession session) {
@@ -200,7 +170,6 @@ public class JobPostingController {
                 pDTO.setId(Long.parseLong(jobId));
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
-
                 if (jobPostingService.updateJobInfo(pDTO) > 0) {
                     res = 1;
                     msg = "수정되었습니다.";
@@ -226,9 +195,6 @@ public class JobPostingController {
 
         return dto;
     }
-
-
-
 
     @ResponseBody
     @PostMapping(value = "updateJobClose")
@@ -282,9 +248,6 @@ public class JobPostingController {
         return dto;
     }
 
-
-
-
     @ResponseBody
     @PostMapping(value = "deleteJobInfo")
     public MsgDTO deleteJobInfo(HttpServletRequest request, HttpSession session) {
@@ -337,10 +300,6 @@ public class JobPostingController {
         return dto;
     }
 
-
-
-
-
     private JobPostingDTO getJobPostingParam(HttpServletRequest request) {
 
         String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim();
@@ -364,11 +323,6 @@ public class JobPostingController {
         String assistiveDeviceSupport = CmmUtil.nvl(request.getParameter("assistiveDeviceSupport"), "false");
         String deadline = CmmUtil.nvl(request.getParameter("deadline"));
 
-
-
-
-
-
         log.info("companyName : " + companyName);
         log.info("title : " + title);
         log.info("jobCategory : " + jobCategory);
@@ -376,9 +330,6 @@ public class JobPostingController {
         log.info("location : " + location);
         log.info("salaryMin : " + salaryMin);
         log.info("deadline : " + deadline);
-
-
-
 
         JobPostingDTO pDTO = new JobPostingDTO();
         pDTO.setCompanyName(companyName);
@@ -395,11 +346,9 @@ public class JobPostingController {
         pDTO.setAccessibilityInfo(accessibilityInfo);
         pDTO.setDeadline(deadline);
 
-
         if (salaryMin.length() > 0) {
             pDTO.setSalaryMin(Integer.parseInt(salaryMin));
         }
-
 
         pDTO.setWheelchairAccessible(Boolean.parseBoolean(wheelchairAccessible));
         pDTO.setAccessibleRestroom(Boolean.parseBoolean(accessibleRestroom));

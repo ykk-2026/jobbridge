@@ -3,10 +3,6 @@ package org.ykk.jobbridge.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-
-
-
-
 @Getter
 @Setter
 public class InterestJobDTO {
@@ -14,7 +10,6 @@ public class InterestJobDTO {
     private Long id;
     private Long memberId;
     private Long jobId;
-
 
     private String companyName;
     private String title;

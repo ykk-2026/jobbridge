@@ -17,30 +17,13 @@ import org.ykk.jobbridge.util.EncryptUtil;
 
 import java.util.Optional;
 
-
-
-
-
-
-
-
-
-
-
-
 @Slf4j
 @RequestMapping(value = "/api/members")
 @RequiredArgsConstructor
 @Controller
 public class MemberController {
 
-
     private final IMemberService memberService;
-
-
-
-
-
 
     @ResponseBody
     @GetMapping(value = "getLoginIdExists")
@@ -50,17 +33,10 @@ public class MemberController {
 
         String loginId = CmmUtil.nvl(request.getParameter("loginId")).trim().toLowerCase();
 
-
-
-
-
-
         log.info("loginId : " + loginId);
 
         MemberDTO pDTO = new MemberDTO();
         pDTO.setLoginId(loginId);
-
-
 
         MemberDTO rDTO = Optional.ofNullable(memberService.getLoginIdExists(pDTO))
                 .orElseGet(MemberDTO::new);
@@ -69,9 +45,6 @@ public class MemberController {
 
         return rDTO;
     }
-
-
-
 
     @ResponseBody
     @GetMapping(value = "getEmailExists")
@@ -93,11 +66,6 @@ public class MemberController {
 
         return rDTO;
     }
-
-
-
-
-
 
     @ResponseBody
     @PostMapping(value = "insertMemberInfo")
@@ -121,11 +89,6 @@ public class MemberController {
             String role = CmmUtil.nvl(request.getParameter("role"), "JOB_SEEKER");
             String desiredJob = CmmUtil.nvl(request.getParameter("desiredJob")).trim();
 
-
-
-
-
-
             log.info("loginId : " + loginId);
             log.info("name : " + name);
             log.info("birthDate : " + birthDate);
@@ -143,8 +106,6 @@ public class MemberController {
 
             } else {
 
-
-
                 MemberDTO pDTO = new MemberDTO();
                 pDTO.setLoginId(loginId);
                 pDTO.setPassword(EncryptUtil.encHashSHA256(password));
@@ -155,9 +116,6 @@ public class MemberController {
                 pDTO.setPhone(phone);
                 pDTO.setRole(role);
                 pDTO.setDesiredJob(desiredJob);
-
-
-
 
                 res = memberService.insertMemberInfo(pDTO);
 
@@ -193,13 +151,6 @@ public class MemberController {
         return dto;
     }
 
-
-
-
-
-
-
-
     @ResponseBody
     @PostMapping(value = "login")
     public MsgDTO login(HttpServletRequest request, HttpSession session) {
@@ -219,21 +170,14 @@ public class MemberController {
             MemberDTO pDTO = new MemberDTO();
             pDTO.setLoginId(loginId);
 
-
             pDTO.setPassword(EncryptUtil.encHashSHA256(password));
 
-
             MemberDTO rDTO = memberService.getLogin(pDTO);
-
-
-
-
 
             if (rDTO != null && CmmUtil.nvl(rDTO.getLoginId()).length() > 0) {
 
                 res = 1;
                 msg = "로그인이 성공했습니다.";
-
 
                 session.setAttribute("SESSION_MEMBER_ID", String.valueOf(rDTO.getId()));
                 session.setAttribute("SESSION_USER_ID", CmmUtil.nvl(rDTO.getLoginId()));
@@ -264,11 +208,6 @@ public class MemberController {
         return dto;
     }
 
-
-
-
-
-
     @ResponseBody
     @GetMapping(value = "getLoginInfo")
     public MemberDTO getLoginInfo(HttpSession session) {
@@ -297,15 +236,11 @@ public class MemberController {
         return rDTO;
     }
 
-
-
-
     @ResponseBody
     @PostMapping(value = "logout")
     public MsgDTO logout(HttpSession session) {
 
         log.info(this.getClass().getName() + ".logout Start!");
-
 
         session.invalidate();
 

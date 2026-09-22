@@ -22,7 +22,6 @@ public class AiJobRecommendationService implements IAiJobRecommendationService {
 
     private final IAiJobRecommendationMapper recommendationMapper;
 
-
     private final JobRecommendationCalculator calculator;
 
     @Transactional
@@ -33,7 +32,6 @@ public class AiJobRecommendationService implements IAiJobRecommendationService {
 
         List<AiJobRecommendationDTO> rList = new ArrayList<>();
 
-
         JobSeekerProfileDTO profileDTO = recommendationMapper.getProfileInfo(pDTO);
 
         if (profileDTO == null) {
@@ -43,15 +41,12 @@ public class AiJobRecommendationService implements IAiJobRecommendationService {
 
             List<JobPostingDTO> jobList = recommendationMapper.getJobList();
 
-
             for (JobPostingDTO jobDTO : jobList) {
                 rList.add(calculator.calculate(pDTO.getMemberId(), profileDTO, jobDTO));
             }
 
-
             rList.sort(Comparator.comparing(AiJobRecommendationDTO::getTotalScore).reversed()
                     .thenComparing(AiJobRecommendationDTO::getJobId));
-
 
             for (AiJobRecommendationDTO rDTO : rList) {
                 if (recommendationMapper.updateRecommendation(rDTO) == 0) {

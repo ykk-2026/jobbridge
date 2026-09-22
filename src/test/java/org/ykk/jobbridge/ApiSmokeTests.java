@@ -17,10 +17,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-
-
-
-
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("h2")
@@ -29,7 +25,6 @@ class ApiSmokeTests {
 
     @Autowired
     private MockMvc mockMvc;
-
 
     private static final MockHttpSession seekerSession = new MockHttpSession();
     private static final MockHttpSession companySession = new MockHttpSession();
@@ -45,7 +40,6 @@ class ApiSmokeTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.existsYn").value("N"));
 
-
         mockMvc.perform(post("/api/members/insertMemberInfo")
                         .param("loginId", "Smoke.User")
                         .param("password", "pass1234")
@@ -60,7 +54,6 @@ class ApiSmokeTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(1));
 
-
         mockMvc.perform(post("/api/members/insertMemberInfo")
                         .param("loginId", "smoke.user")
                         .param("password", "pass1234")
@@ -70,20 +63,16 @@ class ApiSmokeTests {
                         .param("phone", "010-0000-0001"))
                 .andExpect(jsonPath("$.result").value(2));
 
-
         mockMvc.perform(get("/api/members/getLoginIdExists").param("loginId", "smoke.user"))
                 .andExpect(jsonPath("$.existsYn").value("Y"));
-
 
         mockMvc.perform(post("/api/members/login").session(seekerSession)
                         .param("loginId", "smoke.user").param("password", "wrong"))
                 .andExpect(jsonPath("$.msg").value("아이디 또는 비밀번호가 올바르지 않습니다."));
 
-
         mockMvc.perform(post("/api/members/login").session(seekerSession)
                         .param("loginId", "smoke.user").param("password", "pass1234"))
                 .andExpect(jsonPath("$.result").value(1));
-
 
         memberId = mockMvc.perform(get("/api/members/getLoginInfo").session(seekerSession))
                 .andExpect(jsonPath("$.loginId").value("smoke.user"))
@@ -91,7 +80,6 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$.role").value("JOB_SEEKER"))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*\"id\":(\\d+).*", "$1");
-
 
         mockMvc.perform(post("/api/members/login").session(new MockHttpSession())
                         .param("loginId", "minjun.kim").param("password", "1234"))
@@ -115,7 +103,6 @@ class ApiSmokeTests {
                         .param("employeeCount", "10")
                         .param("establishedDate", ""))
                 .andExpect(jsonPath("$.result").value(1));
-
 
         mockMvc.perform(post("/api/companies/login").session(new MockHttpSession())
                         .param("loginId", "smoke.user").param("password", "pass1234"))
@@ -192,7 +179,6 @@ class ApiSmokeTests {
                         .param("employmentType", "FULL_TIME"))
                 .andExpect(jsonPath("$.result").value(1));
 
-
         mockMvc.perform(post("/api/job-applications/insertApplicationInfo").session(seekerSession)
                         .param("jobId", jobId)
                         .param("applicantName", "스모크 사용자")
@@ -212,7 +198,6 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$[0].applicantName").value("스모크 사용자"))
                 .andExpect(jsonPath("$[0].phone").value("010-0000-0000"))
                 .andExpect(jsonPath("$[0].email").value("smoke@example.com"));
-
 
         mockMvc.perform(post("/api/interest-jobs/insertInterestJobInfo").session(seekerSession)
                         .param("jobId", jobId)
@@ -253,7 +238,6 @@ class ApiSmokeTests {
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*?\"id\":(\\d+).*", "$1");
 
-
         mockMvc.perform(get("/api/community/getPostInfo").session(seekerSession).param("postId", postId))
                 .andExpect(jsonPath("$.views").value(1))
                 .andExpect(jsonPath("$.category").value("QUESTION"));
@@ -274,7 +258,6 @@ class ApiSmokeTests {
         mockMvc.perform(post("/api/community/insertReportInfo").session(companySession)
                         .param("postId", postId))
                 .andExpect(jsonPath("$.msg").value("이미 신고한 게시글입니다."));
-
 
         mockMvc.perform(post("/api/community/deletePostInfo").session(companySession).param("postId", postId))
                 .andExpect(jsonPath("$.msg").value("본인이 작성한 게시글만 삭제할 수 있습니다."));
@@ -322,16 +305,13 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$.minSalary").value(2500))
                 .andExpect(jsonPath("$.workType").value("REMOTE"));
 
-
         mockMvc.perform(get("/api/members/getLoginInfo").session(seekerSession))
                 .andExpect(jsonPath("$.name").value("스모크 사용자2"));
-
 
         mockMvc.perform(get("/api/recommendations/getRecommendationList").session(seekerSession))
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].job.title").value("백엔드 개발자 채용(수정)"))
                 .andExpect(jsonPath("$[0].jobMatchSource").value("RULE_FALLBACK"));
-
 
         mockMvc.perform(get("/api/recommendations/getRecommendationList").session(companySession))
                 .andExpect(jsonPath("$", hasSize(0)));
@@ -351,7 +331,6 @@ class ApiSmokeTests {
 
         mockMvc.perform(get("/api/jobs/getMyJobList").session(companySession))
                 .andExpect(jsonPath("$", hasSize(0)));
-
 
         mockMvc.perform(get("/api/admin/getOverview").session(companySession))
                 .andExpect(jsonPath("$.members").doesNotExist());
