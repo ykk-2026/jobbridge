@@ -76,6 +76,7 @@ public class ProfileController {
             String careerYears = CmmUtil.nvl(request.getParameter("careerYears"));
             String minSalary = CmmUtil.nvl(request.getParameter("minSalary"));
             String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY");
+            String educationLevel = CmmUtil.nvl(request.getParameter("educationLevel"), "ANY");
             String wheelchairRequired = CmmUtil.nvl(request.getParameter("wheelchairRequired"), "false");
             String accessibleRestroomRequired = CmmUtil.nvl(request.getParameter("accessibleRestroomRequired"), "false");
             String disabledParkingRequired = CmmUtil.nvl(request.getParameter("disabledParkingRequired"), "false");
@@ -98,6 +99,7 @@ public class ProfileController {
             log.info("careerType : " + careerType);
             log.info("careerYears : " + careerYears);
             log.info("minSalary : " + minSalary);
+            log.info("educationLevel : " + educationLevel);
             log.info("contactTimeStart : " + contactTimeStart);
             log.info("contactTimeEnd : " + contactTimeEnd);
 
@@ -121,6 +123,7 @@ public class ProfileController {
                 pDTO.setDesiredRegion(desiredRegion);
                 pDTO.setEmploymentType(employmentType);
                 pDTO.setWorkType(workType);
+                pDTO.setEducationLevel(educationLevel);
                 pDTO.setCareerType(careerType);
                 pDTO.setContactTimeStart(contactTimeStart);
                 pDTO.setContactTimeEnd(contactTimeEnd);

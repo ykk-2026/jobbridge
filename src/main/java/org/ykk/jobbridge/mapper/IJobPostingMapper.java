@@ -16,6 +16,8 @@ public interface IJobPostingMapper {
 
     int insertJobInfo(JobPostingDTO pDTO) throws Exception;
 
+    int upsertKeadJob(JobPostingDTO pDTO) throws Exception;
+
     int updateJobInfo(JobPostingDTO pDTO) throws Exception;
 
     int updateJobClose(JobPostingDTO pDTO) throws Exception;

@@ -24,6 +24,7 @@ public class JobSeekerProfileDTO {
     private Integer careerYears;
     private Integer minSalary;
     private String workType;
+    private String educationLevel;
 
     private Boolean wheelchairRequired;
     private Boolean accessibleRestroomRequired;

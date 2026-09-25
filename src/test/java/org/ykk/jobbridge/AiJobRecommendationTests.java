@@ -54,12 +54,80 @@ class AiJobRecommendationTests {
 
         AiJobRecommendationDTO result = calculator.calculate(1L, profile, job);
 
-        assertThat(result.getTotalScore()).isEqualTo(100);
+        assertThat(result.getTotalScore()).isEqualTo(95);
         assertThat(result.getEmploymentTypeScore()).isEqualTo(10);
         assertThat(result.getJobScore()).isEqualTo(30);
-        assertThat(result.getAccessibilityScore()).isEqualTo(15);
+        assertThat(result.getAccessibilityScore()).isEqualTo(10);
         assertThat(result.getJobMatchSource()).isEqualTo("RULE_FALLBACK");
         assertThat(result.getMismatchReason()).isEqualTo("없음");
+    }
+
+    @Test
+    void calculatorTreatsRegularEmployeeAsDistinctEmploymentType() {
+        JobSeekerProfileDTO profile = new JobSeekerProfileDTO();
+        profile.setDesiredJob("ANY");
+        profile.setDesiredRegion("ANY");
+        profile.setEmploymentType("REGULAR_EMPLOYEE");
+        profile.setCareerType("ANY");
+
+        AiJobRecommendationDTO exact = calculator.calculate(
+                1L, profile, job("사무원", "REGULAR_EMPLOYEE", "서울", "ANY", 3000));
+        AiJobRecommendationDTO regularJob = calculator.calculate(
+                1L, profile, job("사무원", "FULL_TIME", "서울", "ANY", 3000));
+
+        assertThat(exact.getEmploymentTypeScore()).isEqualTo(10);
+        assertThat(regularJob.getEmploymentTypeScore()).isEqualTo(8);
+    }
+
+    @Test
+    void educationScoreUsesMinimumRequiredEducation() {
+        JobSeekerProfileDTO profile = new JobSeekerProfileDTO();
+        profile.setDesiredJob("ANY");
+        profile.setDesiredRegion("ANY");
+        profile.setEmploymentType("ANY");
+        profile.setCareerType("ANY");
+        profile.setEducationLevel("HIGH_SCHOOL");
+
+        JobPostingDTO unrestricted = job("사무원", "FULL_TIME", "서울", "ANY", 3000);
+        unrestricted.setEducationLevel("ANY");
+        JobPostingDTO qualified = job("사무원", "FULL_TIME", "서울", "ANY", 3000);
+        qualified.setEducationLevel("MIDDLE_SCHOOL");
+        JobPostingDTO underqualified = job("사무원", "FULL_TIME", "서울", "ANY", 3000);
+        underqualified.setEducationLevel("UNIVERSITY");
+
+        assertThat(calculator.calculate(1L, profile, unrestricted).getEducationScore()).isEqualTo(10);
+        assertThat(calculator.calculate(1L, profile, qualified).getEducationScore()).isEqualTo(10);
+        assertThat(calculator.calculate(1L, profile, underqualified).getEducationScore()).isZero();
+    }
+
+    @Test
+    void accessibilityScoreCountsOnlyRequiredButUnsupportedItems() {
+        JobSeekerProfileDTO profile = new JobSeekerProfileDTO();
+        profile.setDesiredJob("ANY");
+        profile.setDesiredRegion("ANY");
+        profile.setEmploymentType("ANY");
+        profile.setCareerType("ANY");
+
+        JobPostingDTO job = job("사무원", "FULL_TIME", "서울", "ANY", 3000);
+        job.setAccessibilityVerified(false);
+        assertThat(calculator.calculate(1L, profile, job).getAccessibilityScore()).isEqualTo(10);
+
+        profile.setWheelchairRequired(true);
+        profile.setAccessibleRestroomRequired(true);
+        job.setWheelchairAccessible(true);
+        assertThat(calculator.calculate(1L, profile, job).getAccessibilityScore()).isEqualTo(8);
+
+        profile.setDisabledParkingRequired(true);
+        assertThat(calculator.calculate(1L, profile, job).getAccessibilityScore()).isEqualTo(6);
+
+        profile.setAssistiveDeviceRequired(true);
+        assertThat(calculator.calculate(1L, profile, job).getAccessibilityScore()).isEqualTo(4);
+
+        profile.setRestAreaRequired(true);
+        assertThat(calculator.calculate(1L, profile, job).getAccessibilityScore()).isEqualTo(2);
+
+        profile.setElevatorRequired(true);
+        assertThat(calculator.calculate(1L, profile, job).getAccessibilityScore()).isZero();
     }
 
     @Test
@@ -103,7 +171,7 @@ class AiJobRecommendationTests {
         assertThat(result.getEmploymentTypeScore()).isBetween(0, 10);
         assertThat(result.getCareerScore()).isBetween(0, 10);
         assertThat(result.getSalaryScore()).isBetween(0, 10);
-        assertThat(result.getWorkStyleScore()).isBetween(0, 10);
+        assertThat(result.getEducationScore()).isBetween(0, 10);
         assertThat(result.getAccessibilityScore()).isBetween(0, 15);
         assertThat(result.getTotalScore()).isBetween(0, 100);
         assertThat(result.getRecommendationReason() + result.getMismatchReason()).contains("km");
@@ -152,7 +220,7 @@ class AiJobRecommendationTests {
         assertThat(result.getJobMatchSource()).isEqualTo("GENERATIVE_AI");
         assertThat(result.getJobMatchReason()).contains("Spring Boot");
         assertThat(result.getRecommendationReason()).doesNotContain("AI 직무 분석", "/30점");
-        assertThat(result.getRecommendationReason()).contains("부족한 조건은 없습니다");
+        assertThat(result.getRecommendationReason()).contains("주요 조건이 잘 맞습니다");
     }
 
     @Test
@@ -169,7 +237,8 @@ class AiJobRecommendationTests {
         JobPostingDTO job = job("매장 서비스 직원", "PART_TIME", "부산 해운대구", "경력 5년", 2800);
         AiJobRecommendationDTO result = calculator.calculate(1L, profile, job);
 
-        assertThat(result.getRecommendationReason()).contains("아쉬운 부분은");
+        assertThat(result.getRecommendationReason()).contains("주요 조건에서 차이가 있습니다");
+        assertThat(result.getRecommendationReason()).doesNotContain("아쉬운 부분은");
         assertThat(result.getRecommendationReason()).doesNotContain("/30점", "/15점", "/10점");
     }
 

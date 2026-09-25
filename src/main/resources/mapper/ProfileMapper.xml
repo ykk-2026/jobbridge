@@ -20,6 +20,7 @@
                P.career_years,
                P.min_salary,
                P.work_type,
+               P.education_level,
                P.wheelchair_required,
                P.accessible_restroom_required,
                P.disabled_parking_required,
@@ -49,7 +50,7 @@
             (
                 member_id,
                 profile_image_url, residence_region, desired_job, desired_region,
-                employment_type, career_type, career_years, min_salary, work_type,
+                employment_type, career_type, career_years, min_salary, work_type, education_level,
                 wheelchair_required,
                 accessible_restroom_required, disabled_parking_required,
                 assistive_device_required, rest_area_required, elevator_required,
@@ -59,7 +60,7 @@
         VALUES (
             #{memberId},
             #{profileImageUrl}, #{residenceRegion}, #{desiredJob}, #{desiredRegion},
-            #{employmentType}, #{careerType}, #{careerYears}, #{minSalary}, #{workType},
+            #{employmentType}, #{careerType}, #{careerYears}, #{minSalary}, #{workType}, #{educationLevel},
             #{wheelchairRequired},
             #{accessibleRestroomRequired}, #{disabledParkingRequired},
             #{assistiveDeviceRequired}, #{restAreaRequired}, #{elevatorRequired},
@@ -79,6 +80,7 @@
             career_years = #{careerYears},
             min_salary = #{minSalary},
             work_type = #{workType},
+            education_level = #{educationLevel},
             wheelchair_required = #{wheelchairRequired},
             accessible_restroom_required = #{accessibleRestroomRequired},
             disabled_parking_required = #{disabledParkingRequired},

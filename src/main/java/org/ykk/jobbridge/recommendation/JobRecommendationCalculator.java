@@ -7,6 +7,7 @@ import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.recommendation.IAiJobMatchService.JobMatchAssessment;
 import org.ykk.jobbridge.recommendation.KakaoMapDistanceService.DrivingRoute;
+import org.ykk.jobbridge.util.EducationLevelCodes;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,8 +37,8 @@ public class JobRecommendationCalculator {
     static final int EMPLOYMENT_TYPE_POINTS = 10;
     static final int CAREER_POINTS = 10;
     static final int SALARY_POINTS = 10;
-    static final int WORK_STYLE_POINTS = 10;
-    static final int ACCESSIBILITY_POINTS = 15;
+    static final int EDUCATION_POINTS = 10;
+    static final int ACCESSIBILITY_POINTS = 10;
 
     private static final int AI_MATCH_THRESHOLD = 18;
 
@@ -47,6 +48,7 @@ public class JobRecommendationCalculator {
             Map.entry("FREELANCER", "FREELANCE"),
             Map.entry("무관", "ANY"),
             Map.entry("정규직", "FULL_TIME"),
+            Map.entry("상용직", "REGULAR_EMPLOYEE"),
             Map.entry("계약직", "CONTRACT"),
             Map.entry("무기계약직", "PERMANENT_CONTRACT"),
             Map.entry("정규직 전환형", "CONVERSION_TYPE"),
@@ -63,15 +65,22 @@ public class JobRecommendationCalculator {
     private static final Map<Set<String>, Integer> EMPLOYMENT_TYPE_SCORES = Map.ofEntries(
             Map.entry(Set.of("FULL_TIME", "CONVERSION_TYPE"), 8),
             Map.entry(Set.of("FULL_TIME", "PERMANENT_CONTRACT"), 8),
+            Map.entry(Set.of("FULL_TIME", "REGULAR_EMPLOYEE"), 8),
             Map.entry(Set.of("CONTRACT", "PERMANENT_CONTRACT"), 8),
+            Map.entry(Set.of("PERMANENT_CONTRACT", "REGULAR_EMPLOYEE"), 8),
             Map.entry(Set.of("FULL_TIME", "CONTRACT"), 6),
+            Map.entry(Set.of("CONTRACT", "REGULAR_EMPLOYEE"), 6),
             Map.entry(Set.of("CONTRACT", "CONVERSION_TYPE"), 6),
             Map.entry(Set.of("PERMANENT_CONTRACT", "CONVERSION_TYPE"), 6),
+            Map.entry(Set.of("CONVERSION_TYPE", "REGULAR_EMPLOYEE"), 6),
             Map.entry(Set.of("CONVERSION_TYPE", "INTERN"), 6),
             Map.entry(Set.of("PART_TIME", "INTERN"), 6),
             Map.entry(Set.of("FULL_TIME", "PART_TIME"), 3),
             Map.entry(Set.of("FULL_TIME", "INTERN"), 3),
             Map.entry(Set.of("FULL_TIME", "DISPATCH"), 3),
+            Map.entry(Set.of("REGULAR_EMPLOYEE", "PART_TIME"), 3),
+            Map.entry(Set.of("REGULAR_EMPLOYEE", "INTERN"), 3),
+            Map.entry(Set.of("REGULAR_EMPLOYEE", "DISPATCH"), 3),
             Map.entry(Set.of("CONTRACT", "PART_TIME"), 3),
             Map.entry(Set.of("CONTRACT", "INTERN"), 3),
             Map.entry(Set.of("CONTRACT", "DISPATCH"), 3),
@@ -115,13 +124,13 @@ public class JobRecommendationCalculator {
         result.setEmploymentTypeScore(employmentTypeScore(profile, job, notes));
         result.setCareerScore(careerScore(profile, job, notes));
         result.setSalaryScore(salaryScore(profile, job, notes));
-        result.setWorkStyleScore(workStyleScore(profile, job, notes));
+        result.setEducationScore(educationScore(profile, job, notes));
         result.setAccessibilityScore(accessibilityScore(profile, job, notes));
 
         result.setTotalScore(result.getJobScore() + result.getRegionScore()
                 + result.getEmploymentTypeScore() + result.getCareerScore() + result.getSalaryScore()
-                + result.getWorkStyleScore() + result.getAccessibilityScore());
-        result.setRecommendationReason(notes.recommendationReason());
+                + result.getEducationScore() + result.getAccessibilityScore());
+        result.setRecommendationReason(notes.recommendationReason(result.getTotalScore()));
         result.setMismatchReason(notes.mismatchReason());
 
         log.info("jobId : " + job.getId() + " / totalScore : " + result.getTotalScore());
@@ -269,39 +278,47 @@ public class JobRecommendationCalculator {
         else if (ratio >= 0.8) score = 6;
         else if (ratio >= 0.7) score = 4;
         else score = 2;
-        return notes.mismatch("희망 급여 " + desired + "만원 대비 " + offered + "만원", score, SALARY_POINTS);
+        int difference = desired - offered;
+        String label = String.format(Locale.KOREA,
+                "희망 급여 %,d만원보다 공고 급여가 %,d만원으로 %,d만원 낮음",
+                desired, offered, difference);
+        return notes.mismatch(label, score, SALARY_POINTS);
     }
 
-    private static int workStyleScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
-        String preferred = toCode(profile.getWorkType());
-        String offered = toCode(job.getWorkType());
-        if (isUnrestricted(preferred) || isUnrestricted(offered)) return 5;
+    private static int educationScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
+        String required = EducationLevelCodes.normalize(job.getEducationLevel());
+        if ("ANY".equals(required)) {
+            return notes.match("공고 학력 무관", EDUCATION_POINTS, EDUCATION_POINTS);
+        }
 
-        boolean matched = preferred.equals(offered)
-                || "HYBRID".equals(offered) && Set.of("OFFICE", "REMOTE").contains(preferred);
-        return matched ? notes.match("희망 근무방식 충족", WORK_STYLE_POINTS, WORK_STYLE_POINTS)
-                : notes.mismatch("희망 근무방식과 다름", 0, WORK_STYLE_POINTS);
+        int applicantRank = EducationLevelCodes.rank(profile.getEducationLevel());
+        int requiredRank = EducationLevelCodes.rank(required);
+        return applicantRank >= requiredRank
+                ? notes.match("학력 조건 충족", EDUCATION_POINTS, EDUCATION_POINTS)
+                : notes.mismatch("공고 요구 학력보다 낮음", 0, EDUCATION_POINTS);
     }
 
     private static int accessibilityScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
-        List<Check> wanted = Stream.of(
+        List<Check> checks = Stream.of(
                 new Check(profile.getWheelchairRequired(), job.getWheelchairAccessible(), "휠체어 접근"),
                 new Check(profile.getAccessibleRestroomRequired(), job.getAccessibleRestroom(), "장애인 화장실"),
                 new Check(profile.getDisabledParkingRequired(), job.getDisabledParking(), "장애인 주차"),
                 new Check(profile.getAssistiveDeviceRequired(), job.getAssistiveDeviceSupport(), "보조공학기기"),
                 new Check(profile.getRestAreaRequired(), job.getRestAreaAvailable(), "장애인 휴게공간"),
                 new Check(profile.getElevatorRequired(), job.getElevatorAvailable(), "엘리베이터 이용"))
-                .filter(Check::isWanted).toList();
-        if (wanted.isEmpty()) return 6;
+                .toList();
 
-        long satisfied = wanted.stream().filter(Check::isSupported).count();
-        wanted.forEach(check -> {
+        checks.stream().filter(Check::isWanted).forEach(check -> {
             if (check.isSupported()) notes.match(check.label() + " 조건 충족");
             else notes.mismatch(check.label() + " 조건 미지원");
         });
-        int total = wanted.size();
-        return satisfied == 0 ? 0 : satisfied == total ? ACCESSIBILITY_POINTS : satisfied * 5 >= total * 4 ? 8
-                : satisfied * 5 >= total * 3 ? 6 : satisfied * 5 >= total * 2 ? 4 : 2;
+
+        long mismatchCount = checks.stream()
+                .filter(Check::isWanted)
+                .filter(check -> !check.isSupported())
+                .count();
+
+        return Math.max(0, ACCESSIBILITY_POINTS - (int) mismatchCount * 2);
     }
 
     private record Check(Boolean wanted, Boolean supported, String label) {

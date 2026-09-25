@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.ykk.jobbridge.dto.JobPostingDTO;
+import org.ykk.jobbridge.dto.KeadJobSyncResultDTO;
 import org.ykk.jobbridge.dto.MsgDTO;
 import org.ykk.jobbridge.service.IJobPostingService;
+import org.ykk.jobbridge.service.IKeadJobService;
 import org.ykk.jobbridge.util.CmmUtil;
 
 import java.util.ArrayList;
@@ -25,6 +27,14 @@ import java.util.Optional;
 public class JobPostingController {
 
     private final IJobPostingService jobPostingService;
+    private final IKeadJobService keadJobService;
+
+    @ResponseBody
+    @PostMapping(value = "syncKeadJobs")
+    public KeadJobSyncResultDTO syncKeadJobs() throws Exception {
+        log.info(this.getClass().getName() + ".syncKeadJobs Start!");
+        return keadJobService.syncJobs();
+    }
 
     @ResponseBody
     @GetMapping(value = "getJobList")
@@ -308,6 +318,8 @@ public class JobPostingController {
         String employmentType = CmmUtil.nvl(request.getParameter("employmentType")).trim();
         String location = CmmUtil.nvl(request.getParameter("location")).trim();
         String salaryMin = CmmUtil.nvl(request.getParameter("salaryMin"));
+        String salaryAmount = CmmUtil.nvl(request.getParameter("salaryAmount"));
+        String salaryType = CmmUtil.nvl(request.getParameter("salaryType"));
         String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY");
         String experienceLevel = CmmUtil.nvl(request.getParameter("experienceLevel"));
         String educationLevel = CmmUtil.nvl(request.getParameter("educationLevel"));
@@ -329,6 +341,8 @@ public class JobPostingController {
         log.info("employmentType : " + employmentType);
         log.info("location : " + location);
         log.info("salaryMin : " + salaryMin);
+        log.info("salaryAmount : " + salaryAmount);
+        log.info("salaryType : " + salaryType);
         log.info("deadline : " + deadline);
 
         JobPostingDTO pDTO = new JobPostingDTO();
@@ -337,6 +351,7 @@ public class JobPostingController {
         pDTO.setJobCategory(jobCategory);
         pDTO.setEmploymentType(employmentType);
         pDTO.setLocation(location);
+        pDTO.setSalaryType(salaryType);
         pDTO.setWorkType(workType);
         pDTO.setExperienceLevel(experienceLevel);
         pDTO.setEducationLevel(educationLevel);
@@ -348,6 +363,10 @@ public class JobPostingController {
 
         if (salaryMin.length() > 0) {
             pDTO.setSalaryMin(Integer.parseInt(salaryMin));
+        }
+
+        if (salaryAmount.length() > 0) {
+            pDTO.setSalaryAmount(Long.parseLong(salaryAmount.replace(",", "")));
         }
 
         pDTO.setWheelchairAccessible(Boolean.parseBoolean(wheelchairAccessible));

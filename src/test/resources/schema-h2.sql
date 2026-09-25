@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS job_seeker_profile (
     career_years INT,
     min_salary INT,
     work_type VARCHAR(20) NOT NULL DEFAULT 'ANY' CHECK (work_type IN ('OFFICE', 'REMOTE', 'HYBRID', 'ANY')),
+    education_level VARCHAR(30) NOT NULL DEFAULT 'ANY',
     wheelchair_required BOOLEAN DEFAULT FALSE,
     accessible_restroom_required BOOLEAN DEFAULT FALSE,
     disabled_parking_required BOOLEAN DEFAULT FALSE,
@@ -46,14 +47,16 @@ CREATE TABLE IF NOT EXISTS job_seeker_profile (
 
 CREATE TABLE IF NOT EXISTS job_posting (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    company_member_id BIGINT NOT NULL,
+    company_member_id BIGINT,
     company_name VARCHAR(100) NOT NULL,
     title VARCHAR(200) NOT NULL,
     job_category VARCHAR(100) NOT NULL,
     employment_type VARCHAR(30) NOT NULL,
     location VARCHAR(150) NOT NULL,
     salary_min INT,
-    work_type VARCHAR(20) NOT NULL DEFAULT 'ANY' CHECK (work_type IN ('OFFICE', 'REMOTE', 'HYBRID', 'ANY')),
+    salary_amount BIGINT,
+    salary_type VARCHAR(20),
+    work_type VARCHAR(20) CHECK (work_type IN ('OFFICE', 'REMOTE', 'HYBRID', 'ANY')),
     experience_level VARCHAR(50),
     education_level VARCHAR(50),
     description CLOB,
@@ -66,11 +69,21 @@ CREATE TABLE IF NOT EXISTS job_posting (
     assistive_device_support BOOLEAN NOT NULL DEFAULT FALSE,
     rest_area_available BOOLEAN NOT NULL DEFAULT FALSE,
     elevator_available BOOLEAN NOT NULL DEFAULT FALSE,
+    accessibility_verified BOOLEAN NOT NULL DEFAULT TRUE,
+    source VARCHAR(20) NOT NULL DEFAULT 'LOCAL',
+    external_job_id VARCHAR(64),
+    contact_number VARCHAR(50),
+    entry_type VARCHAR(30),
+    managing_agency VARCHAR(150),
+    recruitment_start_date DATE,
+    external_apply_date DATE,
+    external_registered_date DATE,
     deadline DATE,
     status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_job_posting_member FOREIGN KEY (company_member_id) REFERENCES member(id)
+    CONSTRAINT fk_job_posting_member FOREIGN KEY (company_member_id) REFERENCES member(id),
+    CONSTRAINT uk_job_posting_external UNIQUE (source, external_job_id)
 );
 
 CREATE TABLE IF NOT EXISTS interest_job (
@@ -95,7 +108,7 @@ CREATE TABLE IF NOT EXISTS ai_job_posting_recommendation (
     employment_score INT NOT NULL,
     career_score INT NOT NULL,
     salary_score INT NOT NULL,
-    work_style_score INT NOT NULL,
+    education_score INT NOT NULL,
     accessibility_score INT NOT NULL,
     recommendation_reason VARCHAR(2000) NOT NULL,
     mismatch_reason VARCHAR(2000) NOT NULL,
