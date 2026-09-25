@@ -136,6 +136,7 @@ class ApiSmokeTests {
                         .param("location", "서울특별시 강남구")
                         .param("salaryMin", "3000")
                         .param("workType", "REMOTE")
+                        .param("educationLevel", "MIDDLE_SCHOOL")
                         .param("wheelchairAccessible", "false")
                         .param("deadline", "2099-12-31"))
                 .andExpect(jsonPath("$.result").value(1));
@@ -145,6 +146,7 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$[0].title").value("백엔드 개발자 채용"))
                 .andExpect(jsonPath("$[0].salaryMin").value(3000))
                 .andExpect(jsonPath("$[0].workType").value("REMOTE"))
+                .andExpect(jsonPath("$[0].educationLevel").value("MIDDLE_SCHOOL"))
                 .andExpect(jsonPath("$[0].deadline").value("2099-12-31"))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*?\"id\":(\\d+).*", "$1");
@@ -291,6 +293,7 @@ class ApiSmokeTests {
                         .param("careerYears", "")
                         .param("minSalary", "2500")
                         .param("workType", "REMOTE")
+                        .param("educationLevel", "ELEMENTARY_SCHOOL")
                         .param("contactTimeStart", "09:00")
                         .param("contactTimeEnd", "18:00")
                         .param("contactMethod", "이메일"))
@@ -303,7 +306,8 @@ class ApiSmokeTests {
                 .andExpect(jsonPath("$.careerType").value("ENTRY"))
                 .andExpect(jsonPath("$.contactMethod").value("EMAIL"))
                 .andExpect(jsonPath("$.minSalary").value(2500))
-                .andExpect(jsonPath("$.workType").value("REMOTE"));
+                .andExpect(jsonPath("$.workType").value("REMOTE"))
+                .andExpect(jsonPath("$.educationLevel").value("ELEMENTARY_SCHOOL"));
 
         mockMvc.perform(get("/api/members/getLoginInfo").session(seekerSession))
                 .andExpect(jsonPath("$.name").value("스모크 사용자2"));

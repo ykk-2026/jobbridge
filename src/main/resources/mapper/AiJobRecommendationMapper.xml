@@ -5,7 +5,7 @@
 
     <select id="getProfileInfo" parameterType="AiJobRecommendationDTO" resultType="JobSeekerProfileDTO">
         SELECT member_id, residence_region, desired_job, desired_region, employment_type,
-               career_type, career_years, min_salary, work_type, introduction,
+               career_type, career_years, min_salary, work_type, education_level, introduction,
                wheelchair_required, accessible_restroom_required,
                disabled_parking_required, assistive_device_required,
                rest_area_required, elevator_required
@@ -15,16 +15,20 @@
 
     <select id="getJobList" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
+               J.title, J.job_category, J.employment_type, J.location,
+               J.salary_min, J.salary_amount, J.salary_type, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
                J.rest_area_available, J.elevator_available,
-               J.assistive_device_support,
+               J.assistive_device_support, J.accessibility_verified,
+               J.source, J.external_job_id, J.contact_number, J.entry_type,
+               J.managing_agency, J.recruitment_start_date,
+               J.external_apply_date, J.external_registered_date,
                J.deadline, J.status, J.created_at, J.updated_at
-          FROM job_posting J, company_profile C
-         WHERE J.company_member_id = C.member_id
-           AND J.status = 'OPEN'
+          FROM job_posting J
+          LEFT JOIN company_profile C ON C.member_id = J.company_member_id
+         WHERE J.status = 'OPEN'
            AND (J.deadline IS NULL OR J.deadline &gt;= CURRENT_DATE)
          ORDER BY J.deadline IS NULL, J.deadline, J.id
     </select>
@@ -39,7 +43,7 @@
             employment_score = #{employmentTypeScore},
             career_score = #{careerScore},
             salary_score = #{salaryScore},
-            work_style_score = #{workStyleScore},
+            education_score = #{educationScore},
             accessibility_score = #{accessibilityScore},
             recommendation_reason = #{recommendationReason},
             mismatch_reason = #{mismatchReason},
@@ -53,12 +57,12 @@
         INSERT INTO ai_job_posting_recommendation
             (
                 member_id, job_id, total_score, job_score, job_match_source, job_match_reason,
-                region_score, employment_score, career_score, salary_score, work_style_score,
+                region_score, employment_score, career_score, salary_score, education_score,
                 accessibility_score, recommendation_reason, mismatch_reason
             )
         VALUES (
             #{memberId}, #{jobId}, #{totalScore}, #{jobScore}, #{jobMatchSource}, #{jobMatchReason},
-            #{regionScore}, #{employmentTypeScore}, #{careerScore}, #{salaryScore}, #{workStyleScore},
+            #{regionScore}, #{employmentTypeScore}, #{careerScore}, #{salaryScore}, #{educationScore},
             #{accessibilityScore}, #{recommendationReason}, #{mismatchReason}
         )
     </insert>

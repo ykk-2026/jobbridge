@@ -8,6 +8,8 @@ import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.mapper.IJobPostingMapper;
 import org.ykk.jobbridge.service.IJobPostingService;
 import org.ykk.jobbridge.util.EmploymentTypeCodes;
+import org.ykk.jobbridge.util.EducationLevelCodes;
+import org.ykk.jobbridge.util.SalaryTypeCodes;
 import org.ykk.jobbridge.util.WorkTypeCodes;
 
 import java.util.List;
@@ -51,6 +53,8 @@ public class JobPostingService implements IJobPostingService {
 
         pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
         pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
+        pDTO.setEducationLevel(EducationLevelCodes.normalize(pDTO.getEducationLevel()));
+        normalizeSalary(pDTO);
         jobPostingMapper.insertJobInfo(pDTO);
     }
 
@@ -62,6 +66,8 @@ public class JobPostingService implements IJobPostingService {
 
         pDTO.setEmploymentType(EmploymentTypeCodes.normalize(pDTO.getEmploymentType()));
         pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
+        pDTO.setEducationLevel(EducationLevelCodes.normalize(pDTO.getEducationLevel()));
+        normalizeSalary(pDTO);
         return jobPostingMapper.updateJobInfo(pDTO);
     }
 
@@ -89,5 +95,13 @@ public class JobPostingService implements IJobPostingService {
         log.info(this.getClass().getName() + ".getJobCount Start!");
 
         return jobPostingMapper.getJobCount();
+    }
+
+    private static void normalizeSalary(JobPostingDTO job) {
+        if (job.getSalaryAmount() == null) return;
+
+        String salaryType = SalaryTypeCodes.normalize(job.getSalaryType());
+        job.setSalaryType(salaryType);
+        job.setSalaryMin(SalaryTypeCodes.toAnnualTenThousandWon(job.getSalaryAmount(), salaryType));
     }
 }

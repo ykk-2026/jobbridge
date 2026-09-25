@@ -7,7 +7,7 @@ import java.util.Set;
 public final class EmploymentTypeCodes {
 
     public static final Set<String> VALUES = Set.of(
-            "ANY", "FULL_TIME", "CONTRACT", "PERMANENT_CONTRACT", "CONVERSION_TYPE",
+            "ANY", "FULL_TIME", "REGULAR_EMPLOYEE", "CONTRACT", "PERMANENT_CONTRACT", "CONVERSION_TYPE",
             "PART_TIME", "INTERN", "DISPATCH", "FREELANCE");
 
     private static final Map<String, String> ALIASES = Map.ofEntries(
@@ -16,6 +16,7 @@ public final class EmploymentTypeCodes {
             Map.entry("FREELANCER", "FREELANCE"),
             Map.entry("무관", "ANY"),
             Map.entry("정규직", "FULL_TIME"),
+            Map.entry("상용직", "REGULAR_EMPLOYEE"),
             Map.entry("계약직", "CONTRACT"),
             Map.entry("무기계약직", "PERMANENT_CONTRACT"),
             Map.entry("정규직 전환형", "CONVERSION_TYPE"),

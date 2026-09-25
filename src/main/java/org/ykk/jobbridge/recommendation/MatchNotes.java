@@ -41,14 +41,30 @@ final class MatchNotes {
         return String.join(", ", mismatches.stream().map(Note::detail).toList());
     }
 
-    String recommendationReason() {
+    String recommendationReason(int totalScore) {
+        List<String> strengths = matches.stream().map(Note::summary).distinct().limit(3).toList();
         List<String> gaps = mismatches.stream().map(Note::summary).distinct().limit(3).toList();
-        if (!gaps.isEmpty()) return "아쉬운 부분은 다음과 같습니다.\n" + String.join("\n", gaps);
 
-        String base = "현재 프로필 기준으로 뚜렷하게 부족한 조건은 없습니다.";
-        List<String> strengths = matches.stream().map(Note::summary).distinct().limit(2).toList();
-        if (strengths.isEmpty()) return base;
-        return base + "\n" + String.join(", ", strengths);
+        if (totalScore >= 70) {
+            String matched = strengths.isEmpty()
+                    ? "주요 조건이 전반적으로 잘 맞습니다."
+                    : String.join(", ", strengths) + " 등 주요 조건이 잘 맞습니다.";
+            return gaps.isEmpty() ? matched : matched + " 다만 " + String.join(", ", gaps) + ".";
+        }
+
+        if (totalScore >= 50) {
+            String matched = strengths.isEmpty()
+                    ? "일치하는 조건이 제한적입니다."
+                    : String.join(", ", strengths) + " 등 일부 조건은 일치하거나 충족합니다.";
+            return gaps.isEmpty() ? matched : matched + " 다만 " + String.join(", ", gaps) + ".";
+        }
+
+        String different = gaps.isEmpty()
+                ? "주요 조건의 일치 여부를 추가로 확인해야 합니다."
+                : String.join(", ", gaps) + " 등 주요 조건에서 차이가 있습니다.";
+        return strengths.isEmpty()
+                ? different
+                : different + " 다만 " + String.join(", ", strengths) + " 조건은 일치하거나 충족합니다.";
     }
 
     private static String withScore(String label, int score, int max) {

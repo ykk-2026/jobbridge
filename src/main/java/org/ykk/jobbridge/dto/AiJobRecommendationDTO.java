@@ -17,7 +17,7 @@ public class AiJobRecommendationDTO {
     private Integer employmentTypeScore;
     private Integer careerScore;
     private Integer salaryScore;
-    private Integer workStyleScore;
+    private Integer educationScore;
     private Integer accessibilityScore;
     private String recommendationReason;
     private String mismatchReason;

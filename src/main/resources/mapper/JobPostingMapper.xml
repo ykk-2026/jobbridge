@@ -5,16 +5,20 @@
 
     <select id="getJobList" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
+               J.title, J.job_category, J.employment_type, J.location,
+               J.salary_min, J.salary_amount, J.salary_type, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
                J.rest_area_available, J.elevator_available,
-               J.assistive_device_support,
+               J.assistive_device_support, J.accessibility_verified,
+               J.source, J.external_job_id, J.contact_number, J.entry_type,
+               J.managing_agency, J.recruitment_start_date,
+               J.external_apply_date, J.external_registered_date,
                J.deadline, J.status, J.created_at, J.updated_at
-          FROM job_posting J, company_profile C
-         WHERE J.company_member_id = C.member_id
-           AND J.status = 'OPEN'
+          FROM job_posting J
+          LEFT JOIN company_profile C ON C.member_id = J.company_member_id
+         WHERE J.status = 'OPEN'
            AND (J.deadline IS NULL OR J.deadline &gt;= CURRENT_DATE)
          ORDER BY J.created_at DESC, J.id DESC
          LIMIT 100
@@ -22,31 +26,39 @@
 
     <select id="getJobInfo" parameterType="JobPostingDTO" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
+               J.title, J.job_category, J.employment_type, J.location,
+               J.salary_min, J.salary_amount, J.salary_type, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
                J.rest_area_available, J.elevator_available,
-               J.assistive_device_support,
+               J.assistive_device_support, J.accessibility_verified,
+               J.source, J.external_job_id, J.contact_number, J.entry_type,
+               J.managing_agency, J.recruitment_start_date,
+               J.external_apply_date, J.external_registered_date,
                J.deadline, J.status, J.created_at, J.updated_at
-          FROM job_posting J, company_profile C
-         WHERE J.company_member_id = C.member_id
-           AND J.id = #{id}
+          FROM job_posting J
+          LEFT JOIN company_profile C ON C.member_id = J.company_member_id
+         WHERE J.id = #{id}
            AND J.status != 'DELETED'
     </select>
 
     <select id="getMyJobList" parameterType="JobPostingDTO" resultType="JobPostingDTO">
         SELECT J.id, J.company_member_id, COALESCE(J.company_name, C.company_name) AS company_name,
-               J.title, J.job_category, J.employment_type, J.location, J.salary_min, J.work_type,
+               J.title, J.job_category, J.employment_type, J.location,
+               J.salary_min, J.salary_amount, J.salary_type, J.work_type,
                J.experience_level, J.education_level, J.description, J.requirements,
                J.preferred_qualifications, J.accessibility_info,
                J.wheelchair_accessible, J.accessible_restroom, J.disabled_parking,
                J.rest_area_available, J.elevator_available,
-               J.assistive_device_support,
+               J.assistive_device_support, J.accessibility_verified,
+               J.source, J.external_job_id, J.contact_number, J.entry_type,
+               J.managing_agency, J.recruitment_start_date,
+               J.external_apply_date, J.external_registered_date,
                J.deadline, J.status, J.created_at, J.updated_at
-          FROM job_posting J, company_profile C
-         WHERE J.company_member_id = C.member_id
-           AND J.company_member_id = #{companyMemberId}
+          FROM job_posting J
+          LEFT JOIN company_profile C ON C.member_id = J.company_member_id
+         WHERE J.company_member_id = #{companyMemberId}
            AND J.status != 'DELETED'
          ORDER BY J.created_at DESC, J.id DESC
     </select>
@@ -55,22 +67,70 @@
         INSERT INTO job_posting
             (
                 company_member_id, company_name, title, job_category, employment_type, location,
-                salary_min, work_type, experience_level, education_level,
+                salary_min, salary_amount, salary_type, work_type, experience_level, education_level,
                 description, requirements, preferred_qualifications, accessibility_info,
                 wheelchair_accessible, accessible_restroom, disabled_parking,
                 rest_area_available, elevator_available,
-                assistive_device_support,
+                assistive_device_support, accessibility_verified, source,
                 deadline, status
             )
         VALUES (
             #{companyMemberId}, #{companyName}, #{title}, #{jobCategory}, #{employmentType}, #{location},
-            #{salaryMin}, #{workType}, #{experienceLevel}, #{educationLevel},
+            #{salaryMin}, #{salaryAmount}, #{salaryType}, #{workType}, #{experienceLevel}, #{educationLevel},
             #{description}, #{requirements}, #{preferredQualifications}, #{accessibilityInfo},
             #{wheelchairAccessible}, #{accessibleRestroom}, #{disabledParking},
             #{restAreaAvailable}, #{elevatorAvailable},
-            #{assistiveDeviceSupport},
+            #{assistiveDeviceSupport}, TRUE, 'LOCAL',
             NULLIF(#{deadline}, ''), 'OPEN'
         )
+    </insert>
+
+    <insert id="upsertKeadJob" parameterType="JobPostingDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job_posting
+            (
+                company_member_id, company_name, title, job_category, employment_type, location,
+                salary_min, salary_amount, salary_type, work_type,
+                experience_level, education_level, description, requirements,
+                preferred_qualifications, accessibility_info,
+                wheelchair_accessible, accessible_restroom, disabled_parking,
+                rest_area_available, elevator_available, assistive_device_support,
+                accessibility_verified, source, external_job_id, contact_number,
+                entry_type, managing_agency, recruitment_start_date,
+                external_apply_date, external_registered_date, deadline, status
+            )
+        VALUES (
+            NULL, #{companyName}, #{title}, #{jobCategory}, #{employmentType}, #{location},
+            #{salaryMin}, #{salaryAmount}, #{salaryType}, #{workType},
+            #{experienceLevel}, #{educationLevel}, #{description}, #{requirements},
+            #{preferredQualifications}, #{accessibilityInfo},
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+            FALSE, 'KEAD', #{externalJobId}, #{contactNumber},
+            #{entryType}, #{managingAgency}, NULLIF(#{recruitmentStartDate}, ''),
+            NULLIF(#{externalApplyDate}, ''), NULLIF(#{externalRegisteredDate}, ''),
+            NULLIF(#{deadline}, ''), 'OPEN'
+        )
+        ON DUPLICATE KEY UPDATE
+            company_name = VALUES(company_name),
+            title = VALUES(title),
+            job_category = VALUES(job_category),
+            employment_type = VALUES(employment_type),
+            location = VALUES(location),
+            salary_min = VALUES(salary_min),
+            salary_amount = VALUES(salary_amount),
+            salary_type = VALUES(salary_type),
+            work_type = VALUES(work_type),
+            experience_level = VALUES(experience_level),
+            education_level = VALUES(education_level),
+            requirements = VALUES(requirements),
+            contact_number = VALUES(contact_number),
+            entry_type = VALUES(entry_type),
+            managing_agency = VALUES(managing_agency),
+            recruitment_start_date = VALUES(recruitment_start_date),
+            external_apply_date = VALUES(external_apply_date),
+            external_registered_date = VALUES(external_registered_date),
+            deadline = VALUES(deadline),
+            status = 'OPEN',
+            updated_at = CURRENT_TIMESTAMP
     </insert>
 
     <update id="updateJobInfo" parameterType="JobPostingDTO">
@@ -81,6 +141,8 @@
             employment_type = #{employmentType},
             location = #{location},
             salary_min = #{salaryMin},
+            salary_amount = #{salaryAmount},
+            salary_type = #{salaryType},
             work_type = #{workType},
             experience_level = #{experienceLevel},
             education_level = #{educationLevel},

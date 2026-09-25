@@ -8,6 +8,7 @@ import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.IProfileMapper;
 import org.ykk.jobbridge.service.IProfileService;
 import org.ykk.jobbridge.util.CmmUtil;
+import org.ykk.jobbridge.util.EducationLevelCodes;
 import org.ykk.jobbridge.util.EmploymentTypeCodes;
 import org.ykk.jobbridge.util.WorkTypeCodes;
 
@@ -37,6 +38,7 @@ public class ProfileService implements IProfileService {
         pDTO.setGender(toGenderCode(pDTO.getGender()));
         pDTO.setEmploymentType(toEmploymentTypeCode(pDTO.getEmploymentType()));
         pDTO.setWorkType(WorkTypeCodes.normalize(pDTO.getWorkType()));
+        pDTO.setEducationLevel(EducationLevelCodes.normalize(pDTO.getEducationLevel()));
         pDTO.setCareerType(toCareerTypeCode(pDTO.getCareerType()));
         pDTO.setContactMethod(toContactMethodCode(pDTO.getContactMethod()));
 
