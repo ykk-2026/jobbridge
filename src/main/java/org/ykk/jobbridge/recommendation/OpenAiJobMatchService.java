@@ -10,6 +10,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -25,8 +26,11 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
 
     private static final int MAX_POINTS = JobRecommendationCalculator.JOB_FIT_POINTS;
     private static final int MAX_TEXT_LENGTH = 2000;
+    private static final int MAX_BATCH_TEXT_LENGTH = 500;
+    private static final int MAX_BATCH_SIZE = 100;
     private static final String DEFAULT_MODEL = "gpt-6-astra";
     private static final Duration TIMEOUT = Duration.ofSeconds(12);
+    private static final Duration BATCH_TIMEOUT = Duration.ofSeconds(60);
     private static final String DEFAULT_REASON = "AI가 직무와 기술의 의미적 유사도를 평가했습니다.";
 
     private static final String INSTRUCTIONS = """
@@ -64,6 +68,18 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
                                     "matchedSkills", Map.of("type", "array", "items", Map.of("type", "string")),
                                     "missingSkills", Map.of("type", "array", "items", Map.of("type", "string")),
                                     "reason", Map.of("type", "string")))));
+
+    private static final Map<String, Object> JSON_OBJECT_RESPONSE_FORMAT = Map.of(
+            "type", "json_object");
+
+    private static final String BATCH_INSTRUCTIONS = """
+            Evaluate every posting in the input independently for job and skill fit.
+            Return exactly one assessment for each jobId and preserve the supplied jobId.
+            Do not score location, salary, employment type, education, or accessibility.
+            Keep each Korean reason concise.
+            Return only one JSON object in this exact shape:
+            {"assessments":[{"jobId":1,"score":0,"reason":"Korean reason"}]}
+            """;
 
     private final boolean enabled;
     private final String apiKey;
@@ -118,6 +134,33 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
         }
     }
 
+    @Override
+    public Map<Long, JobMatchAssessment> assessBatch(JobSeekerProfileDTO profile,
+                                                      List<JobPostingDTO> jobs) {
+        if (!enabled || apiKey.isBlank() || profile == null || jobs == null || jobs.isEmpty()) {
+            return Map.of();
+        }
+
+        List<JobPostingDTO> batch = jobs.stream()
+                .filter(job -> job != null && job.getId() != null)
+                .limit(MAX_BATCH_SIZE)
+                .toList();
+        if (batch.isEmpty()) return Map.of();
+
+        try {
+            log.info("OpenAI batch assessment Start! (jobs : {})", batch.size());
+            JsonNode response = http.post(
+                    endpoint, batchRequest(profile, batch), "Bearer " + apiKey, BATCH_TIMEOUT);
+            Map<Long, JobMatchAssessment> results = parseBatch(response, profile, batch);
+            log.info("OpenAI batch assessment End! (requested : {}, received : {})",
+                    batch.size(), results.size());
+            return results;
+        } catch (Exception e) {
+            log.info("OpenAI batch call failed : " + e);
+            return Map.of();
+        }
+    }
+
     private Map<String, Object> request(JobSeekerProfileDTO profile, JobPostingDTO job) {
         Map<String, Object> candidate = Map.of(
                 "desiredJob", trimToEmpty(profile.getDesiredJob()),
@@ -142,6 +185,33 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
                 "response_format", RESPONSE_FORMAT);
     }
 
+    private Map<String, Object> batchRequest(JobSeekerProfileDTO profile, List<JobPostingDTO> jobs) {
+        Map<String, Object> candidate = Map.of(
+                "desiredJob", trimToEmpty(profile.getDesiredJob()),
+                "careerType", trimToEmpty(profile.getCareerType()),
+                "introduction", shorten(profile.getIntroduction(), MAX_BATCH_TEXT_LENGTH));
+        List<Map<String, Object>> postings = jobs.stream()
+                .map(job -> Map.<String, Object>of(
+                        "jobId", job.getId(),
+                        "title", trimToEmpty(job.getTitle()),
+                        "jobCategory", trimToEmpty(job.getJobCategory()),
+                        "description", shorten(job.getDescription(), MAX_BATCH_TEXT_LENGTH),
+                        "requirements", shorten(job.getRequirements(), MAX_BATCH_TEXT_LENGTH),
+                        "preferredQualifications", shorten(
+                                job.getPreferredQualifications(), MAX_BATCH_TEXT_LENGTH)))
+                .toList();
+        String input = objectMapper.valueToTree(
+                Map.of("candidate", candidate, "postings", postings)).toString();
+
+        return Map.of(
+                "model", model,
+                "messages", List.of(
+                        Map.of("role", "system",
+                                "content", INSTRUCTIONS + BATCH_INSTRUCTIONS),
+                        Map.of("role", "user", "content", input)),
+                "response_format", JSON_OBJECT_RESPONSE_FORMAT);
+    }
+
     private Optional<JobMatchAssessment> parse(JsonNode response) throws Exception {
         String content = response.path("choices").path(0).path("message").path("content").asText("");
         if (content.isBlank()) return Optional.empty();
@@ -153,9 +223,42 @@ public class OpenAiJobMatchService implements IAiJobMatchService {
         return Optional.of(new JobMatchAssessment(score, reason, "GENERATIVE_AI"));
     }
 
+    private Map<Long, JobMatchAssessment> parseBatch(JsonNode response,
+                                                      JobSeekerProfileDTO profile,
+                                                      List<JobPostingDTO> jobs) throws Exception {
+        String content = response.path("choices").path(0).path("message").path("content").asText("");
+        if (content.isBlank()) return Map.of();
+
+        Map<Long, JobPostingDTO> jobsById = new LinkedHashMap<>();
+        for (JobPostingDTO job : jobs) jobsById.put(job.getId(), job);
+
+        Map<Long, JobMatchAssessment> results = new LinkedHashMap<>();
+        JsonNode assessments = objectMapper.readTree(content).path("assessments");
+        for (JsonNode node : assessments) {
+            long jobId = node.path("jobId").asLong(-1L);
+            JobPostingDTO job = jobsById.get(jobId);
+            if (job == null) continue;
+
+            int score = clamp(node.path("score").asInt(), 0, MAX_POINTS);
+            String reason = node.path("reason").asText("").trim();
+            if (reason.isBlank()) reason = DEFAULT_REASON;
+            if (sameJob(profile.getDesiredJob(), job.getJobCategory())) {
+                score = MAX_POINTS;
+            } else if (hasJobInfo(profile, job) && score == 0) {
+                score = 1;
+            }
+            results.put(jobId, new JobMatchAssessment(score, reason, "GENERATIVE_AI"));
+        }
+        return results;
+    }
+
     private static String shorten(String value) {
+        return shorten(value, MAX_TEXT_LENGTH);
+    }
+
+    private static String shorten(String value, int maxLength) {
         String text = trimToEmpty(value);
-        return text.length() <= MAX_TEXT_LENGTH ? text : text.substring(0, MAX_TEXT_LENGTH);
+        return text.length() <= maxLength ? text : text.substring(0, maxLength);
     }
 
     private static boolean sameJob(String desiredJob, String jobCategory) {

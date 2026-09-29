@@ -8,21 +8,29 @@ import org.ykk.jobbridge.dto.AiJobRecommendationDTO;
 import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.dto.JobSeekerProfileDTO;
 import org.ykk.jobbridge.mapper.IAiJobRecommendationMapper;
+import org.ykk.jobbridge.recommendation.IAiJobMatchService;
+import org.ykk.jobbridge.recommendation.IAiJobMatchService.JobMatchAssessment;
 import org.ykk.jobbridge.recommendation.JobRecommendationCalculator;
 import org.ykk.jobbridge.service.IAiJobRecommendationService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class AiJobRecommendationService implements IAiJobRecommendationService {
 
+    private static final int AI_BATCH_SIZE = 100;
+
     private final IAiJobRecommendationMapper recommendationMapper;
 
     private final JobRecommendationCalculator calculator;
+
+    private final IAiJobMatchService aiJobMatchService;
 
     @Transactional
     @Override
@@ -41,8 +49,15 @@ public class AiJobRecommendationService implements IAiJobRecommendationService {
 
             List<JobPostingDTO> jobList = recommendationMapper.getJobList();
 
+            Map<Long, JobMatchAssessment> aiAssessments = new LinkedHashMap<>();
+            for (int start = 0; start < jobList.size(); start += AI_BATCH_SIZE) {
+                int end = Math.min(start + AI_BATCH_SIZE, jobList.size());
+                aiAssessments.putAll(aiJobMatchService.assessBatch(profileDTO, jobList.subList(start, end)));
+            }
+
             for (JobPostingDTO jobDTO : jobList) {
-                rList.add(calculator.calculate(pDTO.getMemberId(), profileDTO, jobDTO));
+                rList.add(calculator.calculate(
+                        pDTO.getMemberId(), profileDTO, jobDTO, aiAssessments.get(jobDTO.getId())));
             }
 
             rList.sort(Comparator.comparing(AiJobRecommendationDTO::getTotalScore).reversed()

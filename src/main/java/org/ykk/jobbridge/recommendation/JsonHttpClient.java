@@ -12,6 +12,8 @@ import java.time.Duration;
 
 final class JsonHttpClient {
 
+    private static final int MAX_ERROR_BODY_LENGTH = 1000;
+
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3))
             .build();
@@ -40,8 +42,15 @@ final class JsonHttpClient {
         HttpResponse<String> response = httpClient.send(
                 request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() / 100 != 2) {
+            String errorBody = response.body() == null
+                    ? ""
+                    : response.body().replaceAll("[\\r\\n]+", " ").trim();
+            if (errorBody.length() > MAX_ERROR_BODY_LENGTH) {
+                errorBody = errorBody.substring(0, MAX_ERROR_BODY_LENGTH) + "...";
+            }
             throw new IllegalStateException(
-                    request.uri().getHost() + " 요청 실패: HTTP " + response.statusCode());
+                    request.uri().getHost() + " request failed: HTTP " + response.statusCode()
+                            + (errorBody.isBlank() ? "" : " / " + errorBody));
         }
         return objectMapper.readTree(response.body());
     }

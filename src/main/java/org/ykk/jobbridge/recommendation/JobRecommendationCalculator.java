@@ -107,10 +107,18 @@ public class JobRecommendationCalculator {
                                              JobSeekerProfileDTO profile,
                                              JobPostingDTO job) {
 
+        return calculate(memberId, profile, job, aiJobMatchService.assess(profile, job).orElse(null));
+    }
+
+    public AiJobRecommendationDTO calculate(Long memberId,
+                                             JobSeekerProfileDTO profile,
+                                             JobPostingDTO job,
+                                             JobMatchAssessment aiAssessment) {
+
         log.info(this.getClass().getName() + ".calculate Start! (jobId : " + job.getId() + ")");
 
         MatchNotes notes = new MatchNotes();
-        JobMatchAssessment jobFit = jobFitScore(profile, job, notes);
+        JobMatchAssessment jobFit = jobFitScore(profile, job, notes, Optional.ofNullable(aiAssessment));
 
         AiJobRecommendationDTO result = new AiJobRecommendationDTO();
         result.setMemberId(memberId);
@@ -138,8 +146,8 @@ public class JobRecommendationCalculator {
         return result;
     }
 
-    private JobMatchAssessment jobFitScore(JobSeekerProfileDTO profile, JobPostingDTO job, MatchNotes notes) {
-        Optional<JobMatchAssessment> ai = aiJobMatchService.assess(profile, job);
+    private JobMatchAssessment jobFitScore(JobSeekerProfileDTO profile, JobPostingDTO job,
+                                            MatchNotes notes, Optional<JobMatchAssessment> ai) {
         if (ai.isPresent()) {
             JobMatchAssessment assessment = ai.get();
             int score = clamp(assessment.score(), 0, JOB_FIT_POINTS);
