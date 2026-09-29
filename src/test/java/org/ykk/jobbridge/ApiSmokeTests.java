@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -276,27 +277,32 @@ class ApiSmokeTests {
     void profileAndRecommendation() throws Exception {
 
         mockMvc.perform(post("/api/profiles/saveProfileInfo").session(companySession)
-                        .param("memberId", memberId).param("name", "해커"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memberId\":%s,\"name\":\"해커\"}".formatted(memberId)))
                 .andExpect(jsonPath("$.msg").value("본인 프로필만 수정할 수 있습니다."));
 
         mockMvc.perform(post("/api/profiles/saveProfileInfo").session(seekerSession)
-                        .param("memberId", memberId)
-                        .param("name", "스모크 사용자2")
-                        .param("birthDate", "1999-01-02")
-                        .param("gender", "남성")
-                        .param("email", "smoke@example.com")
-                        .param("phone", "010-0000-0000")
-                        .param("desiredJob", "백엔드 개발자")
-                        .param("desiredRegion", "서울 강남구")
-                        .param("employmentType", "정규직")
-                        .param("careerType", "신입")
-                        .param("careerYears", "")
-                        .param("minSalary", "2500")
-                        .param("workType", "REMOTE")
-                        .param("educationLevel", "ELEMENTARY_SCHOOL")
-                        .param("contactTimeStart", "09:00")
-                        .param("contactTimeEnd", "18:00")
-                        .param("contactMethod", "이메일"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "memberId": %s,
+                                  "name": "스모크 사용자2",
+                                  "birthDate": "1999-01-02",
+                                  "gender": "남성",
+                                  "email": "smoke@example.com",
+                                  "phone": "010-0000-0000",
+                                  "desiredJob": "백엔드 개발자",
+                                  "desiredRegion": "서울 강남구",
+                                  "employmentType": "정규직",
+                                  "careerType": "신입",
+                                  "minSalary": 2500,
+                                  "workType": "REMOTE",
+                                  "educationLevel": "ELEMENTARY_SCHOOL",
+                                  "contactTimeStart": "09:00",
+                                  "contactTimeEnd": "18:00",
+                                  "contactMethod": "이메일"
+                                }
+                                """.formatted(memberId)))
                 .andExpect(jsonPath("$.result").value(1));
 
         mockMvc.perform(get("/api/profiles/getProfileInfo").param("memberId", memberId))

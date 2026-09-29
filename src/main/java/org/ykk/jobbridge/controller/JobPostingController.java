@@ -6,8 +6,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.ykk.jobbridge.dto.JobPostingDTO;
 import org.ykk.jobbridge.dto.KeadJobSyncResultDTO;
@@ -100,7 +102,7 @@ public class JobPostingController {
 
     @ResponseBody
     @PostMapping(value = "insertJobInfo")
-    public MsgDTO insertJobInfo(HttpServletRequest request, HttpSession session) {
+    public MsgDTO insertJobInfo(@ModelAttribute JobPostingDTO pDTO, HttpSession session) {
 
         log.info(this.getClass().getName() + ".insertJobInfo Start!");
 
@@ -120,7 +122,7 @@ public class JobPostingController {
 
             } else {
 
-                JobPostingDTO pDTO = getJobPostingParam(request);
+                applyDefaults(pDTO);
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
                 if (CmmUtil.nvl(pDTO.getCompanyName()).isEmpty() || CmmUtil.nvl(pDTO.getTitle()).isEmpty()
@@ -156,7 +158,9 @@ public class JobPostingController {
 
     @ResponseBody
     @PostMapping(value = "updateJobInfo")
-    public MsgDTO updateJobInfo(HttpServletRequest request, HttpSession session) {
+    public MsgDTO updateJobInfo(@ModelAttribute JobPostingDTO pDTO,
+                                @RequestParam(name = "jobId", defaultValue = "0") Long jobId,
+                                HttpSession session) {
 
         log.info(this.getClass().getName() + ".updateJobInfo Start!");
 
@@ -167,8 +171,6 @@ public class JobPostingController {
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
-            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
-
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobId);
 
@@ -176,8 +178,8 @@ public class JobPostingController {
                 msg = "기업회원만 채용공고를 수정할 수 있습니다.";
 
             } else {
-                JobPostingDTO pDTO = getJobPostingParam(request);
-                pDTO.setId(Long.parseLong(jobId));
+                applyDefaults(pDTO);
+                pDTO.setId(jobId);
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
                 if (jobPostingService.updateJobInfo(pDTO) > 0) {
@@ -208,7 +210,8 @@ public class JobPostingController {
 
     @ResponseBody
     @PostMapping(value = "updateJobClose")
-    public MsgDTO updateJobClose(HttpServletRequest request, HttpSession session) {
+    public MsgDTO updateJobClose(@RequestParam(name = "jobId", defaultValue = "0") Long jobId,
+                                 HttpSession session) {
 
         log.info(this.getClass().getName() + ".updateJobClose Start!");
 
@@ -219,8 +222,6 @@ public class JobPostingController {
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
-            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
-
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobId);
 
@@ -229,7 +230,7 @@ public class JobPostingController {
 
             } else {
                 JobPostingDTO pDTO = new JobPostingDTO();
-                pDTO.setId(Long.parseLong(jobId));
+                pDTO.setId(jobId);
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
                 if (jobPostingService.updateJobClose(pDTO) > 0) {
@@ -260,7 +261,8 @@ public class JobPostingController {
 
     @ResponseBody
     @PostMapping(value = "deleteJobInfo")
-    public MsgDTO deleteJobInfo(HttpServletRequest request, HttpSession session) {
+    public MsgDTO deleteJobInfo(@RequestParam(name = "jobId", defaultValue = "0") Long jobId,
+                                HttpSession session) {
 
         log.info(this.getClass().getName() + ".deleteJobInfo Start!");
 
@@ -271,8 +273,6 @@ public class JobPostingController {
         try {
             String memberId = CmmUtil.nvl((String) session.getAttribute("SESSION_MEMBER_ID"), "0");
             String userRole = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ROLE"));
-            String jobId = CmmUtil.nvl(request.getParameter("jobId"), "0");
-
             log.info("session memberId : " + memberId);
             log.info("jobId : " + jobId);
 
@@ -281,7 +281,7 @@ public class JobPostingController {
 
             } else {
                 JobPostingDTO pDTO = new JobPostingDTO();
-                pDTO.setId(Long.parseLong(jobId));
+                pDTO.setId(jobId);
                 pDTO.setCompanyMemberId(Long.parseLong(memberId));
 
                 if (jobPostingService.deleteJobInfo(pDTO) > 0) {
@@ -310,72 +310,18 @@ public class JobPostingController {
         return dto;
     }
 
-    private JobPostingDTO getJobPostingParam(HttpServletRequest request) {
-
-        String companyName = CmmUtil.nvl(request.getParameter("companyName")).trim();
-        String title = CmmUtil.nvl(request.getParameter("title")).trim();
-        String jobCategory = CmmUtil.nvl(request.getParameter("jobCategory")).trim();
-        String employmentType = CmmUtil.nvl(request.getParameter("employmentType")).trim();
-        String location = CmmUtil.nvl(request.getParameter("location")).trim();
-        String salaryMin = CmmUtil.nvl(request.getParameter("salaryMin"));
-        String salaryAmount = CmmUtil.nvl(request.getParameter("salaryAmount"));
-        String salaryType = CmmUtil.nvl(request.getParameter("salaryType"));
-        String workType = CmmUtil.nvl(request.getParameter("workType"), "ANY");
-        String experienceLevel = CmmUtil.nvl(request.getParameter("experienceLevel"));
-        String educationLevel = CmmUtil.nvl(request.getParameter("educationLevel"));
-        String description = CmmUtil.nvl(request.getParameter("description"));
-        String requirements = CmmUtil.nvl(request.getParameter("requirements"));
-        String preferredQualifications = CmmUtil.nvl(request.getParameter("preferredQualifications"));
-        String accessibilityInfo = CmmUtil.nvl(request.getParameter("accessibilityInfo"));
-        String wheelchairAccessible = CmmUtil.nvl(request.getParameter("wheelchairAccessible"), "false");
-        String accessibleRestroom = CmmUtil.nvl(request.getParameter("accessibleRestroom"), "false");
-        String disabledParking = CmmUtil.nvl(request.getParameter("disabledParking"), "false");
-        String restAreaAvailable = CmmUtil.nvl(request.getParameter("restAreaAvailable"), "false");
-        String elevatorAvailable = CmmUtil.nvl(request.getParameter("elevatorAvailable"), "false");
-        String assistiveDeviceSupport = CmmUtil.nvl(request.getParameter("assistiveDeviceSupport"), "false");
-        String deadline = CmmUtil.nvl(request.getParameter("deadline"));
-
-        log.info("companyName : " + companyName);
-        log.info("title : " + title);
-        log.info("jobCategory : " + jobCategory);
-        log.info("employmentType : " + employmentType);
-        log.info("location : " + location);
-        log.info("salaryMin : " + salaryMin);
-        log.info("salaryAmount : " + salaryAmount);
-        log.info("salaryType : " + salaryType);
-        log.info("deadline : " + deadline);
-
-        JobPostingDTO pDTO = new JobPostingDTO();
-        pDTO.setCompanyName(companyName);
-        pDTO.setTitle(title);
-        pDTO.setJobCategory(jobCategory);
-        pDTO.setEmploymentType(employmentType);
-        pDTO.setLocation(location);
-        pDTO.setSalaryType(salaryType);
-        pDTO.setWorkType(workType);
-        pDTO.setExperienceLevel(experienceLevel);
-        pDTO.setEducationLevel(educationLevel);
-        pDTO.setDescription(description);
-        pDTO.setRequirements(requirements);
-        pDTO.setPreferredQualifications(preferredQualifications);
-        pDTO.setAccessibilityInfo(accessibilityInfo);
-        pDTO.setDeadline(deadline);
-
-        if (salaryMin.length() > 0) {
-            pDTO.setSalaryMin(Integer.parseInt(salaryMin));
-        }
-
-        if (salaryAmount.length() > 0) {
-            pDTO.setSalaryAmount(Long.parseLong(salaryAmount.replace(",", "")));
-        }
-
-        pDTO.setWheelchairAccessible(Boolean.parseBoolean(wheelchairAccessible));
-        pDTO.setAccessibleRestroom(Boolean.parseBoolean(accessibleRestroom));
-        pDTO.setDisabledParking(Boolean.parseBoolean(disabledParking));
-        pDTO.setRestAreaAvailable(Boolean.parseBoolean(restAreaAvailable));
-        pDTO.setElevatorAvailable(Boolean.parseBoolean(elevatorAvailable));
-        pDTO.setAssistiveDeviceSupport(Boolean.parseBoolean(assistiveDeviceSupport));
-
-        return pDTO;
+    private void applyDefaults(JobPostingDTO dto) {
+        dto.setCompanyName(CmmUtil.nvl(dto.getCompanyName()).trim());
+        dto.setTitle(CmmUtil.nvl(dto.getTitle()).trim());
+        dto.setJobCategory(CmmUtil.nvl(dto.getJobCategory()).trim());
+        dto.setEmploymentType(CmmUtil.nvl(dto.getEmploymentType()).trim());
+        dto.setLocation(CmmUtil.nvl(dto.getLocation()).trim());
+        if (dto.getWorkType() == null) dto.setWorkType("ANY");
+        if (dto.getWheelchairAccessible() == null) dto.setWheelchairAccessible(false);
+        if (dto.getAccessibleRestroom() == null) dto.setAccessibleRestroom(false);
+        if (dto.getDisabledParking() == null) dto.setDisabledParking(false);
+        if (dto.getRestAreaAvailable() == null) dto.setRestAreaAvailable(false);
+        if (dto.getElevatorAvailable() == null) dto.setElevatorAvailable(false);
+        if (dto.getAssistiveDeviceSupport() == null) dto.setAssistiveDeviceSupport(false);
     }
 }

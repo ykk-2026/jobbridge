@@ -10,7 +10,7 @@
 |---|---|---|
 | HTTP 방식 | GET / POST / PUT / PATCH / DELETE | **GET / POST 만** 사용 |
 | URL | `/api/jobs/{id}`, `/api/jobs/{id}/close` | 경로 변수 없음 → `?jobId=1` 쿼리/폼 파라미터 |
-| 요청 본문 | `Content-Type: application/json` + `JSON.stringify(...)` | **`application/x-www-form-urlencoded`** + `URLSearchParams` (강의의 `$("#f").serialize()`와 동일) |
+| 요청 본문 | `Content-Type: application/json` + `JSON.stringify(...)` | 기본은 **`application/x-www-form-urlencoded`**, 프로필 저장만 JSON 사용 |
 | 등록/수정/삭제 응답 | 생성된 객체 또는 204 | **`{ result: 1, msg: "등록되었습니다." }`** (`MsgDTO`). `result`가 1이 아니면 실패 |
 | 에러 | HTTP 400/401/403/409 + `{message}` | HTTP는 항상 200. `result: 0` + `msg`로 판단 |
 | 로그인 안 한 상태의 조회 | 401 | 빈 배열 `[]` 또는 빈 객체 `{}` |
@@ -211,13 +211,19 @@ export const reportCommunityPost = (postId: string) => postForm('/api/community/
 | 함수 | 이전 | 변경 후 |
 |---|---|---|
 | `getProfile` | `GET /api/profiles/{memberId}` | `GET /api/profiles/getProfileInfo?memberId=` |
-| `saveProfile` | `PUT /api/profiles/{memberId}` (JSON) | `POST /api/profiles/saveProfileInfo` (폼, `memberId` 포함) → `MsgDTO` |
+| `saveProfile` | `PUT /api/profiles/{memberId}` (JSON) | `POST /api/profiles/saveProfileInfo` (JSON, `memberId` 포함) → `MsgDTO` |
 
 ```ts
 export const getProfile = (memberId: string | number) =>
   getJson<ApiJobSeekerProfile>('/api/profiles/getProfileInfo', { memberId });
-export const saveProfile = (memberId: string | number, profile: ApiJobSeekerProfile) =>
-  postForm('/api/profiles/saveProfileInfo', { ...profile, memberId });
+export const saveProfile = async (memberId: string | number, profile: ApiJobSeekerProfile) => {
+  const response = await fetch('/api/profiles/saveProfileInfo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...profile, memberId }),
+  });
+  return response.json() as Promise<MsgDTO>;
+};
 ```
 `birthDate`, `contactTimeStart/End`는 `"1999-01-02"`, `"09:00"` 문자열로 보내면 됩니다. 한글 라벨(`남성`, `정규직`, `신입`, `이메일`)은 백엔드에서 코드값으로 변환합니다.
 
